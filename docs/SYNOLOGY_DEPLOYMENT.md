@@ -2,7 +2,7 @@
 
 This guide walks you through deploying Perun's BlackBook to a Synology NAS with remote access via Tailscale.
 
-## Your Setup
+## Deployment Status: COMPLETE
 
 | Item | Value |
 |------|-------|
@@ -11,6 +11,9 @@ This guide walks you through deploying Perun's BlackBook to a Synology NAS with 
 | **DSM Version** | 7.3.2-86009 |
 | **RAM** | 2GB (tight - optimized config included) |
 | **CPU** | Intel Celeron J4025 (2 cores, 2GHz) |
+| **Tailscale Domain** | `bearcave.tail1d5888.ts.net` |
+| **Access URL** | `https://bearcave.tail1d5888.ts.net/` |
+| **Deployed** | December 16, 2025 |
 
 ## Prerequisites
 
@@ -218,18 +221,48 @@ You should see the BlackBook dashboard.
 3. Authenticate with your Tailscale account
 4. Note the Tailscale IP assigned to your NAS (e.g., 100.x.x.x)
 
-### 5.3 Install Tailscale on Other Devices
+### 5.3 Enable MagicDNS (Required for HTTPS)
+
+1. Go to https://login.tailscale.com/admin/dns
+2. Enable **MagicDNS** if not already enabled
+3. Your NAS gets a domain like: `bearcave.tail1d5888.ts.net`
+
+### 5.4 Setup Tailscale Serve (HTTPS)
+
+**IMPORTANT:** Google OAuth requires HTTPS for redirect URIs. Use Tailscale Serve:
+
+```bash
+# SSH into Synology
+ssh admin@YOUR_NAS_IP
+
+# Enable HTTPS proxy for BlackBook
+sudo tailscale serve --bg http://localhost:8000
+```
+
+This creates:
+- `https://bearcave.tail1d5888.ts.net/` → `http://localhost:8000`
+- Automatic TLS certificate from Let's Encrypt
+- No port needed in URL
+
+Verify it's running:
+```bash
+tailscale serve status
+```
+
+### 5.5 Install Tailscale on Other Devices
 
 Install Tailscale on:
 - Your laptops: https://tailscale.com/download
-- Your Google Pixel 9: Install from Play Store
+- Your Google Pixel: Install from Play Store
 
-### 5.4 Update Google OAuth Redirect URI
+**All devices must be signed into the same Tailscale account to access BlackBook.**
 
-Update `GOOGLE_REDIRECT_URI` in your `.env` file with your Tailscale IP:
+### 5.6 Update Google OAuth Redirect URI
+
+Update `GOOGLE_REDIRECT_URI` in your `.env` file with the HTTPS URL:
 
 ```env
-GOOGLE_REDIRECT_URI=http://100.x.x.x:8000/auth/google/callback
+GOOGLE_REDIRECT_URI=https://bearcave.tail1d5888.ts.net/auth/google/callback
 ```
 
 Restart the app:
@@ -332,15 +365,24 @@ Check for:
 2. Check Tailscale admin console for device status
 3. Try `ping YOUR_TAILSCALE_IP` from client device
 
-### Google OAuth Error
+### Google OAuth Error: redirect_uri_mismatch
 
-1. Verify `GOOGLE_REDIRECT_URI` matches exactly in:
-   - `.env` file
-   - Google Cloud Console authorized redirect URIs
-2. Check that required APIs are enabled:
-   - Gmail API
-   - Google Calendar API
-   - Google People API
+**Common causes:**
+
+1. **Wrong Client ID** - If you have multiple OAuth clients, make sure `.env` uses the same Client ID where you configured the redirect URI
+
+2. **HTTP vs HTTPS mismatch** - Use HTTPS with Tailscale Serve:
+   ```env
+   GOOGLE_REDIRECT_URI=https://bearcave.tail1d5888.ts.net/auth/google/callback
+   ```
+
+3. **Redirect URI not added** - Go to Google Cloud Console → Credentials → Your OAuth Client → Add the exact redirect URI
+
+**To diagnose:**
+1. Check which Client ID your app is using (in `.env`)
+2. Go to Google Cloud Console → Credentials
+3. Find that specific OAuth Client ID
+4. Verify the redirect URI is listed under "Authorized redirect URIs"
 
 ### Database Connection Issues
 
@@ -359,3 +401,85 @@ If it fails, check:
 3. **Backup your ENCRYPTION_KEY** - Encrypted data cannot be recovered without it
 4. **Enable 2FA on Tailscale** - Add an extra layer of security
 5. **Regularly update containers** - `docker-compose pull && docker-compose up -d`
+
+---
+
+## Code Updates with GitHub
+
+The codebase is version-controlled with Git and can be pushed to GitHub for easy updates.
+
+### Initial Setup (Windows Development Machine)
+
+```bash
+cd C:\Users\ossow\OneDrive\PerunsBlackBook
+
+# Already initialized - just add remote
+git remote add origin https://github.com/YOUR_USERNAME/PerunsBlackBook.git
+git push -u origin master
+```
+
+### Clone to Synology (First Time)
+
+```bash
+cd /volume1/docker/blackbook
+git clone https://github.com/YOUR_USERNAME/PerunsBlackBook.git .
+```
+
+### Update Workflow
+
+**1. Make changes on Windows with Claude Code**
+
+```bash
+# After making changes
+git add .
+git commit -m "Description of changes"
+git push
+```
+
+**2. Pull and deploy on Synology**
+
+```bash
+ssh admin@bearcave
+cd /volume1/docker/blackbook
+git pull
+sudo docker-compose -f docker-compose.prod.yml down
+sudo docker-compose -f docker-compose.prod.yml build
+sudo docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Quick Deploy Script
+
+Create `/volume1/docker/blackbook/deploy.sh`:
+
+```bash
+#!/bin/bash
+cd /volume1/docker/blackbook
+git pull
+sudo docker-compose -f docker-compose.prod.yml down
+sudo docker-compose -f docker-compose.prod.yml build --no-cache
+sudo docker-compose -f docker-compose.prod.yml up -d
+echo "Deploy complete! Check: https://bearcave.tail1d5888.ts.net/"
+```
+
+Make executable: `chmod +x deploy.sh`
+
+Run: `./deploy.sh`
+
+---
+
+## What's Deployed
+
+As of December 16, 2025:
+
+| Metric | Count |
+|--------|-------|
+| **People** | 5,215 |
+| **Organizations** | 1,867 |
+| **Google Accounts** | 2 (krzysiek.ossowski@gmail.com, krzysztof@wolfstrom.com) |
+
+### Icons Generated
+
+Custom lightning bolt logo icons at all PWA sizes:
+- 16, 32, 48, 72, 96, 128, 144, 152, 192, 384, 512px
+- favicon.ico (multi-size)
+- apple-touch-icon.png (180px)

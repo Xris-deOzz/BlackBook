@@ -104,9 +104,9 @@ A self-hosted personal CRM for managing professional relationships, contacts, or
    http://localhost:8000
    ```
 
-### Docker Deployment
+### Docker Deployment (Local)
 
-For production deployment, use Docker Compose:
+For local production deployment, use Docker Compose:
 
 ```bash
 # Start all services (database + app)
@@ -118,6 +118,25 @@ docker-compose logs -f app
 # Stop services
 docker-compose down
 ```
+
+### Synology NAS Deployment
+
+BlackBook is deployed to a Synology DS220+ NAS with Tailscale for secure remote access.
+
+**Access URL:** `https://bearcave.tail1d5888.ts.net/`
+
+**Quick deploy after code changes:**
+```bash
+# On Windows: commit and push
+git add . && git commit -m "Update" && git push
+
+# On Synology: pull and rebuild
+ssh admin@bearcave
+cd /volume1/docker/blackbook
+git pull && sudo docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+See [docs/SYNOLOGY_DEPLOYMENT.md](docs/SYNOLOGY_DEPLOYMENT.md) for full setup guide.
 
 ## Project Structure
 

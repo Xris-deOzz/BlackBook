@@ -1,7 +1,59 @@
 # Changelog - December 16, 2025
 
 ## Session Summary
-This session focused on duplicate management enhancements, Google Contacts full sync, and bug fixes.
+This session focused on duplicate management enhancements, Google Contacts full sync, bug fixes, and **Synology NAS deployment**.
+
+---
+
+## Synology NAS Deployment
+
+### Successfully Deployed to BearCave (Synology DS220+)
+
+| Item | Value |
+|------|-------|
+| **Access URL** | `https://bearcave.tail1d5888.ts.net/` |
+| **People Migrated** | 5,215 |
+| **Organizations Migrated** | 1,867 |
+| **Google Accounts** | 2 connected |
+
+### Key Steps Completed
+
+1. **Database Migration**
+   - Created `scripts/export_database.py` for SQLAlchemy-based export
+   - Used `Base.metadata.create_all()` for schema creation (Alembic migrations were incremental)
+   - Exported data with proper JSON/UUID/array handling
+
+2. **Docker Deployment**
+   - Built and deployed using `docker-compose.prod.yml`
+   - Containers: `blackbook-app` (FastAPI) + `blackbook-db` (PostgreSQL)
+
+3. **Tailscale Setup**
+   - Installed Tailscale on Synology NAS
+   - Enabled MagicDNS for domain `bearcave.tail1d5888.ts.net`
+   - Configured Tailscale Serve for HTTPS: `sudo tailscale serve --bg http://localhost:8000`
+
+4. **Google OAuth Fix**
+   - **Issue:** redirect_uri_mismatch error
+   - **Root Cause:** App was using Client ID `154555900230-...` but redirect URI was on `948691232998-...`
+   - **Fix:** Updated `.env` with correct Client ID and new Client Secret
+
+5. **PWA Icons Generated**
+   - Created custom lightning bolt icons using `scripts/generate_icons.py`
+   - Sizes: 16, 32, 48, 72, 96, 128, 144, 152, 192, 384, 512px
+   - Plus favicon.ico and apple-touch-icon.png
+
+6. **Git Repository Initialized**
+   - Initialized git repo with 421 files
+   - Created `.gitignore` with proper exclusions
+   - Ready for GitHub push
+
+### Files Added/Modified for Deployment
+
+- `scripts/export_database.py` - Enhanced with JSON/array handling
+- `scripts/init_schema.py` - Schema creation from SQLAlchemy models
+- `docs/SYNOLOGY_DEPLOYMENT.md` - Comprehensive deployment guide
+- `README.md` - Added Synology deployment section
+- `.gitignore` - Added backups/ and assets/blackbook-icons/
 
 ---
 

@@ -164,7 +164,9 @@
       "Bash(.venvScriptspython.exe -c \"from PIL import Image; print(''Pillow available'')\")",
       "Bash(C:/Users/ossow/AppData/Local/Microsoft/WindowsApps/python.exe -c \"from PIL import Image; print(''Pillow available'')\")",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit - Perun''s BlackBook Personal CRM\n\nFull-featured personal CRM with:\n- Person and organization management\n- Google Calendar and Gmail integration\n- AI-powered research assistant\n- Email inbox integration\n- Docker deployment support\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git config:*)"
     ]
   }
 }
