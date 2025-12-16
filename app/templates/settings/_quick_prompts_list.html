@@ -1,0 +1,131 @@
+<!-- Quick Prompts List Partial -->
+{% if quick_prompts %}
+<div class="space-y-3">
+    {% for prompt in quick_prompts %}
+    <div class="p-4 border border-blackbook-200 rounded-lg {% if not prompt.is_active %}opacity-60{% endif %}"
+         id="quick-prompt-{{ prompt.id }}">
+        <div class="flex items-start justify-between gap-4">
+            <!-- Prompt Info -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="font-medium text-blackbook-900">{{ prompt.label }}</span>
+                    <!-- Entity Type Badge -->
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                {% if prompt.entity_type.value == 'person' %}bg-blue-100 text-blue-700
+                                {% elif prompt.entity_type.value == 'organization' %}bg-green-100 text-green-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                        {% if prompt.entity_type.value == 'person' %}People
+                        {% elif prompt.entity_type.value == 'organization' %}Orgs
+                        {% else %}Both{% endif %}
+                    </span>
+                    <!-- Order Badge -->
+                    <span class="text-xs text-blackbook-400">#{{ prompt.display_order }}</span>
+                </div>
+                <p class="text-sm text-blackbook-600 truncate" title="{{ prompt.prompt_text }}">
+                    {{ prompt.prompt_text }}
+                </p>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <!-- Toggle Active -->
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox"
+                           {% if prompt.is_active %}checked{% endif %}
+                           hx-post="/settings/ai/prompts/{{ prompt.id }}/toggle"
+                           hx-target="#quick-prompts-list"
+                           hx-swap="innerHTML"
+                           class="sr-only peer">
+                    <div class="w-9 h-5 bg-blackbook-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-blackbook-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                </label>
+
+                <!-- Edit Button -->
+                <button type="button"
+                        onclick="toggleEditPrompt('{{ prompt.id }}')"
+                        class="p-1.5 text-blackbook-400 hover:text-blackbook-600 hover:bg-blackbook-100 rounded">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </button>
+
+                <!-- Delete Button -->
+                <button type="button"
+                        hx-delete="/settings/ai/prompts/{{ prompt.id }}"
+                        hx-target="#quick-prompts-list"
+                        hx-swap="innerHTML"
+                        hx-confirm="Delete this prompt?"
+                        class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Edit Form (hidden by default) -->
+        <div id="edit-form-{{ prompt.id }}" class="hidden mt-4 pt-4 border-t border-blackbook-100">
+            <form hx-put="/settings/ai/prompts/{{ prompt.id }}"
+                  hx-target="#quick-prompts-list"
+                  hx-swap="innerHTML"
+                  class="space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-blackbook-500 mb-1">Button Label</label>
+                        <input type="text"
+                               name="label"
+                               value="{{ prompt.label }}"
+                               maxlength="50"
+                               required
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-blackbook-500 mb-1">Entity Type</label>
+                        <select name="entity_type"
+                                class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
+                            <option value="both" {% if prompt.entity_type.value == 'both' %}selected{% endif %}>Both (People & Organizations)</option>
+                            <option value="person" {% if prompt.entity_type.value == 'person' %}selected{% endif %}>People Only</option>
+                            <option value="organization" {% if prompt.entity_type.value == 'organization' %}selected{% endif %}>Organizations Only</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-blackbook-500 mb-1">Prompt Text</label>
+                    <textarea name="prompt_text"
+                              required
+                              rows="2"
+                              class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm resize-y">{{ prompt.prompt_text }}</textarea>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button"
+                            onclick="toggleEditPrompt('{{ prompt.id }}')"
+                            class="px-3 py-1.5 border border-blackbook-300 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-50 text-sm">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-3 py-1.5 bg-purple-600 text-white font-medium rounded-md hover:bg-purple-700 text-sm">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+function toggleEditPrompt(promptId) {
+    const editForm = document.getElementById('edit-form-' + promptId);
+    if (editForm) {
+        editForm.classList.toggle('hidden');
+    }
+}
+</script>
+{% else %}
+<div class="text-center py-8 text-blackbook-500">
+    <svg class="w-12 h-12 mx-auto mb-3 text-blackbook-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+    </svg>
+    <p class="text-sm">No quick prompts configured yet.</p>
+    <p class="text-xs text-blackbook-400 mt-1">Add your first prompt above to get started.</p>
+</div>
+{% endif %}

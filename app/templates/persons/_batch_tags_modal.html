@@ -1,0 +1,114 @@
+<!-- Batch Add Tags Modal Content -->
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+     id="batch-tags-modal-overlay"
+     onclick="if(event.target === this) closeBatchTagsModal()">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-4 border-b border-blackbook-200">
+            <h2 class="text-lg font-semibold text-blackbook-900">Add Tags to Selected People</h2>
+            <button onclick="closeBatchTagsModal()"
+                    class="p-1.5 text-blackbook-400 hover:text-blackbook-600 rounded-md hover:bg-blackbook-100">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-4">
+            <p class="text-sm text-blackbook-600 mb-4">
+                Select one or more tags to add to the selected people:
+            </p>
+
+            {% if all_tags %}
+            <div class="space-y-2 max-h-64 overflow-y-auto">
+                {% for tag in all_tags %}
+                <label class="flex items-center p-2 rounded-lg hover:bg-blackbook-50 cursor-pointer">
+                    <input type="checkbox" name="batch_tag_ids" value="{{ tag.id }}"
+                           class="h-4 w-4 text-blackbook-600 border-blackbook-300 rounded focus:ring-blackbook-500">
+                    <span class="ml-3 px-2 py-0.5 text-sm font-medium rounded-full"
+                          style="background-color: {{ tag.color or '#e5e7eb' }}20; color: {{ tag.color or '#374151' }}; border: 1px solid {{ tag.color or '#d1d5db' }};">
+                        {{ tag.name }}
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+                <p class="text-blackbook-500 mb-4">No tags available</p>
+                <a href="/tags/new" class="text-blue-600 hover:underline">Create a tag</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-3 p-4 border-t border-blackbook-200">
+            <button type="button" onclick="closeBatchTagsModal()"
+                    class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                Cancel
+            </button>
+            <button type="button" onclick="applyBatchTags()"
+                    class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700">
+                Add Tags
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Close modal function
+window.closeBatchTagsModal = function() {
+    const container = document.getElementById('batch-tags-modal-container');
+    if (container) container.innerHTML = '';
+}
+
+// Apply tags to selected people
+window.applyBatchTags = async function() {
+    const tagCheckboxes = document.querySelectorAll('input[name="batch_tag_ids"]:checked');
+    const tagIds = Array.from(tagCheckboxes).map(cb => cb.value);
+
+    if (tagIds.length === 0) {
+        alert('Please select at least one tag');
+        return;
+    }
+
+    const personIds = getSelectedIds();
+    if (personIds.length === 0) {
+        alert('No people selected');
+        return;
+    }
+
+    try {
+        const response = await fetch('/people/batch/tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                person_ids: personIds,
+                tag_ids: tagIds
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            closeBatchTagsModal();
+            // Refresh the table
+            htmx.trigger('#search', 'search');
+            // Clear selection
+            clearSelection();
+        } else {
+            const data = await response.json();
+            alert(data.detail || 'Failed to add tags');
+        }
+    } catch (error) {
+        console.error('Error adding tags:', error);
+        alert('An error occurred while adding tags');
+    }
+}
+
+// Close on escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeBatchTagsModal();
+    }
+});
+</script>

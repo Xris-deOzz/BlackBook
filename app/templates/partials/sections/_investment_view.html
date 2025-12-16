@@ -1,0 +1,27 @@
+{# Investment Details Section - View Mode #}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div>
+        <span class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Investment Type</span>
+        {% if person.investment_type %}
+        <p class="text-blackbook-700 mt-1">{{ person.investment_type }}</p>
+        {% else %}
+        <p class="text-blackbook-400 italic mt-1">Not set</p>
+        {% endif %}
+    </div>
+    <div>
+        <span class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Amount Funded</span>
+        {% if person.amount_funded %}
+        <p class="text-blackbook-700 mt-1">{{ person.amount_funded }}</p>
+        {% else %}
+        <p class="text-blackbook-400 italic mt-1">Not set</p>
+        {% endif %}
+    </div>
+    <div>
+        <span class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Potential Intro VC</span>
+        {% if person.potential_intro_vc %}
+        <p class="text-blackbook-700 mt-1">{{ person.potential_intro_vc }}</p>
+        {% else %}
+        <p class="text-blackbook-400 italic mt-1">Not set</p>
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title | default("BlackBook") }}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/icon-16.png">
+
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Personal CRM for managing professional relationships">
+    <meta name="theme-color" content="#f97316">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BlackBook">
+    <link rel="manifest" href="/static/icons/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
+
+    <!-- TailwindCSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Alpine.js - for interactive UI components -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Tom Select - searchable dropdowns -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+    <!-- Quill Rich Text Editor -->
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'blackbook': {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Apply theme before page renders to prevent flash -->
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'system';
+            if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+
+    <!-- Dark Mode Global Overrides -->
+    <style>
+        /* Apply dark mode to common Tailwind classes when html has .dark */
+        .dark .bg-white { background-color: #1e293b !important; } /* blackbook-800 */
+        .dark .bg-blackbook-50 { background-color: #0f172a !important; } /* blackbook-900 */
+        .dark .bg-blackbook-100 { background-color: #334155 !important; } /* blackbook-700 */
+        .dark .text-blackbook-900 { color: #f1f5f9 !important; } /* blackbook-100 */
+        .dark .text-blackbook-800 { color: #e2e8f0 !important; } /* blackbook-200 */
+        .dark .text-blackbook-700 { color: #cbd5e1 !important; } /* blackbook-300 */
+        .dark .text-blackbook-600 { color: #94a3b8 !important; } /* blackbook-400 */
+        .dark .text-blackbook-500 { color: #94a3b8 !important; } /* blackbook-400 */
+        .dark .border-blackbook-200 { border-color: #475569 !important; } /* blackbook-600 */
+        .dark .border-blackbook-300 { border-color: #475569 !important; } /* blackbook-600 */
+        .dark .divide-blackbook-200 > :not([hidden]) ~ :not([hidden]) { border-color: #475569 !important; }
+        .dark .hover\:bg-blackbook-50:hover { background-color: #334155 !important; } /* blackbook-700 */
+        .dark input, .dark select, .dark textarea {
+            background-color: #334155 !important;
+            border-color: #475569 !important;
+            color: #f1f5f9 !important;
+        }
+        .dark input::placeholder, .dark textarea::placeholder {
+            color: #94a3b8 !important;
+        }
+        .dark .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2) !important; }
+        .dark .shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.2) !important; }
+        .dark a:not(.bg-blue-600):not(.bg-blackbook-900) { color: #60a5fa; }
+        .dark th { background-color: #1e293b !important; }
+        .dark tbody tr:hover { background-color: #334155 !important; }
+        /* Tom Select dark mode */
+        .dark .ts-wrapper .ts-control { background-color: #334155 !important; border-color: #475569 !important; color: #f1f5f9 !important; }
+        .dark .ts-wrapper .ts-control input { color: #f1f5f9 !important; }
+        .dark .ts-dropdown { background-color: #334155 !important; border-color: #475569 !important; }
+        .dark .ts-dropdown .option { color: #f1f5f9 !important; }
+        .dark .ts-dropdown .option:hover, .dark .ts-dropdown .option.active { background-color: #475569 !important; }
+        .dark .ts-wrapper.focus .ts-control { border-color: #60a5fa !important; box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3) !important; }
+        /* Quill editor dark mode */
+        .dark .quill-editor { background-color: #334155 !important; }
+        .dark .quill-editor .ql-toolbar { background-color: #1e293b !important; border-color: #475569 !important; }
+        .dark .quill-editor .ql-container { border-color: #475569 !important; }
+        .dark .quill-editor .ql-editor { color: #f1f5f9 !important; min-height: 100px; }
+        .dark .quill-editor .ql-editor.ql-blank::before { color: #94a3b8 !important; }
+        .dark .ql-toolbar.ql-snow { border-color: #475569 !important; background-color: #1e293b !important; }
+        .dark .ql-container.ql-snow { border-color: #475569 !important; }
+        .dark .ql-snow .ql-stroke { stroke: #94a3b8 !important; }
+        .dark .ql-snow .ql-fill { fill: #94a3b8 !important; }
+        .dark .ql-snow .ql-picker { color: #f1f5f9 !important; }
+        .dark .ql-snow .ql-picker-options { background-color: #334155 !important; border-color: #475569 !important; }
+        .dark .ql-snow .ql-picker-item:hover { color: #60a5fa !important; }
+        .dark .ql-toolbar.ql-snow .ql-picker-label:hover,
+        .dark .ql-toolbar.ql-snow .ql-picker-label.ql-active,
+        .dark .ql-toolbar.ql-snow button:hover,
+        .dark .ql-toolbar.ql-snow button.ql-active { color: #60a5fa !important; }
+        .dark .ql-toolbar.ql-snow button:hover .ql-stroke,
+        .dark .ql-toolbar.ql-snow button.ql-active .ql-stroke { stroke: #60a5fa !important; }
+        .dark .ql-toolbar.ql-snow button:hover .ql-fill,
+        .dark .ql-toolbar.ql-snow button.ql-active .ql-fill { fill: #60a5fa !important; }
+        /* Quill editor light mode base styles */
+        .quill-editor .ql-editor { min-height: 100px; }
+        /* Rich text content display styles */
+        .rich-text-content p { margin-bottom: 0.5em; }
+        .rich-text-content p:last-child { margin-bottom: 0; }
+        .rich-text-content ul, .rich-text-content ol { margin-left: 1.5em; margin-bottom: 0.5em; }
+        .rich-text-content ul { list-style-type: disc; }
+        .rich-text-content ol { list-style-type: decimal; }
+        .rich-text-content li { margin-bottom: 0.25em; }
+        .rich-text-content strong { font-weight: 600; }
+        .rich-text-content em { font-style: italic; }
+        .rich-text-content u { text-decoration: underline; }
+        .rich-text-content s { text-decoration: line-through; }
+        .rich-text-content a { color: #3b82f6; text-decoration: underline; }
+        .dark .rich-text-content a { color: #60a5fa; }
+    </style>
+
+    <!-- Collapsible Sections Styles -->
+    <style>
+        /* Hide default marker in all browsers */
+        summary::-webkit-details-marker { display: none; }
+        summary::marker { display: none; }
+        summary { list-style: none; }
+    </style>
+
+    <!-- Navigation button color fix -->
+    <style>
+        /* Force button text color to match nav links */
+        button.nav-dropdown-btn,
+        .nav-dropdown-btn,
+        nav button.nav-dropdown-btn,
+        .bg-blackbook-800 button.nav-dropdown-btn,
+        .bg-blackbook-800 .nav-dropdown-btn {
+            color: #cbd5e1 !important;
+            -webkit-text-fill-color: #cbd5e1 !important;
+        }
+        button.nav-dropdown-btn:hover,
+        .nav-dropdown-btn:hover,
+        nav button.nav-dropdown-btn:hover,
+        .bg-blackbook-800 button.nav-dropdown-btn:hover,
+        .bg-blackbook-800 .nav-dropdown-btn:hover {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+        }
+        button.nav-dropdown-btn.active,
+        .nav-dropdown-btn.active,
+        nav button.nav-dropdown-btn.active,
+        .bg-blackbook-800 button.nav-dropdown-btn.active,
+        .bg-blackbook-800 .nav-dropdown-btn.active {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+        }
+    </style>
+
+    <!-- Column Resizing Styles -->
+    <style>
+        /* Resizable table columns */
+        .resizable-table {
+            table-layout: fixed;
+            width: 100%;
+        }
+        .resizable-table th {
+            position: relative;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .resizable-table td {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .resize-handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            cursor: col-resize;
+            background: linear-gradient(90deg, transparent 0%, transparent 40%, rgba(156, 163, 175, 0.3) 50%, transparent 60%, transparent 100%);
+            z-index: 10;
+            transition: background 0.15s ease;
+        }
+        .resize-handle:hover,
+        .resize-handle.resizing {
+            background: rgba(59, 130, 246, 0.6);
+        }
+        /* Prevent text selection while resizing */
+        .resizing-active {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-blackbook-50 dark:bg-blackbook-900 text-blackbook-900 dark:text-blackbook-100 min-h-screen flex flex-col transition-colors duration-200">
+    <!-- Navigation -->
+    <nav class="bg-blackbook-800 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold text-white">
+                        BlackBook
+                    </a>
+                </div>
+                <!-- Desktop Navigation -->
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        {% set current_path = request.url.path %}
+                        <a href="/" class="px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path == '/' %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                            Dashboard
+                        </a>
+                        <a href="/people" class="px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/people') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                            People
+                        </a>
+                        <a href="/organizations" class="px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/organizations') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                            Organizations
+                        </a>
+                        <!-- Communication Dropdown -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" @click.outside="open = false"
+                                    style="color: #cbd5e1;"
+                                    class="nav-dropdown-btn px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 hover:text-white flex items-center gap-1 {% if current_path.startswith('/emails') or current_path.startswith('/interactions') %}bg-blackbook-700 !text-white{% else %}hover:bg-blackbook-700{% endif %}">
+                                Communication
+                                <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div x-show="open" x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="transform opacity-0 scale-95"
+                                 x-transition:enter-end="transform opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="transform opacity-100 scale-100"
+                                 x-transition:leave-end="transform opacity-0 scale-95"
+                                 class="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-blackbook-700 ring-1 ring-black ring-opacity-5 z-50">
+                                <div class="py-1">
+                                    <a href="/emails" class="block px-4 py-2 text-sm text-blackbook-300 hover:bg-blackbook-600 hover:text-white {% if current_path.startswith('/emails') %}bg-blackbook-600 text-white{% endif %}">
+                                        Email
+                                    </a>
+                                    <a href="/interactions" class="block px-4 py-2 text-sm text-blackbook-300 hover:bg-blackbook-600 hover:text-white {% if current_path.startswith('/interactions') %}bg-blackbook-600 text-white{% endif %}">
+                                        Interactions
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Lists & Views Dropdown -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" @click.outside="open = false"
+                                    style="color: #cbd5e1;"
+                                    class="nav-dropdown-btn px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 hover:text-white flex items-center gap-1 {% if current_path.startswith('/views') or current_path.startswith('/graph') or current_path.startswith('/christmas-lists') %}bg-blackbook-700 !text-white{% else %}hover:bg-blackbook-700{% endif %}">
+                                Lists & Views
+                                <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div x-show="open" x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="transform opacity-0 scale-95"
+                                 x-transition:enter-end="transform opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="transform opacity-100 scale-100"
+                                 x-transition:leave-end="transform opacity-0 scale-95"
+                                 class="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-blackbook-700 ring-1 ring-black ring-opacity-5 z-50">
+                                <div class="py-1">
+                                    <a href="/views" class="block px-4 py-2 text-sm text-blackbook-300 hover:bg-blackbook-600 hover:text-white {% if current_path.startswith('/views') %}bg-blackbook-600 text-white{% endif %}">
+                                        Saved Views
+                                    </a>
+                                    <a href="/graph" class="block px-4 py-2 text-sm text-blackbook-300 hover:bg-blackbook-600 hover:text-white {% if current_path.startswith('/graph') %}bg-blackbook-600 text-white{% endif %}">
+                                        Graph
+                                    </a>
+                                    <div class="border-t border-blackbook-600 my-1"></div>
+                                    <a href="/christmas-lists" class="block px-4 py-2 text-sm text-blackbook-300 hover:bg-blackbook-600 hover:text-white {% if current_path.startswith('/christmas-lists') %}bg-blackbook-600 text-white{% endif %}">
+                                        🎄 Christmas Lists
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="/settings" class="px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/settings') or current_path.startswith('/tags') or current_path.startswith('/pending-contacts') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                            Settings
+                        </a>
+                    </div>
+                </div>
+                <!-- Mobile menu button -->
+                <div class="md:hidden">
+                    <button type="button" onclick="toggleMobileMenu()" class="inline-flex items-center justify-center p-2 rounded-md text-blackbook-400 hover:text-white hover:bg-blackbook-700 focus:outline-none">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="h-6 w-6" id="menu-icon-closed" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <svg class="h-6 w-6 hidden" id="menu-icon-open" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Navigation Menu -->
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                {% set current_path = request.url.path %}
+                <a href="/" class="block px-3 py-2 rounded-md text-base font-medium text-blackbook-300 {% if current_path == '/' %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                    Dashboard
+                </a>
+                <a href="/people" class="block px-3 py-2 rounded-md text-base font-medium text-blackbook-300 {% if current_path.startswith('/people') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                    People
+                </a>
+                <a href="/organizations" class="block px-3 py-2 rounded-md text-base font-medium text-blackbook-300 {% if current_path.startswith('/organizations') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                    Organizations
+                </a>
+                <!-- Communication Section (Mobile) -->
+                <div x-data="{ open: false }">
+                    <button @click="open = !open"
+                            style="color: #cbd5e1;"
+                            class="nav-dropdown-btn w-full flex justify-between items-center px-3 py-2 rounded-md text-base font-medium text-blackbook-300 hover:text-white {% if current_path.startswith('/emails') or current_path.startswith('/interactions') %}bg-blackbook-700 !text-white{% else %}hover:bg-blackbook-700{% endif %}">
+                        Communication
+                        <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div x-show="open" x-collapse class="pl-4">
+                        <a href="/emails" class="block px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/emails') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                            Email
+                        </a>
+                        <a href="/interactions" class="block px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/interactions') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                            Interactions
+                        </a>
+                    </div>
+                </div>
+                <!-- Lists & Views Section (Mobile) -->
+                <div x-data="{ open: false }">
+                    <button @click="open = !open"
+                            style="color: #cbd5e1;"
+                            class="nav-dropdown-btn w-full flex justify-between items-center px-3 py-2 rounded-md text-base font-medium text-blackbook-300 hover:text-white {% if current_path.startswith('/views') or current_path.startswith('/graph') or current_path.startswith('/christmas-lists') %}bg-blackbook-700 !text-white{% else %}hover:bg-blackbook-700{% endif %}">
+                        Lists & Views
+                        <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div x-show="open" x-collapse class="pl-4">
+                        <a href="/views" class="block px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/views') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                            Saved Views
+                        </a>
+                        <a href="/graph" class="block px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/graph') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                            Graph
+                        </a>
+                        <a href="/christmas-lists" class="block px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/christmas-lists') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                            🎄 Christmas Lists
+                        </a>
+                    </div>
+                </div>
+                <a href="/settings" class="block px-3 py-2 rounded-md text-base font-medium text-blackbook-300 {% if current_path.startswith('/settings') or current_path.startswith('/tags') or current_path.startswith('/pending-contacts') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                    Settings
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    {% block breadcrumb %}{% endblock %}
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
+        {% block content %}
+        <div class="bg-white dark:bg-blackbook-800 rounded-lg shadow-md p-6">
+            <h1 class="text-2xl font-bold mb-4">{{ title | default("Welcome") }}</h1>
+            <p class="text-blackbook-600 dark:text-blackbook-300">{{ content | default("") }}</p>
+
+            <!-- Quick Stats -->
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-blackbook-100 dark:bg-blackbook-700 rounded-lg p-4">
+                    <p class="text-sm text-blackbook-500 dark:text-blackbook-400">People</p>
+                    <p class="text-2xl font-bold" id="stat-persons">-</p>
+                </div>
+                <div class="bg-blackbook-100 dark:bg-blackbook-700 rounded-lg p-4">
+                    <p class="text-sm text-blackbook-500 dark:text-blackbook-400">Organizations</p>
+                    <p class="text-2xl font-bold" id="stat-organizations">-</p>
+                </div>
+                <div class="bg-blackbook-100 dark:bg-blackbook-700 rounded-lg p-4">
+                    <p class="text-sm text-blackbook-500 dark:text-blackbook-400">Tags</p>
+                    <p class="text-2xl font-bold" id="stat-tags">-</p>
+                </div>
+                <div class="bg-blackbook-100 dark:bg-blackbook-700 rounded-lg p-4">
+                    <p class="text-sm text-blackbook-500 dark:text-blackbook-400">Interactions</p>
+                    <p class="text-2xl font-bold" id="stat-interactions">-</p>
+                </div>
+            </div>
+        </div>
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-blackbook-800 text-white mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <p class="text-center text-sm text-blackbook-400">
+                BlackBook &copy; 2025 | Personal CRM
+            </p>
+        </div>
+    </footer>
+
+    <!-- Load stats on page load -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load main stats
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+
+                const personsEl = document.getElementById('stat-persons');
+                const orgsEl = document.getElementById('stat-organizations');
+                const tagsEl = document.getElementById('stat-tags');
+                const interactionsEl = document.getElementById('stat-interactions');
+
+                if (personsEl) personsEl.textContent = stats.persons || 0;
+                if (orgsEl) orgsEl.textContent = stats.organizations || 0;
+                if (tagsEl) tagsEl.textContent = stats.tags || 0;
+                if (interactionsEl) interactionsEl.textContent = stats.interactions || 0;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+
+            // Load pending suggestions count for nav badge
+            try {
+                const response = await fetch('/ai-chat/suggestions/pending-count');
+                const data = await response.json();
+                updatePendingBadge(data.pending);
+            } catch (error) {
+                console.error('Failed to load pending suggestions count:', error);
+            }
+        });
+
+        // Update pending suggestions badge in navigation
+        function updatePendingBadge(count) {
+            const badge = document.getElementById('nav-pending-badge');
+            const badgeMobile = document.getElementById('nav-pending-badge-mobile');
+
+            [badge, badgeMobile].forEach(el => {
+                if (el) {
+                    if (count > 0) {
+                        el.textContent = count > 99 ? '99+' : count;
+                        el.classList.remove('hidden');
+                    } else {
+                        el.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const iconClosed = document.getElementById('menu-icon-closed');
+            const iconOpen = document.getElementById('menu-icon-open');
+
+            menu.classList.toggle('hidden');
+            iconClosed.classList.toggle('hidden');
+            iconOpen.classList.toggle('hidden');
+        }
+
+        // Column resizing functionality
+        function initResizableTable(tableId, storageKey) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const headers = table.querySelectorAll('thead th');
+
+            // Load saved widths
+            const savedWidths = localStorage.getItem(storageKey);
+            if (savedWidths) {
+                try {
+                    const widths = JSON.parse(savedWidths);
+                    headers.forEach((th, index) => {
+                        if (widths[index]) {
+                            th.style.width = widths[index] + 'px';
+                        }
+                    });
+                } catch (e) {
+                    console.error('Failed to load column widths:', e);
+                }
+            }
+
+            // Add resize handles to each header
+            headers.forEach((th, index) => {
+                // Skip last column (no need to resize from the right edge)
+                if (index === headers.length - 1) return;
+
+                const handle = document.createElement('div');
+                handle.className = 'resize-handle';
+                th.appendChild(handle);
+
+                let startX, startWidth, nextStartWidth;
+                const nextTh = headers[index + 1];
+
+                handle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    startX = e.pageX;
+                    startWidth = th.offsetWidth;
+                    nextStartWidth = nextTh ? nextTh.offsetWidth : 0;
+
+                    handle.classList.add('resizing');
+                    document.body.classList.add('resizing-active');
+
+                    function onMouseMove(e) {
+                        const diff = e.pageX - startX;
+                        const newWidth = Math.max(50, startWidth + diff);
+                        th.style.width = newWidth + 'px';
+
+                        // Adjust next column if needed
+                        if (nextTh && nextStartWidth - diff > 50) {
+                            nextTh.style.width = (nextStartWidth - diff) + 'px';
+                        }
+                    }
+
+                    function onMouseUp() {
+                        handle.classList.remove('resizing');
+                        document.body.classList.remove('resizing-active');
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+
+                        // Save widths to localStorage
+                        const widths = [];
+                        headers.forEach(h => widths.push(h.offsetWidth));
+                        localStorage.setItem(storageKey, JSON.stringify(widths));
+                    }
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+        }
+
+        // Re-initialize resizable tables after HTMX swaps
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            // Check if the swapped content contains a resizable table
+            const personTable = document.getElementById('person-table');
+            const orgTable = document.getElementById('org-table');
+
+            if (personTable) initResizableTable('person-table', 'person-table-widths');
+            if (orgTable) initResizableTable('org-table', 'org-table-widths');
+        });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

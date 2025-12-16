@@ -1,0 +1,118 @@
+{% if suggestions %}
+<table class="min-w-full divide-y divide-blackbook-200 dark:divide-blackbook-700">
+    <thead class="bg-blackbook-50 dark:bg-blackbook-800">
+        <tr>
+            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-blackbook-500 dark:text-blackbook-400 uppercase tracking-wider">
+                Name
+            </th>
+            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-blackbook-500 dark:text-blackbook-400 uppercase tracking-wider">
+                Email
+            </th>
+            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-blackbook-500 dark:text-blackbook-400 uppercase tracking-wider max-w-[200px]">
+                Location
+            </th>
+            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-blackbook-500 dark:text-blackbook-400 uppercase tracking-wider">
+                Tags
+            </th>
+            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-blackbook-500 dark:text-blackbook-400 uppercase tracking-wider">
+                Suggestion
+            </th>
+            <th scope="col" class="px-3 py-2 text-right text-xs font-medium text-blackbook-500 dark:text-blackbook-400 uppercase tracking-wider">
+                Actions
+            </th>
+        </tr>
+    </thead>
+    <tbody class="bg-white dark:bg-blackbook-900 divide-y divide-blackbook-200 dark:divide-blackbook-700">
+        {% for s in suggestions %}
+        <tr class="hover:bg-blackbook-50 dark:hover:bg-blackbook-800" id="suggestion-row-{{ s.person_id }}">
+            <td class="px-3 py-2 whitespace-nowrap">
+                <a href="/people/{{ s.person_id }}" class="text-sm font-medium text-blackbook-900 dark:text-white hover:text-blue-600">
+                    {{ s.full_name }}
+                </a>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+                <a href="mailto:{{ s.email }}" class="text-xs text-blue-600 hover:text-blue-800">
+                    {{ s.email|truncate(25) }}
+                </a>
+            </td>
+            <td class="px-3 py-2 max-w-[200px]">
+                <span class="text-xs text-blackbook-600 dark:text-blackbook-300 truncate block" title="{{ s.location or '-' }}">{{ s.location or '-' }}</span>
+            </td>
+            <td class="px-3 py-2">
+                <div id="tags-{{ s.person_id }}" class="flex flex-wrap gap-1 items-center">
+                    {% for tag in s.tags[:2] %}
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium"
+                          style="background-color: {{ tag.color or '#e5e7eb' }}20; color: {{ tag.color or '#374151' }}; border: 1px solid {{ tag.color or '#d1d5db' }};">
+                        {{ tag.name|truncate(10) }}
+                    </span>
+                    {% endfor %}
+                    {% if s.tags|length > 2 %}
+                    <span class="text-xs text-blackbook-500 dark:text-blackbook-400">+{{ s.tags|length - 2 }}</span>
+                    {% endif %}
+                    <button onclick="openTagEditor('{{ s.person_id }}', '{{ s.full_name }}')"
+                            class="inline-flex items-center p-0.5 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            title="Manage tags">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </button>
+                </div>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+                <div class="flex items-center gap-1">
+                    {% if s.suggested_list.value == 'polish' %}
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        PL
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        EN
+                    </span>
+                    {% endif %}
+                    <span class="px-1.5 py-0.5 text-xs font-medium rounded
+                                 {% if s.confidence.value == 'high' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
+                                 {% elif s.confidence.value == 'medium' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400
+                                 {% else %}bg-blackbook-100 text-blackbook-700 dark:bg-blackbook-700 dark:text-blackbook-300{% endif %}">
+                        {{ s.confidence.value[0]|upper }}
+                    </span>
+                </div>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
+                <div class="flex items-center justify-end gap-1">
+                    <button onclick="assignToList('{{ s.person_id }}', 'polish', this.closest('tr'))"
+                            class="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                            title="Add to Polish list">
+                        PL
+                    </button>
+                    <button onclick="assignToList('{{ s.person_id }}', 'english', this.closest('tr'))"
+                            class="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
+                            title="Add to English list">
+                        EN
+                    </button>
+                    <button onclick="skipPerson(this.closest('tr'))"
+                            class="inline-flex items-center p-1 text-xs font-medium rounded bg-blackbook-100 text-blackbook-600 hover:bg-blackbook-200 dark:bg-blackbook-700 dark:text-blackbook-300 dark:hover:bg-blackbook-600"
+                            title="Skip for now">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="text-center py-12">
+    <svg class="mx-auto h-12 w-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <h3 class="mt-2 text-sm font-medium text-blackbook-900 dark:text-white">All done!</h3>
+    <p class="mt-1 text-sm text-blackbook-500 dark:text-blackbook-400">
+        Everyone with an email has been assigned to a list.
+    </p>
+    <a href="/christmas-lists" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700">
+        View Lists
+    </a>
+</div>
+{% endif %}

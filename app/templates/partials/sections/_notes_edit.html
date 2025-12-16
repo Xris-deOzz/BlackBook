@@ -1,0 +1,75 @@
+{# Notes Section - Edit Mode with Rich Text #}
+<form id="person-notes-form"
+      hx-put="/api/people/{{ person.id }}/sections/notes"
+      hx-target="#section-notes-content"
+      hx-swap="innerHTML"
+      class="space-y-3">
+
+    {# Hidden input to store the HTML content #}
+    <input type="hidden" name="notes" id="person-notes-hidden">
+
+    {# Quill editor container #}
+    <div class="quill-editor border border-blackbook-300 rounded-md overflow-hidden">
+        <div id="person-notes-editor" style="min-height: 150px;"></div>
+    </div>
+
+    {# Store initial content for Quill to load #}
+    <div id="person-notes-initial-content" style="display: none;">{{ person.notes or '' | safe }}</div>
+
+    <div class="flex justify-end gap-2">
+        <button type="button"
+                hx-get="/api/people/{{ person.id }}/sections/notes/view"
+                hx-target="#section-notes-content"
+                hx-swap="innerHTML"
+                class="px-3 py-1.5 text-sm text-blackbook-600 hover:text-blackbook-800">
+            Cancel
+        </button>
+        <button type="submit"
+                class="px-3 py-1.5 text-sm bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700">
+            Save
+        </button>
+    </div>
+</form>
+
+<script>
+setTimeout(function() {
+    const editorEl = document.getElementById('person-notes-editor');
+    if (!editorEl || editorEl.querySelector('.ql-editor')) return;
+
+    const quill = new Quill('#person-notes-editor', {
+        theme: 'snow',
+        placeholder: 'Add notes about this person...',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+
+    // Load initial content from hidden div
+    const initialContentEl = document.getElementById('person-notes-initial-content');
+    if (initialContentEl && initialContentEl.innerHTML.trim()) {
+        quill.root.innerHTML = initialContentEl.innerHTML;
+    }
+
+    const form = document.getElementById('person-notes-form');
+    const hiddenInput = document.getElementById('person-notes-hidden');
+
+    if (form && hiddenInput) {
+        form.addEventListener('htmx:configRequest', function(evt) {
+            let content = quill.root.innerHTML;
+            if (content === '<p><br></p>' || content === '<p></p>') content = '';
+            hiddenInput.value = content;
+        });
+
+        quill.on('text-change', function() {
+            let content = quill.root.innerHTML;
+            if (content === '<p><br></p>' || content === '<p></p>') content = '';
+            hiddenInput.value = content;
+        });
+    }
+}, 0);
+</script>

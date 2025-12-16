@@ -1,0 +1,57 @@
+{% if contacts %}
+<div class="space-y-3">
+    {% for contact in contacts %}
+    <div class="flex items-center justify-between py-2 border-b border-blackbook-100 last:border-0">
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="flex-shrink-0 h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-800 text-sm font-medium">
+                {{ (contact.name or contact.email)[0]|upper }}
+            </div>
+            <div class="min-w-0">
+                <a href="/pending-contacts/{{ contact.id }}" class="text-sm font-medium text-blackbook-900 hover:text-blue-600 truncate block">
+                    {{ contact.name or contact.email }}
+                </a>
+                {% if contact.name %}
+                <p class="text-xs text-blackbook-500 truncate">{{ contact.email }}</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="text-xs text-blackbook-500">
+                {{ contact.occurrence_count }} meeting{% if contact.occurrence_count != 1 %}s{% endif %}
+            </span>
+            <button hx-post="/pending-contacts/{{ contact.id }}/create"
+                    hx-target="#pending-contacts-widget"
+                    hx-swap="innerHTML"
+                    hx-get="/pending-contacts/widget"
+                    class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                Add
+            </button>
+            <button hx-post="/pending-contacts/{{ contact.id }}/ignore"
+                    hx-target="#pending-contacts-widget"
+                    hx-swap="innerHTML"
+                    hx-get="/pending-contacts/widget"
+                    class="text-xs text-blackbook-400 hover:text-blackbook-600">
+                Ignore
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if total_count > 5 %}
+<p class="text-xs text-blackbook-500 mt-4 text-center">
+    Showing 5 of {{ total_count }} pending contacts
+</p>
+{% endif %}
+
+{% else %}
+<div class="text-center py-8">
+    <svg class="mx-auto h-12 w-12 text-blackbook-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>
+    <p class="mt-2 text-sm text-blackbook-500">No pending contacts</p>
+    <p class="text-xs text-blackbook-400 mt-1">
+        Sync your calendar to discover new contacts
+    </p>
+</div>
+{% endif %}

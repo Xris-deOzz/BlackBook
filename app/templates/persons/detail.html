@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+{% from "partials/_components.html" import collapsible_section, profile_picture_display, field_display, multi_entry_display, employment_display, education_display, relationship_display, address_display, website_display %}
+
+{% block breadcrumb %}
+<nav class="bg-white border-b border-blackbook-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="/" class="text-blackbook-500 hover:text-blackbook-700">Home</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li>
+                <a href="/people" class="text-blackbook-500 hover:text-blackbook-700">People</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li class="text-blackbook-900 font-medium">{{ person.full_name }}</li>
+        </ol>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header with Back Button, Picture, and Name -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <a href="/people" class="text-blackbook-500 hover:text-blackbook-700">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+            </a>
+            {% include "partials/sections/_header_view.html" %}
+        </div>
+        <div class="flex items-center space-x-3">
+            <!-- Email Button -->
+            {% if email_compose_url %}
+            <a href="{{ email_compose_url }}" target="_blank"
+               class="inline-flex items-center px-3 py-1.5 bg-blackbook-100 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-200 transition-colors"
+               title="Send email to {{ person.primary_email }}">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                Email
+            </a>
+            {% else %}
+            <button disabled
+                    class="inline-flex items-center px-3 py-1.5 bg-blackbook-50 text-blackbook-400 font-medium rounded-md cursor-not-allowed"
+                    title="No email address on file">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                Email
+            </button>
+            {% endif %}
+
+            <!-- AI Research Button -->
+            <button onclick="openAiSidebar()"
+                    class="inline-flex items-center px-3 py-1.5 bg-blackbook-100 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-200 transition-colors">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                AI Research
+            </button>
+
+            <!-- Edit All Sections Button -->
+            <button id="edit-all-btn"
+                    onclick="enterEditAllMode()"
+                    class="inline-flex items-center px-3 py-1.5 bg-blackbook-100 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-200 transition-colors">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Edit All
+            </button>
+            <!-- Done Editing Button (hidden initially) -->
+            <button id="done-editing-btn"
+                    onclick="exitEditAllMode()"
+                    class="hidden inline-flex items-center px-3 py-1.5 bg-green-100 text-green-700 font-medium rounded-md hover:bg-green-200 transition-colors">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Done Editing
+            </button>
+
+            <!-- Merge Button -->
+            <a href="/people/{{ person.id }}/merge"
+               class="inline-flex items-center px-3 py-1.5 bg-blackbook-100 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-200 transition-colors">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                </svg>
+                Merge
+            </a>
+
+            <!-- Delete Button -->
+            <button onclick="confirmDelete()"
+                    class="inline-flex items-center px-3 py-1.5 bg-blackbook-100 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-200 transition-colors">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Delete
+            </button>
+        </div>
+    </div>
+
+    <!-- Profile Picture + Tags Section - Side by Side -->
+    <div class="bg-white rounded-lg shadow-md p-4">
+        <div class="flex gap-6">
+            <!-- Profile Picture Column -->
+            <div id="profile-picture-section" class="flex-shrink-0">
+                {% include "partials/sections/_profile_picture.html" %}
+            </div>
+
+            <!-- Tags Column -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-semibold text-blackbook-900">Tags</h2>
+                </div>
+                <div id="tags-widget-container"
+                     hx-get="/people/{{ person.id }}/tags/manage"
+                     hx-trigger="load"
+                     hx-target="this">
+                    <!-- Loading state -->
+                    <div class="flex flex-wrap gap-2">
+                        {% if person.tags %}
+                        {% for tag in person.tags %}
+                        <span class="px-3 py-1 text-sm font-medium rounded-full"
+                              style="background-color: {{ tag.color or '#e5e7eb' }}20; color: {{ tag.color or '#374151' }}; border: 1px solid {{ tag.color or '#d1d5db' }};">
+                            {{ tag.name }}
+                        </span>
+                        {% endfor %}
+                        {% else %}
+                        <span class="text-sm text-blackbook-400 italic">No tags assigned</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Main Content Sections -->
+        <div class="lg:col-span-2 space-y-4">
+
+            <!-- Contact Information Section -->
+            {% call collapsible_section('contact-info', 'Contact Information', open=true, edit_action='/api/people/' ~ person.id ~ '/sections/contact/edit') %}
+            {% include "partials/sections/_contact_view.html" %}
+            {% endcall %}
+
+            <!-- Email Management Modal Container -->
+            <div id="email-manage-modal"></div>
+
+            <!-- Employment History Section (Combined Current + Past) -->
+            {% call collapsible_section('employment', 'Employment History', open=true, edit_action='/api/people/' ~ person.id ~ '/sections/employment/edit') %}
+            {% include "partials/sections/_employment_view.html" %}
+            {% endcall %}
+
+            <!-- Social Links Section -->
+            {% call collapsible_section('social', 'Social Profiles', open=true, edit_action='/api/people/' ~ person.id ~ '/sections/social/edit') %}
+            {% include "partials/sections/_social_view.html" %}
+            {% endcall %}
+
+            <!-- Education Section -->
+            {% call collapsible_section('education', 'Education', open=true, edit_action='/api/people/' ~ person.id ~ '/sections/education/edit') %}
+            {% include "partials/sections/_education_view.html" %}
+            {% endcall %}
+
+            <!-- Relationships Section -->
+            {% call collapsible_section('relationships', 'Relationships', open=true, edit_action='/api/people/' ~ person.id ~ '/sections/relationships/edit') %}
+            {% include "partials/sections/_relationships_view.html" %}
+            {% endcall %}
+
+            <!-- Investment Details Section -->
+            {% call collapsible_section('investment', 'Investment Details', open=false, edit_action='/api/people/' ~ person.id ~ '/sections/investment/edit') %}
+            {% include "partials/sections/_investment_view.html" %}
+            {% endcall %}
+
+            <!-- Notes Section -->
+            {% call collapsible_section('notes', 'Notes', open=true, edit_action='/api/people/' ~ person.id ~ '/sections/notes/edit') %}
+            {% include "partials/sections/_notes_view.html" %}
+            {% endcall %}
+        </div>
+
+        <!-- Right Column: Interactions, Email History -->
+        <div class="space-y-6">
+            {% include "partials/sections/_interactions_card.html" %}
+
+            <!-- Interactions Modal Container -->
+            <div id="interactions-modal-container"></div>
+
+            <!-- Email History Card -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-blackbook-900">Email History</h2>
+                    <button hx-get="/emails/person/{{ person.id }}/refresh"
+                            hx-target="#email-list"
+                            hx-indicator="#email-spinner"
+                            class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                        Refresh
+                    </button>
+                </div>
+                <div id="email-list"
+                     hx-get="/emails/person/{{ person.id }}"
+                     hx-trigger="load"
+                     hx-target="this"
+                     hx-indicator="#email-spinner">
+                    <div id="email-spinner" class="htmx-indicator flex justify-center py-8">
+                        <svg class="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metadata Card -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-lg font-semibold text-blackbook-900 mb-4">Record Info</h2>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-blackbook-500">Created:</span>
+                        <span class="text-blackbook-700">{{ person.created_at.strftime('%b %d, %Y') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-blackbook-500">Updated:</span>
+                        <span class="text-blackbook-700">{{ person.updated_at.strftime('%b %d, %Y') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-blackbook-500">Contacted:</span>
+                        <span class="text-blackbook-700">{{ 'Yes' if person.contacted else 'No' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-blackbook-900 mb-2">Delete Person</h3>
+        <p class="text-blackbook-600 mb-4">
+            Are you sure you want to delete <strong>{{ person.full_name }}</strong>?
+            This action cannot be undone.
+        </p>
+        <div class="flex justify-end gap-3">
+            <button onclick="closeDeleteModal()"
+                    class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                Cancel
+            </button>
+            <button hx-delete="/people/{{ person.id }}"
+                    hx-target="body"
+                    class="px-4 py-2 bg-red-600 text-white font-medium rounded-md hover:bg-red-700">
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Picture Zoom Modal -->
+<div id="profile-picture-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-50" onclick="closeProfilePictureModal()">
+    <div class="relative max-w-4xl max-h-[90vh] p-4">
+        <!-- Close button -->
+        <button onclick="closeProfilePictureModal()"
+                class="absolute -top-2 -right-2 w-10 h-10 bg-white text-blackbook-700 rounded-full flex items-center justify-center shadow-lg hover:bg-blackbook-100 z-10">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+        <img id="profile-picture-enlarged"
+             src=""
+             alt="{{ person.full_name }}"
+             class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain"
+             onclick="event.stopPropagation()">
+        <p class="text-white text-center mt-3 text-lg font-medium">{{ person.full_name }}</p>
+    </div>
+</div>
+
+<!-- AI Research Sidebar -->
+{% with entity_type="person", entity_id=person.id, entity_name=person.full_name %}
+{% include "partials/_ai_sidebar.html" %}
+{% endwith %}
+
+<script>
+    function confirmDelete() {
+        document.getElementById('delete-modal').classList.remove('hidden');
+        document.getElementById('delete-modal').classList.add('flex');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').classList.add('hidden');
+        document.getElementById('delete-modal').classList.remove('flex');
+    }
+
+    function closeInteractionsModal() {
+        const modal = document.getElementById('interactions-modal-container');
+        if (modal) modal.innerHTML = '';
+    }
+
+    // Profile Picture Modal Functions
+    function openProfilePictureModal() {
+        const modal = document.getElementById('profile-picture-modal');
+        const enlargedImg = document.getElementById('profile-picture-enlarged');
+        const profileSection = document.getElementById('profile-picture-section');
+
+        // Get the current profile picture src from the section
+        const currentImg = profileSection.querySelector('img');
+        if (currentImg && currentImg.src && modal && enlargedImg) {
+            enlargedImg.src = currentImg.src;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+    }
+
+    function closeProfilePictureModal() {
+        const modal = document.getElementById('profile-picture-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDeleteModal();
+            closeInteractionsModal();
+            closeProfilePictureModal();
+            closeAiSidebar();
+        }
+    });
+
+    // Close modal on outside click
+    document.getElementById('delete-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDeleteModal();
+        }
+    });
+
+    // Edit All Mode - Triggers all section edit buttons at once
+    function enterEditAllMode() {
+        // Find and click all section edit buttons
+        const editButtons = document.querySelectorAll('.section-edit-btn');
+        console.log('Found edit buttons:', editButtons.length);
+        editButtons.forEach(btn => {
+            // Get the hx-get URL and target
+            const url = btn.getAttribute('hx-get');
+            const targetSelector = btn.getAttribute('hx-target');
+            const target = document.querySelector(targetSelector);
+
+            console.log('Triggering edit for:', url, '->', targetSelector);
+
+            if (url && target) {
+                // Directly issue the HTMX request
+                htmx.ajax('GET', url, {target: target, swap: 'innerHTML'});
+            }
+        });
+
+        // Toggle button visibility
+        document.getElementById('edit-all-btn').classList.add('hidden');
+        document.getElementById('done-editing-btn').classList.remove('hidden');
+    }
+
+    function exitEditAllMode() {
+        // Reload the page to reset all sections to view mode
+        // This ensures all data is fresh and in view state
+        window.location.reload();
+    }
+
+    // ============ DYNAMIC SUBTITLE FROM EMPLOYMENT ============
+    // Update subtitle when employment section changes
+    function updateSubtitleFromEmployment() {
+        const employmentSection = document.getElementById('section-employment-content');
+        if (!employmentSection) return;
+
+        const subtitle = document.getElementById('person-subtitle');
+        if (!subtitle) return;
+
+        // Find current employment entries (those with green border/background)
+        const currentEntries = employmentSection.querySelectorAll('.border-green-500');
+
+        let title = '';
+        let company = '';
+
+        if (currentEntries.length > 0) {
+            // Get the first current employment
+            const firstCurrent = currentEntries[0];
+
+            // Get company name (from the link or text)
+            const companyLink = firstCurrent.querySelector('a.hover\\:text-blue-600');
+            const companyDiv = firstCurrent.querySelector('.font-medium');
+            if (companyLink) {
+                company = companyLink.textContent.trim();
+            } else if (companyDiv) {
+                company = companyDiv.textContent.trim();
+            }
+
+            // Get title/role (from the text-sm div)
+            const titleDiv = firstCurrent.querySelector('.text-sm.text-blackbook-600');
+            if (titleDiv) {
+                title = titleDiv.textContent.trim();
+            }
+        }
+
+        // Build and update subtitle
+        let subtitleText = '';
+        if (title && company) {
+            subtitleText = `${title} at ${company}`;
+        } else if (title) {
+            subtitleText = title;
+        } else if (company) {
+            subtitleText = `at ${company}`;
+        }
+
+        if (subtitleText) {
+            subtitle.textContent = subtitleText;
+            subtitle.classList.remove('hidden');
+        } else {
+            // If no current employment, keep any existing person.title or hide
+            if (!subtitle.textContent.trim()) {
+                subtitle.classList.add('hidden');
+            }
+        }
+    }
+
+    // Listen for HTMX events on employment section
+    document.body.addEventListener('htmx:afterSwap', function(e) {
+        // Check if the swap affected the employment section
+        if (e.detail.target && (
+            e.detail.target.id === 'section-employment-content' ||
+            e.detail.target.closest && e.detail.target.closest('#section-employment-content')
+        )) {
+            // Small delay to ensure DOM is fully updated
+            setTimeout(updateSubtitleFromEmployment, 100);
+        }
+    });
+</script>
+{% endblock %}

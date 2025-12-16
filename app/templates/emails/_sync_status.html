@@ -1,0 +1,46 @@
+{% if sync_triggered is defined and sync_triggered %}
+<div class="text-sm text-blue-600 flex items-center">
+    <svg class="w-4 h-4 mr-1.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+    </svg>
+    Syncing...
+</div>
+{% elif accounts %}
+    {% set ns = namespace(any_syncing=false, last_sync=none) %}
+    {% for account in accounts %}
+        {% set state = sync_states.get(account.id|string) %}
+        {% if state %}
+            {% if state.sync_status == 'syncing' %}
+                {% set ns.any_syncing = true %}
+            {% endif %}
+            {% if state.last_sync_at and (not ns.last_sync or state.last_sync_at > ns.last_sync) %}
+                {% set ns.last_sync = state.last_sync_at %}
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+
+    {% if ns.any_syncing %}
+    <div class="text-sm text-blue-600 flex items-center">
+        <svg class="w-4 h-4 mr-1.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Syncing...
+    </div>
+    {% else %}
+    <div class="text-xs text-blackbook-500 flex items-center justify-between">
+        <span class="flex items-center">
+            <svg class="w-3.5 h-3.5 mr-1 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            {{ accounts|length }} account{% if accounts|length != 1 %}s{% endif %}
+        </span>
+        {% if ns.last_sync %}
+        <span class="text-blackbook-400" title="Last sync: {{ ns.last_sync.strftime('%Y-%m-%d %H:%M') }}">
+            {{ ns.last_sync.strftime('%b %d, %H:%M') }}
+        </span>
+        {% endif %}
+    </div>
+    {% endif %}
+{% else %}
+<div class="text-xs text-blackbook-500">No accounts connected</div>
+{% endif %}

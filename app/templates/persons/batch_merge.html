@@ -1,0 +1,910 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<nav class="bg-white border-b border-blackbook-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="/" class="text-blackbook-500 hover:text-blackbook-700">Home</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li>
+                <a href="/people" class="text-blackbook-500 hover:text-blackbook-700">People</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li class="text-blackbook-900 font-medium">Merge Selected</li>
+        </ol>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <a href="/people" class="text-blackbook-500 hover:text-blackbook-700">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-blackbook-900">Merge {{ persons|length }} People</h1>
+                <p class="text-blackbook-500">Select which person to keep - others will be merged into it</p>
+            </div>
+        </div>
+    </div>
+
+    <form id="merge-form" method="POST" action="/people/merge/execute">
+        <!-- Person Selection Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for person in persons %}
+            <label class="cursor-pointer">
+                <input type="radio" name="keep_id" value="{{ person.id }}" class="hidden peer" {% if loop.first %}checked{% endif %}>
+                <input type="hidden" name="merge_ids" value="{{ person.id }}">
+                <div class="bg-white rounded-lg shadow-md p-4 border-2 border-transparent peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-blackbook-300 transition-colors">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-blackbook-100 text-blackbook-700 peer-checked:bg-blue-100 peer-checked:text-blue-700">
+                            {% if loop.first %}Will Keep{% else %}Will Merge{% endif %}
+                        </span>
+                        <div class="w-5 h-5 rounded-full border-2 border-blackbook-300 peer-checked:border-blue-500 peer-checked:bg-blue-500 flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white hidden peer-checked:block" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 mb-3">
+                        {% if person.profile_picture %}
+                        <img src="{{ person.profile_picture }}" alt="{{ person.full_name }}"
+                             class="w-12 h-12 rounded-full object-cover border-2 border-blackbook-200">
+                        {% else %}
+                        <div class="w-12 h-12 rounded-full bg-blackbook-200 flex items-center justify-center border-2 border-blackbook-300">
+                            <span class="text-lg font-semibold text-blackbook-600">
+                                {{ person.full_name[0]|upper }}{% if person.last_name %}{{ person.last_name[0]|upper }}{% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-medium text-blackbook-900 truncate">{{ person.full_name }}</h3>
+                            {% if person.title %}
+                            <p class="text-sm text-blackbook-500 truncate">{{ person.title }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="text-xs text-blackbook-500 space-y-2">
+                        {% if person.email %}
+                        <p class="truncate">{{ person.email }}</p>
+                        {% endif %}
+
+                        <!-- Data counts badges -->
+                        <div class="flex flex-wrap gap-1">
+                            <span class="px-2 py-0.5 bg-blackbook-100 rounded text-blackbook-600">
+                                {{ person.emails|length }} email{% if person.emails|length != 1 %}s{% endif %}
+                            </span>
+                            {% set phone_count = person.phones|length + (1 if person.phone else 0) %}
+                            <span class="px-2 py-0.5 bg-blackbook-100 rounded text-blackbook-600">
+                                {{ phone_count }} phone{% if phone_count != 1 %}s{% endif %}
+                            </span>
+                            <span class="px-2 py-0.5 bg-blackbook-100 rounded text-blackbook-600">
+                                {{ person.tags|length }} tag{% if person.tags|length != 1 %}s{% endif %}
+                            </span>
+                            <span class="px-2 py-0.5 bg-blackbook-100 rounded text-blackbook-600">
+                                {{ person.organizations|length }} org{% if person.organizations|length != 1 %}s{% endif %}
+                            </span>
+                            <span class="px-2 py-0.5 bg-blackbook-100 rounded text-blackbook-600">
+                                {{ person.interactions|length }} interaction{% if person.interactions|length != 1 %}s{% endif %}
+                            </span>
+                        </div>
+
+                        <!-- Email list -->
+                        {% if person.emails %}
+                        <div class="mt-2 pt-2 border-t border-blackbook-200">
+                            <p class="font-medium text-blackbook-600 mb-1">Emails:</p>
+                            {% for email in person.emails[:3] %}
+                            <p class="truncate text-blackbook-500">{{ email.email }}</p>
+                            {% endfor %}
+                            {% if person.emails|length > 3 %}
+                            <p class="text-blackbook-400">+{{ person.emails|length - 3 }} more</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Phone list -->
+                        {% if person.phones or person.phone %}
+                        <div class="mt-2 pt-2 border-t border-blackbook-200">
+                            <p class="font-medium text-blackbook-600 mb-1">Phones:</p>
+                            {% if person.phone %}
+                            <p class="truncate text-blackbook-500">{{ person.phone }} <span class="text-xs text-blackbook-400">(primary)</span></p>
+                            {% endif %}
+                            {% for phone in person.phones[:3] %}
+                            <p class="truncate text-blackbook-500">{{ phone.phone_number }} {% if phone.label %}({{ phone.label.value }}){% endif %}</p>
+                            {% endfor %}
+                            {% if person.phones|length > 3 %}
+                            <p class="text-blackbook-400">+{{ person.phones|length - 3 }} more</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Notes preview -->
+                        {% if person.notes %}
+                        <div class="mt-2 pt-2 border-t border-blackbook-200">
+                            <p class="font-medium text-blackbook-600 mb-1">Notes:</p>
+                            <p class="text-blackbook-500 line-clamp-2">{{ person.notes[:100] }}{% if person.notes|length > 100 %}...{% endif %}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+
+        <!-- Field Selection - Choose which values to keep -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-blackbook-900 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-blackbook-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    Field Selection
+                </h2>
+                <span class="text-sm text-blackbook-500">Choose which value to keep for each field</span>
+            </div>
+
+            <p class="text-sm text-blackbook-600 mb-4">
+                For each field below, select which person's value you want to keep in the merged profile. Fields with no value from any person are hidden.
+            </p>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-blackbook-200">
+                    <thead class="bg-blackbook-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider w-40">Field</th>
+                            {% for person in persons %}
+                            <th class="px-4 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                                {{ person.full_name|truncate(20) }}
+                                {% if loop.first %}<span class="ml-1 text-blue-500">(default)</span>{% endif %}
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-blackbook-200">
+                        <!-- Full Name -->
+                        {% set has_values = persons|selectattr('full_name')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Full Name</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_full_name" value="{{ person.id }}"
+                                           {% if loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm text-blackbook-900">{{ person.full_name or '-' }}</span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- First Name -->
+                        {% set has_values = persons|selectattr('first_name')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">First Name</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_first_name" value="{{ person.id }}"
+                                           {% if person.first_name and loop.first %}checked{% elif person.first_name and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm {% if person.first_name %}text-blackbook-900{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.first_name or '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Last Name -->
+                        {% set has_values = persons|selectattr('last_name')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Last Name</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_last_name" value="{{ person.id }}"
+                                           {% if person.last_name and loop.first %}checked{% elif person.last_name and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm {% if person.last_name %}text-blackbook-900{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.last_name or '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Title -->
+                        {% set has_values = persons|selectattr('title')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Title</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_title" value="{{ person.id }}"
+                                           {% if person.title and loop.first %}checked{% elif person.title and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm {% if person.title %}text-blackbook-900{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.title or '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Profile Picture -->
+                        {% set has_values = persons|selectattr('profile_picture')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Profile Picture</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_profile_picture" value="{{ person.id }}"
+                                           {% if person.profile_picture and loop.first %}checked{% elif person.profile_picture and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    {% if person.profile_picture %}
+                                    <img src="{{ person.profile_picture }}" alt="Profile" class="w-10 h-10 rounded-full object-cover">
+                                    {% else %}
+                                    <span class="text-sm text-blackbook-400 italic">(no image)</span>
+                                    {% endif %}
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Birthday -->
+                        {% set has_values = persons|selectattr('birthday')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Birthday</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_birthday" value="{{ person.id }}"
+                                           {% if person.birthday and loop.first %}checked{% elif person.birthday and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm {% if person.birthday %}text-blackbook-900{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.birthday.strftime('%b %d, %Y') if person.birthday else '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Location -->
+                        {% set has_values = persons|selectattr('location')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Location</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_location" value="{{ person.id }}"
+                                           {% if person.location and loop.first %}checked{% elif person.location and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm {% if person.location %}text-blackbook-900{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.location or '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Phone (legacy field) -->
+                        {% set has_values = persons|selectattr('phone')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Phone</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_phone" value="{{ person.id }}"
+                                           {% if person.phone and loop.first %}checked{% elif person.phone and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm {% if person.phone %}text-blackbook-900{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.phone or '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- LinkedIn -->
+                        {% set has_values = persons|selectattr('linkedin')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">LinkedIn</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_linkedin" value="{{ person.id }}"
+                                           {% if person.linkedin and loop.first %}checked{% elif person.linkedin and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500 flex-shrink-0">
+                                    <span class="text-sm {% if person.linkedin %}text-blackbook-900 break-all{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.linkedin if person.linkedin else '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Twitter -->
+                        {% set has_values = persons|selectattr('twitter')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Twitter</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_twitter" value="{{ person.id }}"
+                                           {% if person.twitter and loop.first %}checked{% elif person.twitter and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500 flex-shrink-0">
+                                    <span class="text-sm {% if person.twitter %}text-blackbook-900 break-all{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.twitter or '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Website -->
+                        {% set has_values = persons|selectattr('website')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Website</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_website" value="{{ person.id }}"
+                                           {% if person.website and loop.first %}checked{% elif person.website and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500 flex-shrink-0">
+                                    <span class="text-sm {% if person.website %}text-blackbook-900 break-all{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.website if person.website else '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Crunchbase -->
+                        {% set has_values = persons|selectattr('crunchbase')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Crunchbase</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_crunchbase" value="{{ person.id }}"
+                                           {% if person.crunchbase and loop.first %}checked{% elif person.crunchbase and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500 flex-shrink-0">
+                                    <span class="text-sm {% if person.crunchbase %}text-blackbook-900 break-all{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.crunchbase if person.crunchbase else '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- AngelList -->
+                        {% set has_values = persons|selectattr('angellist')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">AngelList</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_angellist" value="{{ person.id }}"
+                                           {% if person.angellist and loop.first %}checked{% elif person.angellist and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500 flex-shrink-0">
+                                    <span class="text-sm {% if person.angellist %}text-blackbook-900 break-all{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.angellist if person.angellist else '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Investment Type -->
+                        {% set has_values = persons|selectattr('investment_type')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Investment Type</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_investment_type" value="{{ person.id }}"
+                                           {% if person.investment_type and loop.first %}checked{% elif person.investment_type and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm {% if person.investment_type %}text-blackbook-900{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.investment_type or '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Amount Funded -->
+                        {% set has_values = persons|selectattr('amount_funded')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Amount Funded</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_amount_funded" value="{{ person.id }}"
+                                           {% if person.amount_funded and loop.first %}checked{% elif person.amount_funded and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm {% if person.amount_funded %}text-blackbook-900{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.amount_funded or '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Potential Intro VC -->
+                        {% set has_values = persons|selectattr('potential_intro_vc')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Potential Intro VC</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_potential_intro_vc" value="{{ person.id }}"
+                                           {% if person.potential_intro_vc and loop.first %}checked{% elif person.potential_intro_vc and not loop.first %}{% elif loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm {% if person.potential_intro_vc %}text-blackbook-900{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.potential_intro_vc or '(empty)' }}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+
+                        <!-- Notes (special handling - can combine) -->
+                        {% set has_values = persons|selectattr('notes')|list|length > 0 %}
+                        {% if has_values %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">
+                                Notes
+                                <span class="block text-xs text-blackbook-500 font-normal mt-1">(or combine all)</span>
+                            </td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_notes" value="{{ person.id }}"
+                                           {% if loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm {% if person.notes %}text-blackbook-900{% else %}text-blackbook-400 italic{% endif %}">
+                                        {{ person.notes[:80]|e if person.notes else '(empty)' }}{% if person.notes and person.notes|length > 80 %}...{% endif %}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        <tr class="border-t-0">
+                            <td class="px-4 py-2"></td>
+                            <td colspan="{{ persons|length }}" class="px-4 py-2">
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="checkbox" name="combine_notes" value="true" checked
+                                           class="h-4 w-4 text-blue-600 border-blackbook-300 rounded focus:ring-blue-500">
+                                    <span class="text-sm text-blackbook-700">Combine all notes (append from all persons)</span>
+                                </label>
+                            </td>
+                        </tr>
+                        {% endif %}
+
+                        <!-- Contacted -->
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">Contacted</td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <label class="flex items-start space-x-2 cursor-pointer">
+                                    <input type="radio" name="field_contacted" value="{{ person.id }}"
+                                           {% if loop.first %}checked{% endif %}
+                                           class="mt-1 h-4 w-4 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                                    <span class="text-sm text-blackbook-900">
+                                        {% if person.contacted %}
+                                        <span class="text-green-600">Yes</span>
+                                        {% else %}
+                                        <span class="text-blackbook-400">No</span>
+                                        {% endif %}
+                                    </span>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- Divider for consolidated items -->
+                        <tr class="bg-blackbook-100">
+                            <td colspan="{{ persons|length + 1 }}" class="px-4 py-2">
+                                <span class="text-xs font-semibold text-blackbook-600 uppercase tracking-wider">
+                                    Items to Consolidate (all will be merged)
+                                </span>
+                            </td>
+                        </tr>
+
+                        <!-- Emails (consolidated) -->
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                    </svg>
+                                    Emails
+                                </div>
+                                <span class="text-xs text-blackbook-500 font-normal block mt-1">All combined</span>
+                            </td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <div class="text-sm space-y-1 max-h-24 overflow-y-auto">
+                                    {% if person.emails %}
+                                        {% for email in person.emails[:3] %}
+                                        <div class="text-blackbook-700 truncate">{{ email.email }}</div>
+                                        {% endfor %}
+                                        {% if person.emails|length > 3 %}
+                                        <div class="text-xs text-blackbook-400">+{{ person.emails|length - 3 }} more</div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-blackbook-400 italic">No emails</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- Phones (consolidated) -->
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                    </svg>
+                                    Phones
+                                </div>
+                                <span class="text-xs text-blackbook-500 font-normal block mt-1">All combined</span>
+                            </td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <div class="text-sm space-y-1 max-h-24 overflow-y-auto">
+                                    {% set phone_list = [] %}
+                                    {% if person.phone %}
+                                        {% if phone_list.append(person.phone ~ ' (primary)') %}{% endif %}
+                                    {% endif %}
+                                    {% for phone in person.phones %}
+                                        {% if phone_list.append(phone.phone_number ~ ' (' ~ phone.label.value ~ ')') %}{% endif %}
+                                    {% endfor %}
+                                    {% if phone_list %}
+                                        {% for p in phone_list[:3] %}
+                                        <div class="text-blackbook-700 truncate">{{ p }}</div>
+                                        {% endfor %}
+                                        {% if phone_list|length > 3 %}
+                                        <div class="text-xs text-blackbook-400">+{{ phone_list|length - 3 }} more</div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-blackbook-400 italic">No phones</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- Tags (consolidated) -->
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                    </svg>
+                                    Tags
+                                </div>
+                                <span class="text-xs text-blackbook-500 font-normal block mt-1">Deduplicated</span>
+                            </td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <div class="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                                    {% if person.tags %}
+                                        {% for tag in person.tags[:5] %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" style="background-color: {{ tag.color }}20; color: {{ tag.color }}">
+                                            {{ tag.name }}
+                                        </span>
+                                        {% endfor %}
+                                        {% if person.tags|length > 5 %}
+                                        <span class="text-xs text-blackbook-400">+{{ person.tags|length - 5 }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-sm text-blackbook-400 italic">No tags</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- Organizations (consolidated) -->
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    Organizations
+                                </div>
+                                <span class="text-xs text-blackbook-500 font-normal block mt-1">All combined</span>
+                            </td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <div class="text-sm space-y-1 max-h-24 overflow-y-auto">
+                                    {% if person.organizations %}
+                                        {% for po in person.organizations[:3] %}
+                                        <div class="text-blackbook-700 truncate">
+                                            {{ po.organization.name }}{% if po.role %} <span class="text-xs text-blackbook-400">({{ po.role }})</span>{% endif %}
+                                        </div>
+                                        {% endfor %}
+                                        {% if person.organizations|length > 3 %}
+                                        <div class="text-xs text-blackbook-400">+{{ person.organizations|length - 3 }} more</div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-blackbook-400 italic">No organizations</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- Interactions (consolidated) -->
+                        <tr>
+                            <td class="px-4 py-3 text-sm font-medium text-blackbook-700">
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                    </svg>
+                                    Interactions
+                                </div>
+                                <span class="text-xs text-blackbook-500 font-normal block mt-1">All combined</span>
+                            </td>
+                            {% for person in persons %}
+                            <td class="px-4 py-3">
+                                <div class="text-sm">
+                                    {% if person.interactions %}
+                                        <span class="text-blackbook-700">{{ person.interactions|length }} interaction{% if person.interactions|length != 1 %}s{% endif %}</span>
+                                        {% if person.interactions[0].interaction_date %}
+                                        <div class="text-xs text-blackbook-500 mt-1">Latest: {{ person.interactions[0].interaction_date.strftime('%b %d, %Y') }}</div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-blackbook-400 italic">No interactions</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+            <div class="flex">
+                <svg class="h-5 w-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-800">How merging works</h3>
+                    <ul class="mt-2 text-sm text-blue-700 list-disc list-inside space-y-1">
+                        <li>Select which person to <strong>keep</strong> by clicking their card at the top</li>
+                        <li>Use the <strong>Field Selection</strong> table to choose which person's value to use for each profile field</li>
+                        <li>All emails, phone numbers, interactions, tags, and organization links from all people will be consolidated</li>
+                        <li>Duplicate emails, phones, and tags will be skipped automatically</li>
+                        <li>For notes, you can either select one person's notes or check "Combine all notes" to merge them together</li>
+                        <li>Other selected people will be permanently deleted</li>
+                        <li><strong>This action cannot be undone</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-3 mt-6">
+            <a href="/people" class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                Cancel
+            </a>
+            <button type="button" onclick="confirmMerge()"
+                    class="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700">
+                Merge {{ persons|length }} People
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="merge-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-blackbook-900 mb-2">Confirm Merge</h3>
+        <p class="text-blackbook-600 mb-4">
+            Merge <strong>{{ persons|length - 1 }}</strong> person{% if persons|length > 2 %}s{% endif %} into the selected person?
+        </p>
+        <p class="text-sm text-blackbook-500 mb-4">
+            All data will be transferred to the kept person, and the others will be deleted.
+        </p>
+        <div class="flex justify-end gap-3">
+            <button onclick="closeMergeModal()"
+                    class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                Cancel
+            </button>
+            <button id="confirm-merge-btn"
+                    onclick="executeMerge()"
+                    class="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700">
+                Merge
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-4 right-4 transform translate-y-20 transition-transform duration-300 z-50">
+    <div class="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span id="toast-message">Merged successfully!</span>
+    </div>
+</div>
+
+<script>
+    function confirmMerge() {
+        document.getElementById('merge-modal').classList.remove('hidden');
+        document.getElementById('merge-modal').classList.add('flex');
+    }
+
+    function closeMergeModal() {
+        document.getElementById('merge-modal').classList.add('hidden');
+        document.getElementById('merge-modal').classList.remove('flex');
+    }
+
+    async function executeMerge() {
+        const btn = document.getElementById('confirm-merge-btn');
+        btn.disabled = true;
+        btn.textContent = 'Merging...';
+
+        const form = document.getElementById('merge-form');
+        const formData = new FormData(form);
+
+        // Debug: log the form data being sent
+        console.log('Submitting merge request...');
+        for (let [key, value] of formData.entries()) {
+            console.log(`  ${key}: ${value}`);
+        }
+
+        try {
+            const response = await fetch('/people/merge/execute', {
+                method: 'POST',
+                body: formData
+            });
+
+            console.log('Response status:', response.status);
+
+            // Try to get response text first for debugging
+            const responseText = await response.text();
+            console.log('Response text:', responseText);
+
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse JSON:', parseError);
+                showToast('Server returned invalid response', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Merge';
+                return;
+            }
+
+            if (response.ok && data.success) {
+                closeMergeModal();
+                showToast(`Merged ${data.merged_count} person(s) successfully!`, 'success');
+                setTimeout(() => {
+                    window.location.href = data.redirect_url;
+                }, 1500);
+            } else {
+                console.error('Merge failed:', data);
+                showToast(data.detail || 'Merge failed', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Merge';
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            showToast('An error occurred: ' + error.message, 'error');
+            btn.disabled = false;
+            btn.textContent = 'Merge';
+        }
+    }
+
+    function showToast(message, type) {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        const toastDiv = toast.querySelector('div');
+
+        toastMessage.textContent = message;
+
+        if (type === 'error') {
+            toastDiv.classList.remove('bg-green-600');
+            toastDiv.classList.add('bg-red-600');
+        } else {
+            toastDiv.classList.remove('bg-red-600');
+            toastDiv.classList.add('bg-green-600');
+        }
+
+        toast.classList.remove('translate-y-20');
+
+        setTimeout(() => {
+            toast.classList.add('translate-y-20');
+        }, 3000);
+    }
+
+    // Update labels when selection changes
+    document.querySelectorAll('input[name="keep_id"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('input[name="keep_id"]').forEach(r => {
+                const label = r.closest('label').querySelector('span');
+                if (r.checked) {
+                    label.textContent = 'Will Keep';
+                    label.classList.remove('bg-blackbook-100', 'text-blackbook-700');
+                    label.classList.add('bg-blue-100', 'text-blue-700');
+                } else {
+                    label.textContent = 'Will Merge';
+                    label.classList.remove('bg-blue-100', 'text-blue-700');
+                    label.classList.add('bg-blackbook-100', 'text-blackbook-700');
+                }
+            });
+        });
+    });
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMergeModal();
+        }
+    });
+
+    // Close modal on outside click
+    document.getElementById('merge-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeMergeModal();
+        }
+    });
+</script>
+{% endblock %}

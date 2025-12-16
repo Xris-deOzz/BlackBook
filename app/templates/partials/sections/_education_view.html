@@ -1,0 +1,20 @@
+{# Education Section - View Mode #}
+{% if person.education %}
+<div class="space-y-4">
+    {% for edu in person.education %}
+    <div class="border-l-4 border-purple-500 pl-3 py-2">
+        <div class="font-medium text-white">{{ edu.school_name }}</div>
+        {% if edu.degree_type or edu.field_of_study %}
+        <div class="text-sm text-blackbook-300">
+            {{ edu.degree_type or '' }}{% if edu.degree_type and edu.field_of_study %} in {% endif %}{{ edu.field_of_study or '' }}
+        </div>
+        {% endif %}
+        {% if edu.graduation_year %}
+        <div class="text-xs text-blackbook-400 mt-1">Class of {{ edu.graduation_year }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-blackbook-400 italic">No education history</p>
+{% endif %}

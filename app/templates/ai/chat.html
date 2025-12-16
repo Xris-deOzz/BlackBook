@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<nav class="bg-white border-b border-blackbook-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="/" class="text-blackbook-500 hover:text-blackbook-700">Home</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            {% if person %}
+            <li>
+                <a href="/people/{{ person.id }}" class="text-blackbook-500 hover:text-blackbook-700">{{ person.full_name }}</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            {% elif organization %}
+            <li>
+                <a href="/organizations/{{ organization.id }}" class="text-blackbook-500 hover:text-blackbook-700">{{ organization.name }}</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            {% endif %}
+            <li class="text-blackbook-900 font-medium">AI Research</li>
+        </ol>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="flex h-[calc(100vh-12rem)] gap-4">
+    <!-- Sidebar: Conversation List -->
+    <div class="w-72 flex-shrink-0 bg-white rounded-lg shadow-md flex flex-col">
+        <div class="p-4 border-b border-blackbook-200">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-semibold text-blackbook-900">Conversations</h2>
+                <button hx-post="/ai/conversations"
+                        hx-target="#chat-panel"
+                        hx-swap="innerHTML"
+                        hx-vals='{"person_id": "{{ person_id or '' }}", "org_id": "{{ org_id or '' }}"}'
+                        class="p-1.5 text-blackbook-600 hover:text-blackbook-900 hover:bg-blackbook-100 rounded-md">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </button>
+            </div>
+            {% if person or organization %}
+            <div class="text-xs text-blackbook-500 bg-blackbook-50 rounded p-2">
+                Context: {{ person.full_name if person else organization.name }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div id="conversation-list" class="flex-1 overflow-y-auto p-2"
+             hx-get="/ai/conversations{% if person_id %}?person_id={{ person_id }}{% endif %}{% if org_id %}{% if person_id %}&{% else %}?{% endif %}org_id={{ org_id }}{% endif %}"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="flex items-center justify-center h-full text-blackbook-400">
+                <svg class="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Chat Panel -->
+    <div id="chat-panel" class="flex-1 bg-white rounded-lg shadow-md flex flex-col">
+        {% if current_conversation %}
+            {% include "ai/_chat_panel.html" with context only %}
+        {% else %}
+            {% include "ai/_empty_chat.html" %}
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// SSE streaming handler
+function handleStreamingResponse(conversationId) {
+    const messagesDiv = document.getElementById('message-list');
+    const streamingDiv = document.createElement('div');
+    streamingDiv.id = 'streaming-response';
+    streamingDiv.className = 'flex justify-start';
+    streamingDiv.innerHTML = `
+        <div class="max-w-[80%] px-4 py-3 rounded-lg bg-blackbook-100 text-blackbook-900">
+            <div id="streaming-content" class="prose prose-sm"></div>
+            <div id="streaming-cursor" class="inline-block w-2 h-4 bg-blackbook-600 animate-pulse"></div>
+        </div>
+    `;
+    messagesDiv.appendChild(streamingDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    const contentDiv = document.getElementById('streaming-content');
+    const cursorDiv = document.getElementById('streaming-cursor');
+
+    return {
+        append: function(text) {
+            contentDiv.innerHTML += text;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        },
+        finish: function() {
+            cursorDiv.remove();
+            // Reload messages to get properly formatted version
+            htmx.ajax('GET', '/ai/conversations/' + conversationId, {target: '#chat-panel', swap: 'innerHTML'});
+        },
+        error: function(message) {
+            contentDiv.innerHTML = '<span class="text-red-600">Error: ' + message + '</span>';
+            cursorDiv.remove();
+        }
+    };
+}
+
+function sendStreamingMessage(form) {
+    const formData = new FormData(form);
+    const conversationId = formData.get('conversation_id');
+    const input = form.querySelector('input[name="content"]');
+    const content = input.value.trim();
+
+    if (!content) return;
+
+    // Clear input
+    input.value = '';
+
+    // Add user message immediately
+    const messagesDiv = document.getElementById('message-list');
+    const userMsgDiv = document.createElement('div');
+    userMsgDiv.className = 'flex justify-end';
+    userMsgDiv.innerHTML = `
+        <div class="max-w-[80%] px-4 py-3 rounded-lg bg-blackbook-600 text-white">
+            ${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+        </div>
+    `;
+    messagesDiv.appendChild(userMsgDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    // Start streaming
+    const handler = handleStreamingResponse(conversationId);
+
+    fetch('/ai/chat/stream', {
+        method: 'POST',
+        body: formData
+    }).then(response => {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        function read() {
+            reader.read().then(({done, value}) => {
+                if (done) {
+                    handler.finish();
+                    return;
+                }
+
+                const text = decoder.decode(value);
+                const lines = text.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        if (data === '[DONE]') {
+                            handler.finish();
+                            return;
+                        }
+                        try {
+                            const json = JSON.parse(data);
+                            if (json.error) {
+                                handler.error(json.error);
+                                return;
+                            }
+                            if (json.content) {
+                                handler.append(json.content);
+                            }
+                        } catch (e) {
+                            // Ignore parse errors for partial data
+                        }
+                    }
+                }
+
+                read();
+            });
+        }
+
+        read();
+    }).catch(err => {
+        handler.error(err.message);
+    });
+}
+</script>
+{% endblock %}

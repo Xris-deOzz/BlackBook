@@ -1,0 +1,14 @@
+<!-- Provider selection dropdown options -->
+{% if providers %}
+    {% for provider in providers %}
+    <option value="{{ provider }}">
+        {% if provider == 'openai' %}OpenAI (GPT-4)
+        {% elif provider == 'anthropic' %}Claude (Anthropic)
+        {% elif provider == 'google' %}Gemini (Google)
+        {% else %}{{ provider }}
+        {% endif %}
+    </option>
+    {% endfor %}
+{% else %}
+<option value="" disabled>No providers configured</option>
+{% endif %}

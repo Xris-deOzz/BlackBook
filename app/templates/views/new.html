@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-blackbook-900">Save Current View</h1>
+            <p class="text-sm text-blackbook-500">Save your current filter configuration for quick access</p>
+        </div>
+        <a href="{{ '/people' if entity_type == 'person' else '/organizations' }}"
+           class="text-blackbook-600 hover:text-blackbook-800 flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to {{ 'People' if entity_type == 'person' else 'Organizations' }}
+        </a>
+    </div>
+
+    <!-- Save View Form -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form action="/views" method="POST" class="space-y-6">
+            <!-- Hidden fields for filter state -->
+            <input type="hidden" name="entity_type" value="{{ entity_type }}">
+            {% if filters.q %}
+            <input type="hidden" name="filters_q" value="{{ filters.q }}">
+            {% endif %}
+            {% if filters.status %}
+            <input type="hidden" name="filters_status" value="{{ filters.status }}">
+            {% endif %}
+            {% if filters.org_type %}
+            <input type="hidden" name="filters_org_type" value="{{ filters.org_type }}">
+            {% endif %}
+            {% if filters.tag_id %}
+            <input type="hidden" name="filters_tag_id" value="{{ filters.tag_id }}">
+            {% endif %}
+            {% if sort_by %}
+            <input type="hidden" name="sort_by" value="{{ sort_by }}">
+            {% endif %}
+            <input type="hidden" name="sort_order" value="{{ sort_order }}">
+
+            <!-- View Name -->
+            <div>
+                <label for="name" class="block text-sm font-medium text-blackbook-700 mb-1">
+                    View Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text"
+                       id="name"
+                       name="name"
+                       required
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-blackbook-500"
+                       placeholder="e.g., Active VIP Contacts">
+                <p class="mt-1 text-sm text-blackbook-500">Give your view a descriptive name</p>
+            </div>
+
+            <!-- Current Filters Summary -->
+            <div class="bg-blackbook-50 rounded-md p-4">
+                <h3 class="text-sm font-medium text-blackbook-700 mb-2">Filters to Save</h3>
+                <div class="space-y-2 text-sm text-blackbook-600">
+                    <p><span class="font-medium">Entity Type:</span> {{ 'People' if entity_type == 'person' else 'Organizations' }}</p>
+
+                    {% if filters %}
+                        {% if filters.q %}
+                        <p><span class="font-medium">Search:</span> "{{ filters.q }}"</p>
+                        {% endif %}
+                        {% if filters.status %}
+                        <p><span class="font-medium">Status:</span> {{ filters.status|capitalize }}</p>
+                        {% endif %}
+                        {% if filters.org_type %}
+                        <p><span class="font-medium">Organization Type:</span> {{ filters.org_type|replace('_', ' ')|title }}</p>
+                        {% endif %}
+                        {% if filters.tag_id %}
+                        <p><span class="font-medium">Tag Filter:</span> Active</p>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-blackbook-400 italic">No filters applied (all records)</p>
+                    {% endif %}
+
+                    {% if sort_by %}
+                    <p><span class="font-medium">Sort By:</span> {{ sort_by|replace('_', ' ')|title }} ({{ sort_order|upper }})</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Set as Default -->
+            <div class="flex items-center gap-3">
+                <input type="checkbox"
+                       id="is_default"
+                       name="is_default"
+                       value="true"
+                       class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                <label for="is_default" class="text-sm text-blackbook-700">
+                    Set as default view for {{ 'People' if entity_type == 'person' else 'Organizations' }}
+                </label>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end gap-3 pt-4 border-t border-blackbook-200">
+                <a href="{{ '/people' if entity_type == 'person' else '/organizations' }}"
+                   class="px-4 py-2 text-blackbook-700 bg-white border border-blackbook-300 rounded-md hover:bg-blackbook-50 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="px-4 py-2 bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700 transition-colors">
+                    Save View
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

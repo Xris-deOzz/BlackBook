@@ -1,0 +1,77 @@
+{% if error %}
+<div class="text-center py-8 text-red-400">
+    <p class="text-sm">{{ error }}</p>
+</div>
+{% else %}
+<div>
+    <!-- Month Header with Navigation -->
+    <div class="flex items-center justify-between mb-4">
+        <button hx-get="/calendar/month-view?month={{ prev_month }}&year={{ prev_year }}"
+                hx-target="#upcoming-events"
+                hx-swap="innerHTML"
+                class="p-1.5 rounded-md hover:bg-blackbook-700 transition-colors">
+            <svg class="w-5 h-5 text-blackbook-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <h3 class="text-lg font-semibold text-blackbook-100">{{ month_name }} {{ year }}</h3>
+        <button hx-get="/calendar/month-view?month={{ next_month }}&year={{ next_year }}"
+                hx-target="#upcoming-events"
+                hx-swap="innerHTML"
+                class="p-1.5 rounded-md hover:bg-blackbook-700 transition-colors">
+            <svg class="w-5 h-5 text-blackbook-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Calendar Grid -->
+    <div class="border border-blackbook-600 rounded-lg overflow-hidden">
+        <!-- Day Headers -->
+        <div class="grid grid-cols-7 bg-blackbook-700 border-b border-blackbook-600">
+            {% for day_name in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] %}
+            <div class="py-2 text-center text-xs font-semibold text-blackbook-300">{{ day_name }}</div>
+            {% endfor %}
+        </div>
+
+        <!-- Calendar Weeks -->
+        {% for week in weeks %}
+        <div class="grid grid-cols-7 divide-x divide-blackbook-700 {% if not loop.last %}border-b border-blackbook-700{% endif %}">
+            {% for day_data in week %}
+            <div class="min-h-[100px] p-1 {% if day_data.day == 0 %}bg-blackbook-800/50{% elif day_data.is_today %}bg-blue-900/20{% elif day_data.is_past %}bg-blackbook-800/30{% else %}bg-blackbook-800{% endif %}">
+                {% if day_data.day != 0 %}
+                <div class="flex flex-col h-full">
+                    <!-- Day Number -->
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-medium {% if day_data.is_today %}bg-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center{% elif day_data.is_past %}text-blackbook-500{% else %}text-blackbook-400{% endif %}">
+                            {{ day_data.day }}
+                        </span>
+                    </div>
+
+                    <!-- Events for this day -->
+                    <div class="flex-1 space-y-0.5 overflow-y-auto max-h-[80px]">
+                        {% for item in day_data.events[:4] %}
+                        <div class="px-1 py-0.5 text-[10px] rounded truncate
+                                    {% if item.is_all_day %}bg-blue-600/50 text-blue-200{% else %}bg-blackbook-600 text-blackbook-200{% endif %}"
+                             title="{{ item.event.summary }} - {{ item.event.start_time_local.strftime('%I:%M %p') if item.event.start_time_local else '' }}">
+                            {% if not item.is_all_day %}
+                            <span class="text-blackbook-400">{{ item.event.start_time_local.strftime('%H:%M') }}</span>
+                            {% endif %}
+                            {{ item.event.summary or 'Untitled' }}
+                        </div>
+                        {% endfor %}
+                        {% if day_data.events|length > 4 %}
+                        <div class="text-[10px] text-blackbook-400 px-1">
+                            +{{ day_data.events|length - 4 }} more
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}

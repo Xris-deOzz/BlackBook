@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-blackbook-900">Edit View</h1>
+            <p class="text-sm text-blackbook-500">Update your saved view configuration</p>
+        </div>
+        <a href="/views"
+           class="text-blackbook-600 hover:text-blackbook-800 flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Views
+        </a>
+    </div>
+
+    <!-- Edit View Form -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form action="/views/{{ view.id }}" method="POST" class="space-y-6">
+            <!-- Method override for PUT -->
+            <input type="hidden" name="_method" value="PUT">
+
+            <!-- View Name -->
+            <div>
+                <label for="name" class="block text-sm font-medium text-blackbook-700 mb-1">
+                    View Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text"
+                       id="name"
+                       name="name"
+                       required
+                       value="{{ view.name }}"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-blackbook-500">
+            </div>
+
+            <!-- Entity Type (readonly) -->
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">
+                    Entity Type
+                </label>
+                <div class="px-3 py-2 bg-blackbook-50 border border-blackbook-200 rounded-md text-blackbook-600">
+                    {{ 'People' if view.entity_type == 'person' else 'Organizations' }}
+                </div>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="border-t border-blackbook-200 pt-6">
+                <h3 class="text-lg font-medium text-blackbook-900 mb-4">Filters</h3>
+
+                <!-- Search Query -->
+                <div class="mb-4">
+                    <label for="filters_q" class="block text-sm font-medium text-blackbook-700 mb-1">
+                        Search Query
+                    </label>
+                    <input type="text"
+                           id="filters_q"
+                           name="filters_q"
+                           value="{{ view.filters.q if view.filters and view.filters.q else '' }}"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-blackbook-500"
+                           placeholder="Search term...">
+                </div>
+
+                {% if view.entity_type == 'person' %}
+                <!-- Status Filter (for People) -->
+                <div class="mb-4">
+                    <label for="filters_status" class="block text-sm font-medium text-blackbook-700 mb-1">
+                        Status
+                    </label>
+                    <select id="filters_status"
+                            name="filters_status"
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-blackbook-500">
+                        <option value="">All Statuses</option>
+                        <option value="active" {% if view.filters and view.filters.status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if view.filters and view.filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                        <option value="archived" {% if view.filters and view.filters.status == 'archived' %}selected{% endif %}>Archived</option>
+                    </select>
+                </div>
+                {% else %}
+                <!-- Org Type Filter (for Organizations) -->
+                <div class="mb-4">
+                    <label for="filters_org_type" class="block text-sm font-medium text-blackbook-700 mb-1">
+                        Organization Type
+                    </label>
+                    <select id="filters_org_type"
+                            name="filters_org_type"
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-blackbook-500">
+                        <option value="">All Types</option>
+                        <option value="company" {% if view.filters and view.filters.org_type == 'company' %}selected{% endif %}>Company</option>
+                        <option value="investment_firm" {% if view.filters and view.filters.org_type == 'investment_firm' %}selected{% endif %}>Investment Firm</option>
+                        <option value="startup" {% if view.filters and view.filters.org_type == 'startup' %}selected{% endif %}>Startup</option>
+                        <option value="non_profit" {% if view.filters and view.filters.org_type == 'non_profit' %}selected{% endif %}>Non-Profit</option>
+                        <option value="government" {% if view.filters and view.filters.org_type == 'government' %}selected{% endif %}>Government</option>
+                        <option value="educational" {% if view.filters and view.filters.org_type == 'educational' %}selected{% endif %}>Educational</option>
+                        <option value="other" {% if view.filters and view.filters.org_type == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                {% endif %}
+
+                <!-- Tag Filter -->
+                <div class="mb-4">
+                    <label for="filters_tag_id" class="block text-sm font-medium text-blackbook-700 mb-1">
+                        Tag ID
+                    </label>
+                    <input type="text"
+                           id="filters_tag_id"
+                           name="filters_tag_id"
+                           value="{{ view.filters.tag_id if view.filters and view.filters.tag_id else '' }}"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-blackbook-500"
+                           placeholder="Tag UUID (optional)">
+                </div>
+            </div>
+
+            <!-- Sort Section -->
+            <div class="border-t border-blackbook-200 pt-6">
+                <h3 class="text-lg font-medium text-blackbook-900 mb-4">Sorting</h3>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="sort_by" class="block text-sm font-medium text-blackbook-700 mb-1">
+                            Sort By
+                        </label>
+                        <select id="sort_by"
+                                name="sort_by"
+                                class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-blackbook-500">
+                            <option value="">Default</option>
+                            {% if view.entity_type == 'person' %}
+                            <option value="full_name" {% if view.sort_by == 'full_name' %}selected{% endif %}>Full Name</option>
+                            <option value="created_at" {% if view.sort_by == 'created_at' %}selected{% endif %}>Created Date</option>
+                            <option value="updated_at" {% if view.sort_by == 'updated_at' %}selected{% endif %}>Updated Date</option>
+                            <option value="status" {% if view.sort_by == 'status' %}selected{% endif %}>Status</option>
+                            {% else %}
+                            <option value="name" {% if view.sort_by == 'name' %}selected{% endif %}>Name</option>
+                            <option value="org_type" {% if view.sort_by == 'org_type' %}selected{% endif %}>Type</option>
+                            <option value="category" {% if view.sort_by == 'category' %}selected{% endif %}>Category</option>
+                            <option value="created_at" {% if view.sort_by == 'created_at' %}selected{% endif %}>Created Date</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="sort_order" class="block text-sm font-medium text-blackbook-700 mb-1">
+                            Sort Order
+                        </label>
+                        <select id="sort_order"
+                                name="sort_order"
+                                class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-blackbook-500">
+                            <option value="asc" {% if view.sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                            <option value="desc" {% if view.sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Set as Default -->
+            <div class="flex items-center gap-3 pt-4 border-t border-blackbook-200">
+                <input type="checkbox"
+                       id="is_default"
+                       name="is_default"
+                       value="true"
+                       {% if view.is_default %}checked{% endif %}
+                       class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                <label for="is_default" class="text-sm text-blackbook-700">
+                    Set as default view for {{ 'People' if view.entity_type == 'person' else 'Organizations' }}
+                </label>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end gap-3 pt-4 border-t border-blackbook-200">
+                <a href="/views"
+                   class="px-4 py-2 text-blackbook-700 bg-white border border-blackbook-300 rounded-md hover:bg-blackbook-50 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="px-4 py-2 bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700 transition-colors">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Override form submission to use PUT method
+    document.querySelector('form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        fetch(this.action, {
+            method: 'PUT',
+            body: new URLSearchParams(formData)
+        }).then(response => {
+            if (response.ok || response.redirected) {
+                window.location.href = '/views';
+            }
+        });
+    });
+</script>
+{% endblock %}

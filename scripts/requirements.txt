@@ -1,0 +1,15 @@
+# Perun's BlackBook - Import Script Dependencies
+# Install with: pip install -r requirements.txt
+
+# Database
+psycopg2-binary>=2.9.9      # PostgreSQL adapter
+sqlalchemy>=2.0.0            # ORM (optional, for future use)
+
+# Environment
+python-dotenv>=1.0.0         # Load .env files
+
+# CSV Processing
+# (using built-in csv module, no extra deps needed)
+
+# Utilities
+tqdm>=4.66.0                 # Progress bars for import

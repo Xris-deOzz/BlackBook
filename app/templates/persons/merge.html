@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<nav class="bg-white border-b border-blackbook-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="/" class="text-blackbook-500 hover:text-blackbook-700">Home</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li>
+                <a href="/people" class="text-blackbook-500 hover:text-blackbook-700">People</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li>
+                <a href="/people/{{ person.id }}" class="text-blackbook-500 hover:text-blackbook-700">{{ person.full_name }}</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li class="text-blackbook-900 font-medium">Merge</li>
+        </ol>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <a href="/people/{{ person.id }}" class="text-blackbook-500 hover:text-blackbook-700">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-blackbook-900">Merge {{ person.full_name }}</h1>
+                <p class="text-blackbook-500">Select a person to merge this contact into</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Source Person (will be deleted) -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-blackbook-900">Source (will be deleted)</h2>
+                <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">
+                    Will be removed
+                </span>
+            </div>
+            <div class="flex items-center space-x-4">
+                {% if person.profile_picture %}
+                <img src="{{ person.profile_picture }}" alt="{{ person.full_name }}"
+                     class="w-16 h-16 rounded-full object-cover border-2 border-blackbook-200">
+                {% else %}
+                <div class="w-16 h-16 rounded-full bg-blackbook-200 flex items-center justify-center border-2 border-blackbook-300">
+                    <span class="text-xl font-semibold text-blackbook-600">
+                        {{ person.full_name[0]|upper }}{% if person.last_name %}{{ person.last_name[0]|upper }}{% endif %}
+                    </span>
+                </div>
+                {% endif %}
+                <div>
+                    <h3 class="text-lg font-medium text-blackbook-900">{{ person.full_name }}</h3>
+                    {% if person.title %}
+                    <p class="text-sm text-blackbook-500">{{ person.title }}</p>
+                    {% endif %}
+                    {% if person.email %}
+                    <p class="text-sm text-blackbook-500">{{ person.email }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-blackbook-200">
+                <p class="text-sm text-blackbook-600">
+                    <strong>Data to transfer:</strong>
+                </p>
+                <ul class="text-sm text-blackbook-500 mt-2 space-y-1">
+                    <li>{{ person.emails|length }} email address{% if person.emails|length != 1 %}es{% endif %}</li>
+                    <li>{{ person.interactions|length }} interaction{% if person.interactions|length != 1 %}s{% endif %}</li>
+                    <li>{{ person.tags|length }} tag{% if person.tags|length != 1 %}s{% endif %}</li>
+                    <li>{{ person.organizations|length }} organization{% if person.organizations|length != 1 %}s{% endif %}</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Target Selection -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-semibold text-blackbook-900 mb-4">Target (will keep)</h2>
+
+            <!-- Search -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-blackbook-700 mb-2">Search for person</label>
+                <input type="text"
+                       id="merge-search"
+                       hx-get="/people/{{ person.id }}/merge/search"
+                       hx-trigger="keyup changed delay:300ms"
+                       hx-target="#search-results"
+                       hx-include="[name='q']"
+                       name="q"
+                       placeholder="Type to search..."
+                       class="w-full px-4 py-2 border border-blackbook-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <!-- Search Results -->
+            <div id="search-results" class="space-y-2 max-h-64 overflow-y-auto">
+                <!-- Will be populated by HTMX -->
+            </div>
+
+            <!-- Potential Duplicates -->
+            {% if duplicates %}
+            <div class="mt-6 pt-4 border-t border-blackbook-200">
+                <h3 class="text-sm font-medium text-blackbook-700 mb-3">Suggested Matches</h3>
+                <div class="space-y-2">
+                    {% for dup in duplicates %}
+                    <div class="flex items-center justify-between p-3 bg-blackbook-50 rounded-lg hover:bg-blackbook-100 transition-colors">
+                        <div class="flex items-center space-x-3">
+                            {% if dup.person.profile_picture %}
+                            <img src="{{ dup.person.profile_picture }}" alt="{{ dup.person.full_name }}"
+                                 class="w-10 h-10 rounded-full object-cover">
+                            {% else %}
+                            <div class="w-10 h-10 rounded-full bg-blackbook-200 flex items-center justify-center">
+                                <span class="text-sm font-semibold text-blackbook-600">
+                                    {{ dup.person.full_name[0]|upper }}
+                                </span>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <p class="font-medium text-blackbook-900">{{ dup.person.full_name }}</p>
+                                <p class="text-xs text-blackbook-500">{{ dup.match_reason }}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            {% set conf_colors = {
+                                'high': 'bg-green-100 text-green-700',
+                                'medium': 'bg-yellow-100 text-yellow-700',
+                                'low': 'bg-gray-100 text-gray-700'
+                            } %}
+                            <span class="px-2 py-1 text-xs rounded-full {{ conf_colors.get(dup.confidence, 'bg-gray-100 text-gray-700') }}">
+                                {{ dup.confidence|title }}
+                            </span>
+                            <a href="/people/merge?ids={{ person.id }}&ids={{ dup.person.id }}"
+                               class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                                Merge
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="mt-6 pt-4 border-t border-blackbook-200">
+                <p class="text-sm text-blackbook-500 italic">No potential duplicates found. Use the search above to find a person to merge with.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex">
+            <svg class="h-5 w-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">How merging works</h3>
+                <ul class="mt-2 text-sm text-blue-700 list-disc list-inside space-y-1">
+                    <li>Click "Merge" to open the <strong>advanced merge page</strong> where you can choose which data to keep</li>
+                    <li>Select which person's values to use for each field (name, title, LinkedIn, etc.)</li>
+                    <li>All emails, interactions, tags, and organization links will be consolidated</li>
+                    <li>Duplicate emails and tags will be skipped automatically</li>
+                    <li>Notes from the source person will be appended to the target's notes</li>
+                    <li>The source person (<strong>{{ person.full_name }}</strong>) will be permanently deleted</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

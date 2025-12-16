@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People</title>
+
+    <!-- TailwindCSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'blackbook': {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    
+<style>
+    /* Custom styles for sort indicators */
+    .sort-indicator::after {
+        content: '';
+        margin-left: 0.25rem;
+    }
+    .sort-asc::after {
+        content: ' \2191';
+    }
+    .sort-desc::after {
+        content: ' \2193';
+    }
+</style>
+
+</head>
+<body class="bg-blackbook-50 text-blackbook-900 min-h-screen flex flex-col">
+    <!-- Navigation -->
+    <nav class="bg-blackbook-800 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold">
+                        Perun's BlackBook
+                    </a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="/" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            Dashboard
+                        </a>
+                        <a href="/people" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            People
+                        </a>
+                        <a href="/organizations" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            Organizations
+                        </a>
+                        <a href="/interactions" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            Interactions
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
+        
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-blackbook-900">People</h1>
+            <p class="text-sm text-blackbook-500">1012 total records</p>
+        </div>
+        <a href="/people/new"
+           class="inline-flex items-center px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            New Person
+        </a>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="bg-white rounded-lg shadow-md p-4">
+        <form id="filter-form" class="flex flex-wrap gap-4 items-end">
+            <!-- Search Input -->
+            <div class="flex-1 min-w-[200px]">
+                <label for="search" class="block text-sm font-medium text-blackbook-700 mb-1">
+                    Search
+                </label>
+                <input
+                    type="search"
+                    id="search"
+                    name="q"
+                    value=""
+                    placeholder="Search name, title, email, notes..."
+                    class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                    hx-get="/people/table"
+                    hx-trigger="input changed delay:300ms, search"
+                    hx-target="#person-table-container"
+                    hx-include="#filter-form"
+                >
+            </div>
+
+            <!-- Status Filter -->
+            <div class="w-40">
+                <label for="status" class="block text-sm font-medium text-blackbook-700 mb-1">
+                    Status
+                </label>
+                <select
+                    id="status"
+                    name="status"
+                    class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                    hx-get="/people/table"
+                    hx-trigger="change"
+                    hx-target="#person-table-container"
+                    hx-include="#filter-form"
+                >
+                    <option value="">All Statuses</option>
+                    
+                    <option value="active" >
+                        Active
+                    </option>
+                    
+                    <option value="inactive" >
+                        Inactive
+                    </option>
+                    
+                    <option value="archived" >
+                        Archived
+                    </option>
+                    
+                </select>
+            </div>
+
+            <!-- Tag Filter -->
+            <div class="w-48">
+                <label for="tag_id" class="block text-sm font-medium text-blackbook-700 mb-1">
+                    Tag
+                </label>
+                <select
+                    id="tag_id"
+                    name="tag_id"
+                    class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                    hx-get="/people/table"
+                    hx-trigger="change"
+                    hx-target="#person-table-container"
+                    hx-include="#filter-form"
+                >
+                    <option value="">All Tags</option>
+                    
+                    <option value="13875924-7d11-4606-90a7-d3ee0bd21990" >
+                        Advisor
+                    </option>
+                    
+                    <option value="54944b96-b43c-41f3-afe5-cc502638038c" >
+                        Banker | Consultant
+                    </option>
+                    
+                    <option value="40b4a6ed-c0a4-41d5-bf3b-95d7bb0ec0ef" >
+                        Competition
+                    </option>
+                    
+                    <option value="6be09309-e01a-4d61-ad5d-2cfa5e27e2a5" >
+                        Enterpreneur
+                    </option>
+                    
+                    <option value="dfa44c3c-5f2f-421b-a34f-84b75505626f" >
+                        Headhunter/ Recruiter
+                    </option>
+                    
+                    <option value="c41dd4ea-a129-4282-af92-1ab37126417e" >
+                        Investor: Angel
+                    </option>
+                    
+                    <option value="9cdfc843-0837-493d-86ae-664bc6e18814" >
+                        Investor: PE / Institutional
+                    </option>
+                    
+                    <option value="d0ccfb35-50bf-4b28-9f94-9d5b9e8edd88" >
+                        Investor: Venture VC
+                    </option>
+                    
+                    <option value="309641e6-22a8-4117-a02e-f83fdac3d2a0" >
+                        Referrals | Introductions
+                    </option>
+                    
+                    <option value="b2d5c4b9-9bab-4597-9dd8-7345da8929d0" >
+                        Resource: Actuary
+                    </option>
+                    
+                    <option value="f211facd-b917-4639-9635-c60e7411abaa" >
+                        Resource: Creative
+                    </option>
+                    
+                    <option value="b01635bb-8c3d-47eb-b57f-b9d0bcf0e494" >
+                        Resource: Lawyer
+                    </option>
+                    
+                    <option value="c6c15ede-3c5e-4552-b62b-1b49f95df8bc" >
+                        Resource: Marketing
+                    </option>
+                    
+                    <option value="c52ac6db-7913-4304-979a-363491ff4095" >
+                        Resource: Operations
+                    </option>
+                    
+                    <option value="401b269a-3241-4470-8653-cebfe7043695" >
+                        Resource: Tech
+                    </option>
+                    
+                </select>
+            </div>
+
+            <!-- Hidden inputs for sort state -->
+            <input type="hidden" name="sort_by" id="sort_by" value="full_name">
+            <input type="hidden" name="sort_order" id="sort_order" value="asc">
+            <input type="hidden" name="page" id="page" value="1">
+
+            <!-- Per Page Selector -->
+            <div class="w-32">
+                <label for="per_page" class="block text-sm font-medium text-blackbook-700 mb-1">
+                    Per Page
+                </label>
+                <select
+                    id="per_page"
+                    name="per_page"
+                    class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                    onchange="changePerPage(this.value)"
+                >
+                    <option value="20" selected>20</option>
+                    <option value="50" >50</option>
+                    <option value="100" >100</option>
+                    <option value="250" >250</option>
+                </select>
+            </div>
+
+            <!-- Clear Filters Button -->
+            <div>
+                <a
+                    href="/people"
+                    class="px-4 py-2 text-sm bg-blackbook-100 text-blackbook-700 rounded-md hover:bg-blackbook-200"
+                >
+                    Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table Container -->
+    <div id="person-table-container">
+        <!-- Person Table Partial - HTMX swappable -->
+<!-- Store current page for JavaScript to read after swap -->
+<div id="current-page-data" data-page="1" style="display:none;"></div>
+
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <table class="min-w-full divide-y divide-blackbook-200">
+        <thead class="bg-blackbook-100">
+            <tr>
+                <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-blackbook-600 uppercase tracking-wider cursor-pointer hover:bg-blackbook-200 sort-indicator sort-asc"
+                    onclick="sortBy('full_name')"
+                >
+                    Name
+                </th>
+                <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-blackbook-600 uppercase tracking-wider cursor-pointer hover:bg-blackbook-200 sort-indicator "
+                    onclick="sortBy('title')"
+                >
+                    Title
+                </th>
+                <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-blackbook-600 uppercase tracking-wider"
+                >
+                    Organization
+                </th>
+                <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-blackbook-600 uppercase tracking-wider"
+                >
+                    Tags
+                </th>
+                <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-blackbook-600 uppercase tracking-wider cursor-pointer hover:bg-blackbook-200 sort-indicator "
+                    onclick="sortBy('status')"
+                >
+                    Status
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-blackbook-200">
+            
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/07cbad8b-a88d-4198-8c39-6c9b9f79bb19" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Aaron Levie
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="Angel Investor">
+            Angel Investor
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                <span class="text-blackbook-400">-</span>
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Investor: Angel
+            </span>
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Enterpreneur
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/87cab77b-9be4-4a43-af6a-855953782e7b" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Aaron Lissner
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/ef80e002-6791-4382-aa91-7ce9e2caeb6a" class="hover:text-blackbook-600">
+                        Blackstone
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Referrals | Introductions
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/d1380d7e-fb10-4c67-be83-4e77c7bc694f" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Aaron Sarfatti
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="MD">
+            MD
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                <span class="text-blackbook-400">-</span>
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Investor: PE / Institutional
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/bc7e9339-ed6a-4256-ae29-579628dfa2e1" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Aaron Schumm
+        </a>
+        
+        <div class="text-sm text-blackbook-500">
+            aaron.schumm@vestwell.com
+        </div>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                <span class="text-blackbook-400">-</span>
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Referrals | Introductions
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/8335ba68-93d3-4c1d-bb76-1e972c327f5b" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Abby Miller Levy
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/243b8a46-c7c0-4fe6-91a5-c438e953584e" class="hover:text-blackbook-600">
+                        Primetime Partners
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Investor: Venture VC
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/e4b00e4a-4178-43dc-a14b-4e95cd454136" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Abdul Qureshi
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/ddcfafb9-4066-4100-bf15-ef876dd4ae7d" class="hover:text-blackbook-600">
+                        Golden Gate Capital
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Investor: PE / Institutional
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/c73e0515-1ff6-4020-86b2-732af87f1779" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Adam Boyden
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="MD">
+            MD
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/ce296ef0-fa4e-4fcb-80ad-3f9c790c1cd2" class="hover:text-blackbook-600">
+                        RPM Ventures
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Investor: Venture VC
+            </span>
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Referrals | Introductions
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/63a96fa4-4e72-4a45-ac54-8bc814b95570" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Adam Bratt
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                <span class="text-blackbook-400">-</span>
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Enterpreneur
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/46eac609-bc23-4e48-859d-ea77430f7e5b" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Adam Brenner
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            <span class="text-blackbook-400">-</span>
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Resource: Lawyer
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/a70781c6-3f02-455c-a431-9cd382fe06a7" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Adam Durrett
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="Partner">
+            Partner
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/31939022-be5d-4fe3-97b2-d59ddb80fc2a" class="hover:text-blackbook-600">
+                        Hellman &amp; Friedman
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Investor: PE / Institutional
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/f40c4fb0-43da-4a2a-bc97-aff1f7a6354c" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Adam Fisher
+        </a>
+        
+        <div class="text-sm text-blackbook-500">
+            fisherar@georgetown.edu
+        </div>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/06032177-0625-4794-8ede-b225731793dc" class="hover:text-blackbook-600">
+                        Bessemer Venture Partners
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Investor: Venture VC
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/0e83d24d-77d1-4b2d-9266-2a787b9b1bc1" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Adam Nash
+        </a>
+        
+        <div class="text-sm text-blackbook-500">
+            adamnash@dropbox.com
+        </div>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="Partner">
+            Partner
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/65af2646-770e-4a13-8389-0866bd31341e" class="hover:text-blackbook-600">
+                        Greycroft Partners
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Advisor
+            </span>
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Referrals | Introductions
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/3c65faa4-9084-40c9-91d1-efae64dc6438" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Adam Plotkin
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/e5b41bf6-270f-4f5e-9417-fff3f1300f8c" class="hover:text-blackbook-600">
+                        ff Venture Capital
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Investor: Venture VC
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/e9df4120-a855-4875-882b-9b6a9f9b74c0" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Adam Rothenberg
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="Partner">
+            Partner
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/1afffbec-0dc1-4476-8b30-90a40fba1b8f" class="hover:text-blackbook-600">
+                        Box Group
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Investor: Venture VC
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/f0f937e9-b99e-409d-aef5-8e02d7db6788" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Adeyemi Ajao
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/b96e3e40-cf55-4618-b015-729e7c2e93f1" class="hover:text-blackbook-600">
+                        Augusta Investments LLC (Urizen)
+                    </a>
+                    
+                </div>
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/c919de39-a43d-4d72-8699-74a418524c02" class="hover:text-blackbook-600">
+                        Base10 Partners
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Investor: Venture VC
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/3e478c79-ad7e-4ba2-8492-27868988998a" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Adrian Jones
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            <span class="text-blackbook-400">-</span>
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/afbe413f-014a-4466-8552-e4d20ffe757e" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Aileen Lee
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/f28fa89f-dc16-457c-b718-d785e3058b26" class="hover:text-blackbook-600">
+                        Cowboy ventures
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/eff1a163-de94-4db6-a6c4-e9948e07f17d" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Ajay Banga
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="CEO">
+            CEO
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/632290c4-ef73-47a5-a5d1-ba708724e2e4" class="hover:text-blackbook-600">
+                        MasterCard
+                    </a>
+                    
+                </div>
+                
+                
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/7a9c7af3-3b8f-4404-9db5-052f28ef9213" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Al Dal Porto
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            
+            
+                <span class="text-blackbook-400">-</span>
+            
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Resource: Actuary
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+                    <!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/dcf8940d-0992-4965-b60f-4166598020d2" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            Al Klein
+        </a>
+        
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        
+            <span class="text-blackbook-400">-</span>
+        
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: #6B728020; color: #6B7280; border: 1px solid #6B728040;"
+            >
+                Resource: Actuary
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Status -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Active
+        </span>
+    </td>
+</tr>
+                
+            
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+
+<div class="flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow-md mt-4">
+    <div class="flex-1 flex justify-between sm:hidden">
+        
+        
+        <button
+            type="button"
+            onclick="goToPage(2)"
+            class="ml-3 relative inline-flex items-center px-4 py-2 border border-blackbook-300 text-sm font-medium rounded-md text-blackbook-700 bg-white hover:bg-blackbook-50"
+        >
+            Next
+        </button>
+        
+    </div>
+    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+            <p class="text-sm text-blackbook-700">
+                Showing
+                <span class="font-medium">1</span>
+                to
+                <span class="font-medium">20</span>
+                of
+                <span class="font-medium">1012</span>
+                results
+            </p>
+        </div>
+        <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <!-- Previous -->
+                <button
+                    type="button"
+                    onclick="goToPage(0)"
+                    disabled
+                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-blackbook-300 bg-white text-sm font-medium text-blackbook-500 hover:bg-blackbook-50 opacity-50 cursor-not-allowed"
+                >
+                    <span class="sr-only">Previous</span>
+                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+
+                <!-- Page Numbers -->
+                
+                
+
+                
+
+                
+                <button
+                    type="button"
+                    onclick="goToPage(1)"
+                    class="relative inline-flex items-center px-4 py-2 border border-blackbook-300 text-sm font-medium bg-blackbook-600 text-white"
+                >
+                    1
+                </button>
+                
+                <button
+                    type="button"
+                    onclick="goToPage(2)"
+                    class="relative inline-flex items-center px-4 py-2 border border-blackbook-300 text-sm font-medium bg-white text-blackbook-700 hover:bg-blackbook-50"
+                >
+                    2
+                </button>
+                
+                <button
+                    type="button"
+                    onclick="goToPage(3)"
+                    class="relative inline-flex items-center px-4 py-2 border border-blackbook-300 text-sm font-medium bg-white text-blackbook-700 hover:bg-blackbook-50"
+                >
+                    3
+                </button>
+                
+
+                
+                
+                <span class="relative inline-flex items-center px-4 py-2 border border-blackbook-300 bg-white text-sm font-medium text-blackbook-700">...</span>
+                
+                <button
+                    type="button"
+                    onclick="goToPage(51)"
+                    class="relative inline-flex items-center px-4 py-2 border border-blackbook-300 bg-white text-sm font-medium text-blackbook-700 hover:bg-blackbook-50"
+                >
+                    51
+                </button>
+                
+
+                <!-- Next -->
+                <button
+                    type="button"
+                    onclick="goToPage(2)"
+                    
+                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-blackbook-300 bg-white text-sm font-medium text-blackbook-500 hover:bg-blackbook-50 "
+                >
+                    <span class="sr-only">Next</span>
+                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </nav>
+        </div>
+    </div>
+</div>
+
+    </div>
+</div>
+
+<script>
+    // Handle per page change with proper URL building (excludes empty params)
+    function changePerPage(perPage) {
+        let params = new URLSearchParams();
+        params.set('per_page', perPage);
+
+        const q = document.getElementById('search').value;
+        if (q) params.set('q', q);
+
+        const status = document.getElementById('status').value;
+        if (status) params.set('status', status);
+
+        const tagId = document.getElementById('tag_id').value;
+        if (tagId) params.set('tag_id', tagId);
+
+        params.set('sort_by', document.getElementById('sort_by').value);
+        params.set('sort_order', document.getElementById('sort_order').value);
+
+        window.location.href = '/people?' + params.toString();
+    }
+
+    // Handle sort column clicks
+    function sortBy(column) {
+        const sortByInput = document.getElementById('sort_by');
+        const sortOrderInput = document.getElementById('sort_order');
+        const pageInput = document.getElementById('page');
+
+        if (sortByInput.value === column) {
+            // Toggle sort order
+            sortOrderInput.value = sortOrderInput.value === 'asc' ? 'desc' : 'asc';
+        } else {
+            // New column, default to ascending
+            sortByInput.value = column;
+            sortOrderInput.value = 'asc';
+        }
+
+        // Reset to page 1 when sorting changes
+        pageInput.value = '1';
+
+        // Trigger HTMX request
+        htmx.trigger('#search', 'search');
+    }
+
+    // Handle pagination
+    function goToPage(pageNum) {
+        console.log('goToPage called with page:', pageNum);
+        const pageInput = document.getElementById('page');
+        console.log('Page input element:', pageInput);
+        pageInput.value = pageNum;
+        console.log('Page value set to:', pageInput.value);
+        const searchEl = document.getElementById('search');
+        console.log('Search element:', searchEl);
+        htmx.trigger(searchEl, 'search');
+        console.log('HTMX trigger fired');
+    }
+
+    // After HTMX swap, sync the page value from the response data
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'person-table-container') {
+            const pageData = document.getElementById('current-page-data');
+            if (pageData) {
+                const newPage = pageData.dataset.page;
+                document.getElementById('page').value = newPage;
+            }
+        }
+    });
+</script>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-blackbook-800 text-white mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <p class="text-center text-sm text-blackbook-400">
+                Perun's BlackBook &copy; 2025 | Personal CRM
+            </p>
+        </div>
+    </footer>
+
+    <!-- Load stats on page load -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+
+                document.getElementById('stat-persons').textContent = stats.persons || 0;
+                document.getElementById('stat-organizations').textContent = stats.organizations || 0;
+                document.getElementById('stat-tags').textContent = stats.tags || 0;
+                document.getElementById('stat-interactions').textContent = stats.interactions || 0;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        });
+    </script>
+
+    
+</body>
+</html>

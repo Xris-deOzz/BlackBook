@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<nav class="bg-white dark:bg-blackbook-800 border-b border-blackbook-200 dark:border-blackbook-700">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="/" class="text-blackbook-500 dark:text-blackbook-400 hover:text-blackbook-700 dark:hover:text-blackbook-300">Home</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li>
+                <a href="/christmas-lists" class="text-blackbook-500 dark:text-blackbook-400 hover:text-blackbook-700 dark:hover:text-blackbook-300">Christmas Lists</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li class="text-blackbook-900 dark:text-white font-medium">Review Suggestions</li>
+        </ol>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-blackbook-900 dark:text-white flex items-center gap-3">
+                <svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                Review Suggestions
+            </h1>
+            <p class="text-sm text-blackbook-500 dark:text-blackbook-400 mt-1">
+                {{ total_count }} people with email addresses need to be assigned
+            </p>
+        </div>
+        {% if total_count > 0 %}
+        <div class="flex gap-2">
+            <button onclick="bulkAssign('high')"
+                    class="inline-flex items-center px-4 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Accept High Confidence ({{ high_count }})
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Confidence Legend -->
+    <div class="bg-white dark:bg-blackbook-800 rounded-lg shadow-md p-4">
+        <h3 class="text-sm font-medium text-blackbook-700 dark:text-blackbook-300 mb-3">Confidence Levels</h3>
+        <div class="flex flex-wrap gap-6">
+            <div class="flex items-center gap-2">
+                <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded">HIGH</span>
+                <span class="text-sm text-blackbook-600 dark:text-blackbook-400">Address in Poland or Polish city ({{ high_count }})</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded">MEDIUM</span>
+                <span class="text-sm text-blackbook-600 dark:text-blackbook-400">Polish surname pattern ({{ medium_count }})</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="px-2 py-1 text-xs font-medium bg-blackbook-100 text-blackbook-700 dark:bg-blackbook-700 dark:text-blackbook-300 rounded">LOW</span>
+                <span class="text-sm text-blackbook-600 dark:text-blackbook-400">Default to English ({{ low_count }})</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination Controls Top -->
+    <div class="bg-white dark:bg-blackbook-800 rounded-lg shadow-md p-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-blackbook-600 dark:text-blackbook-400">
+                    Showing {{ start_idx }}-{{ end_idx }} of {{ total_count }}
+                </span>
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-blackbook-600 dark:text-blackbook-400">Per page:</label>
+                    <select onchange="changePerPage(this.value)"
+                            class="px-2 py-1 text-sm border border-blackbook-300 dark:border-blackbook-600 rounded bg-white dark:bg-blackbook-700 text-blackbook-900 dark:text-white">
+                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                        <option value="250" {% if per_page == 250 %}selected{% endif %}>250</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                {% if page > 1 %}
+                <a href="?page=1&per_page={{ per_page }}" class="px-3 py-1 text-sm bg-blackbook-100 dark:bg-blackbook-700 text-blackbook-700 dark:text-blackbook-300 rounded hover:bg-blackbook-200 dark:hover:bg-blackbook-600">First</a>
+                <a href="?page={{ page - 1 }}&per_page={{ per_page }}" class="px-3 py-1 text-sm bg-blackbook-100 dark:bg-blackbook-700 text-blackbook-700 dark:text-blackbook-300 rounded hover:bg-blackbook-200 dark:hover:bg-blackbook-600">Prev</a>
+                {% endif %}
+                <span class="px-3 py-1 text-sm text-blackbook-600 dark:text-blackbook-400">
+                    Page {{ page }} of {{ total_pages }}
+                </span>
+                {% if page < total_pages %}
+                <a href="?page={{ page + 1 }}&per_page={{ per_page }}" class="px-3 py-1 text-sm bg-blackbook-100 dark:bg-blackbook-700 text-blackbook-700 dark:text-blackbook-300 rounded hover:bg-blackbook-200 dark:hover:bg-blackbook-600">Next</a>
+                <a href="?page={{ total_pages }}&per_page={{ per_page }}" class="px-3 py-1 text-sm bg-blackbook-100 dark:bg-blackbook-700 text-blackbook-700 dark:text-blackbook-300 rounded hover:bg-blackbook-200 dark:hover:bg-blackbook-600">Last</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Suggestions Table -->
+    <div class="bg-white dark:bg-blackbook-800 rounded-lg shadow-md overflow-x-auto">
+        <div id="suggestions-container">
+            {% include "christmas_lists/_suggestions_table.html" %}
+        </div>
+    </div>
+
+    <!-- Pagination Controls Bottom -->
+    {% if total_pages > 1 %}
+    <div class="bg-white dark:bg-blackbook-800 rounded-lg shadow-md p-4">
+        <div class="flex items-center justify-center gap-2">
+            {% if page > 1 %}
+            <a href="?page={{ page - 1 }}&per_page={{ per_page }}" class="px-3 py-1 text-sm bg-blackbook-100 dark:bg-blackbook-700 text-blackbook-700 dark:text-blackbook-300 rounded hover:bg-blackbook-200 dark:hover:bg-blackbook-600">Previous</a>
+            {% endif %}
+            <span class="px-3 py-1 text-sm text-blackbook-600 dark:text-blackbook-400">
+                Page {{ page }} of {{ total_pages }}
+            </span>
+            {% if page < total_pages %}
+            <a href="?page={{ page + 1 }}&per_page={{ per_page }}" class="px-3 py-1 text-sm bg-blackbook-100 dark:bg-blackbook-700 text-blackbook-700 dark:text-blackbook-300 rounded hover:bg-blackbook-200 dark:hover:bg-blackbook-600">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Back Link -->
+    <div>
+        <a href="/christmas-lists" class="inline-flex items-center text-blackbook-600 dark:text-blackbook-400 hover:text-blackbook-800 dark:hover:text-blackbook-200">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Back to Christmas Lists
+        </a>
+    </div>
+</div>
+
+<!-- Tag Editor Modal -->
+<div id="tag-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-blackbook-900 bg-opacity-75 transition-opacity" onclick="closeTagModal()"></div>
+
+        <!-- Modal panel -->
+        <div class="relative inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom bg-white dark:bg-blackbook-800 rounded-lg shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+            <div class="absolute top-0 right-0 pt-4 pr-4">
+                <button onclick="closeTagModal()" class="text-blackbook-400 hover:text-blackbook-500 dark:hover:text-blackbook-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="sm:flex sm:items-start">
+                <div class="w-full mt-3 text-center sm:mt-0 sm:text-left">
+                    <h3 class="text-lg font-medium leading-6 text-blackbook-900 dark:text-white" id="modal-title">
+                        Manage Tags
+                    </h3>
+                    <p class="mt-1 text-sm text-blackbook-500 dark:text-blackbook-400" id="modal-person-name"></p>
+
+                    <!-- Tag Widget Container -->
+                    <div id="modal-tag-widget" class="mt-4">
+                        <div class="flex justify-center py-4">
+                            <svg class="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                <button onclick="closeTagModal()" class="w-full inline-flex justify-center px-4 py-2 text-base font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPersonId = null;
+
+function changePerPage(perPage) {
+    window.location.href = `?page=1&per_page=${perPage}`;
+}
+
+async function assignToList(personId, listType, rowElement) {
+    try {
+        const response = await fetch('/christmas-lists/assign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                person_id: personId,
+                list_type: listType
+            })
+        });
+
+        if (response.ok) {
+            // Animate row removal
+            rowElement.style.transition = 'all 0.3s ease';
+            rowElement.style.opacity = '0';
+            rowElement.style.transform = 'translateX(100px)';
+            setTimeout(() => {
+                rowElement.remove();
+                updateCounts();
+            }, 300);
+        } else {
+            const data = await response.json();
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error assigning to list:', error);
+        alert('Error assigning to list');
+    }
+}
+
+function skipPerson(rowElement) {
+    // Just hide the row for this session
+    rowElement.style.transition = 'all 0.3s ease';
+    rowElement.style.opacity = '0.3';
+    rowElement.style.pointerEvents = 'none';
+}
+
+async function bulkAssign(minConfidence) {
+    const confirmMsg = minConfidence === 'high'
+        ? 'Accept all HIGH confidence suggestions? This will add the suggested tags to these people.'
+        : 'Accept all suggestions with ' + minConfidence.toUpperCase() + ' confidence or higher?';
+
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/christmas-lists/bulk-assign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ min_confidence: minConfidence })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`Assigned ${data.total} people:\n- Polish: ${data.assigned.polish}\n- English: ${data.assigned.english}`);
+            // Refresh the page
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error bulk assigning:', error);
+        alert('Error bulk assigning');
+    }
+}
+
+function updateCounts() {
+    const remaining = document.querySelectorAll('tbody tr:not([style*="opacity: 0"])').length;
+    if (remaining === 0) {
+        document.getElementById('suggestions-container').innerHTML = `
+            <div class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-blackbook-900 dark:text-white">All done!</h3>
+                <p class="mt-1 text-sm text-blackbook-500 dark:text-blackbook-400">
+                    All suggestions have been reviewed.
+                </p>
+                <a href="/christmas-lists" class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700">
+                    View Lists
+                </a>
+            </div>
+        `;
+    }
+}
+
+async function openTagEditor(personId, personName) {
+    currentPersonId = personId;
+    document.getElementById('modal-person-name').textContent = personName;
+    document.getElementById('tag-modal').classList.remove('hidden');
+
+    // Load the tag widget
+    try {
+        const response = await fetch(`/people/${personId}/tags/manage`);
+        if (response.ok) {
+            const html = await response.text();
+            const container = document.getElementById('modal-tag-widget');
+            container.innerHTML = html;
+            // Process HTMX attributes on newly loaded content
+            htmx.process(container);
+        } else {
+            document.getElementById('modal-tag-widget').innerHTML = '<p class="text-red-500">Error loading tags</p>';
+        }
+    } catch (error) {
+        console.error('Error loading tags:', error);
+        document.getElementById('modal-tag-widget').innerHTML = '<p class="text-red-500">Error loading tags</p>';
+    }
+}
+
+function closeTagModal() {
+    document.getElementById('tag-modal').classList.add('hidden');
+    currentPersonId = null;
+
+    // Reload the page to show updated tags
+    window.location.reload();
+}
+</script>
+{% endblock %}

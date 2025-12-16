@@ -1,0 +1,38 @@
+{% if results %}
+<div class="space-y-2">
+    {% for person in results %}
+    <div class="flex items-center justify-between p-3 bg-blackbook-50 rounded-lg hover:bg-blackbook-100 transition-colors">
+        <div class="flex items-center space-x-3">
+            {% if person.profile_picture %}
+            <img src="{{ person.profile_picture }}" alt="{{ person.full_name }}"
+                 class="w-10 h-10 rounded-full object-cover">
+            {% else %}
+            <div class="w-10 h-10 rounded-full bg-blackbook-200 flex items-center justify-center">
+                <span class="text-sm font-semibold text-blackbook-600">
+                    {{ person.full_name[0]|upper }}
+                </span>
+            </div>
+            {% endif %}
+            <div>
+                <p class="font-medium text-blackbook-900">{{ person.full_name }}</p>
+                {% if person.title %}
+                <p class="text-xs text-blackbook-500">{{ person.title }}</p>
+                {% endif %}
+                {% if person.email %}
+                <p class="text-xs text-blackbook-400">{{ person.email }}</p>
+                {% endif %}
+            </div>
+        </div>
+        <a href="/people/merge?ids={{ source_person.id }}&ids={{ person.id }}"
+           class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+            Merge Into
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-4 text-blackbook-500">
+    <p class="text-sm">No matching persons found.</p>
+    <p class="text-xs mt-1">Try a different search term.</p>
+</div>
+{% endif %}

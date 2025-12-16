@@ -1,0 +1,40 @@
+{% if duplicates %}
+<div class="space-y-3">
+    {% for dup in duplicates %}
+    <div class="flex items-center justify-between py-2 border-b border-blackbook-100 last:border-0">
+        <div class="flex items-center space-x-3">
+            {% if dup.person.profile_picture %}
+            <img src="{{ dup.person.profile_picture }}" alt="{{ dup.person.full_name }}"
+                 class="w-8 h-8 rounded-full object-cover">
+            {% else %}
+            <div class="w-8 h-8 rounded-full bg-blackbook-200 flex items-center justify-center">
+                <span class="text-xs font-semibold text-blackbook-600">
+                    {{ dup.person.full_name[0]|upper }}
+                </span>
+            </div>
+            {% endif %}
+            <div>
+                <p class="text-sm font-medium text-blackbook-900">{{ dup.person.full_name }}</p>
+                <p class="text-xs text-blackbook-500">{{ dup.match_reason }}</p>
+            </div>
+        </div>
+        {% set conf_colors = {
+            'high': 'bg-green-100 text-green-700',
+            'medium': 'bg-yellow-100 text-yellow-700',
+            'low': 'bg-gray-100 text-gray-700'
+        } %}
+        <span class="px-2 py-0.5 text-xs rounded-full {{ conf_colors.get(dup.confidence, 'bg-gray-100 text-gray-700') }}">
+            {{ dup.confidence|title }}
+        </span>
+    </div>
+    {% endfor %}
+    <div class="pt-2">
+        <a href="/people/{{ person_id }}/merge"
+           class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+            View merge options &rarr;
+        </a>
+    </div>
+</div>
+{% else %}
+<p class="text-sm text-blackbook-500 italic">No potential duplicates found.</p>
+{% endif %}

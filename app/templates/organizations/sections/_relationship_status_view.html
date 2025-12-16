@@ -1,0 +1,105 @@
+{# Organization Relationship Status Card - View Mode (Sidebar) #}
+{# Shows your personal relationship with this organization #}
+
+{% set status = organization.relationship_status %}
+{% set warmth_display = {
+    'hot': {'label': 'Hot', 'emoji': '🔥', 'color': 'bg-red-100 text-red-800'},
+    'warm': {'label': 'Warm', 'emoji': '🟢', 'color': 'bg-green-100 text-green-800'},
+    'met_once': {'label': 'Met Once', 'emoji': '🟡', 'color': 'bg-yellow-100 text-yellow-800'},
+    'cold': {'label': 'Cold', 'emoji': '🔴', 'color': 'bg-gray-100 text-gray-600'},
+    'unknown': {'label': 'Unknown', 'emoji': '⚪', 'color': 'bg-gray-100 text-gray-500'}
+} %}
+
+<dl class="space-y-4">
+    {# Primary Contact #}
+    <div>
+        <dt class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Primary Contact</dt>
+        <dd class="mt-1">
+            {% if status and status.primary_contact %}
+            <a href="/people/{{ status.primary_contact.id }}"
+               class="inline-flex items-center gap-2 text-blackbook-900 hover:text-blue-600">
+                <div class="w-6 h-6 rounded-full bg-blackbook-100 flex items-center justify-center text-xs font-medium text-blackbook-600">
+                    {{ status.primary_contact.full_name[:2] | upper }}
+                </div>
+                {{ status.primary_contact.full_name }}
+            </a>
+            {% else %}
+            <span class="text-blackbook-400 italic">Not set</span>
+            {% endif %}
+        </dd>
+    </div>
+
+    {# Relationship Warmth #}
+    <div>
+        <dt class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Warmth</dt>
+        <dd class="mt-1">
+            {% if status and status.relationship_warmth %}
+            {% set warmth = warmth_display.get(status.relationship_warmth, warmth_display.unknown) %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium {{ warmth.color }}">
+                <span>{{ warmth.emoji }}</span>
+                {{ warmth.label }}
+            </span>
+            {% else %}
+            <span class="text-blackbook-400 italic">Not set</span>
+            {% endif %}
+        </dd>
+    </div>
+
+    {# Intro Available Via #}
+    <div>
+        <dt class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Intro Available Via</dt>
+        <dd class="mt-1">
+            {% if status and status.intro_available_via %}
+            <a href="/people/{{ status.intro_available_via.id }}"
+               class="inline-flex items-center gap-2 text-blackbook-900 hover:text-blue-600">
+                <div class="w-6 h-6 rounded-full bg-blackbook-100 flex items-center justify-center text-xs font-medium text-blackbook-600">
+                    {{ status.intro_available_via.full_name[:2] | upper }}
+                </div>
+                {{ status.intro_available_via.full_name }}
+            </a>
+            {% else %}
+            <span class="text-blackbook-400">-</span>
+            {% endif %}
+        </dd>
+    </div>
+
+    {# Last Contacted - Computed from aggregated interactions #}
+    <div>
+        <dt class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Last Contact</dt>
+        <dd class="mt-1">
+            {% if last_contacted %}
+            <span class="text-blackbook-900">{{ last_contacted.strftime('%B %d, %Y') }}</span>
+            {% else %}
+            <span class="text-blackbook-400">-</span>
+            {% endif %}
+        </dd>
+    </div>
+
+    {# Next Follow-up #}
+    <div>
+        <dt class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Next Follow-up</dt>
+        <dd class="mt-1">
+            {% if status and status.next_followup_date %}
+            {% set today = now().date() if now is defined else none %}
+            {% set is_overdue = status.next_followup_date < today if today else false %}
+            {% set is_soon = status.next_followup_date <= today + timedelta(days=7) if today and not is_overdue else false %}
+            <span class="{% if is_overdue %}text-red-600 font-medium{% elif is_soon %}text-amber-600{% else %}text-blackbook-900{% endif %}">
+                {{ status.next_followup_date.strftime('%B %d, %Y') }}
+                {% if is_overdue %}
+                <span class="text-xs">(overdue)</span>
+                {% endif %}
+            </span>
+            {% else %}
+            <span class="text-blackbook-400">-</span>
+            {% endif %}
+        </dd>
+    </div>
+
+    {# Notes #}
+    {% if status and status.notes %}
+    <div class="pt-3 border-t border-blackbook-100">
+        <dt class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Notes</dt>
+        <dd class="mt-1 text-sm text-blackbook-600">{{ status.notes }}</dd>
+    </div>
+    {% endif %}
+</dl>

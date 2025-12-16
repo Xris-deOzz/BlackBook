@@ -1,0 +1,89 @@
+{# Organization Relationship Status Card - Edit Mode (Sidebar) #}
+{% set status = organization.relationship_status %}
+
+<form hx-put="/api/organizations/{{ organization.id }}/sections/relationship-status"
+      hx-target="#relationship-status-content"
+      hx-swap="innerHTML"
+      class="space-y-4">
+
+    {# Primary Contact - Searchable select #}
+    <div>
+        <label for="primary_contact_id" class="block text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-1">Primary Contact</label>
+        <select name="primary_contact_id" id="primary_contact_id"
+                class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 text-sm">
+            <option value="">-- Select a person --</option>
+            {% for person in all_persons %}
+            <option value="{{ person.id }}"
+                    {% if status and status.primary_contact_id == person.id %}selected{% endif %}>
+                {{ person.full_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {# Relationship Warmth #}
+    <div>
+        <label for="relationship_warmth" class="block text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-1">Warmth</label>
+        <select name="relationship_warmth" id="relationship_warmth"
+                class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 text-sm">
+            <option value="">-- Select warmth --</option>
+            {% for warmth in [
+                ('hot', '🔥 Hot - Active deal/discussion'),
+                ('warm', '🟢 Warm - Regular contact'),
+                ('met_once', '🟡 Met Once'),
+                ('cold', '🔴 Cold - No recent contact'),
+                ('unknown', '⚪ Unknown')
+            ] %}
+            <option value="{{ warmth[0] }}"
+                    {% if status and status.relationship_warmth == warmth[0] %}selected{% endif %}>
+                {{ warmth[1] }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {# Intro Available Via #}
+    <div>
+        <label for="intro_available_via_id" class="block text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-1">Intro Available Via</label>
+        <select name="intro_available_via_id" id="intro_available_via_id"
+                class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 text-sm">
+            <option value="">-- Select a person --</option>
+            {% for person in all_persons %}
+            <option value="{{ person.id }}"
+                    {% if status and status.intro_available_via_id == person.id %}selected{% endif %}>
+                {{ person.full_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {# Next Follow-up Date #}
+    <div>
+        <label for="next_followup_date" class="block text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-1">Next Follow-up</label>
+        <input type="date" name="next_followup_date" id="next_followup_date"
+               value="{{ status.next_followup_date.strftime('%Y-%m-%d') if status and status.next_followup_date else '' }}"
+               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 text-sm">
+    </div>
+
+    {# Notes #}
+    <div>
+        <label for="relationship_notes" class="block text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-1">Notes</label>
+        <textarea name="notes" id="relationship_notes" rows="3"
+                  placeholder="Notes about your relationship with this organization..."
+                  class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 text-sm">{{ status.notes if status and status.notes else '' }}</textarea>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+        <button type="button"
+                hx-get="/api/organizations/{{ organization.id }}/sections/relationship-status/view"
+                hx-target="#relationship-status-content"
+                hx-swap="innerHTML"
+                class="px-3 py-1.5 text-sm text-blackbook-600 hover:text-blackbook-800">
+            Cancel
+        </button>
+        <button type="submit"
+                class="px-3 py-1.5 text-sm bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700">
+            Save
+        </button>
+    </div>
+</form>

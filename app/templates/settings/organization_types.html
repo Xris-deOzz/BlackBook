@@ -1,0 +1,589 @@
+<!-- Organization Types Admin -->
+<div class="space-y-6">
+    <!-- Header -->
+    <div>
+        <h2 class="text-lg font-semibold text-blackbook-900">Organization Types</h2>
+        <p class="text-sm text-blackbook-500">Manage organization categories and types for your CRM</p>
+    </div>
+
+    <!-- Categories Section -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-blackbook-200 bg-blackbook-50">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blackbook-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    <h3 class="text-base font-semibold text-blackbook-900">Categories</h3>
+                    <span class="text-sm text-blackbook-500">({{ categories|length }} total)</span>
+                </div>
+                <button onclick="showAddCategoryModal()"
+                        class="inline-flex items-center px-3 py-1.5 bg-blackbook-600 text-white text-xs font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-1">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Category
+                </button>
+            </div>
+        </div>
+
+        <div id="categories-list">
+            {% include "settings/_organization_categories_list.html" %}
+        </div>
+    </div>
+
+    <!-- Types Section -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-blackbook-200 bg-blackbook-50">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blackbook-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    <h3 class="text-base font-semibold text-blackbook-900">Types</h3>
+                    <span class="text-sm text-blackbook-500">({{ types|length }} total)</span>
+                </div>
+                <button onclick="showAddTypeModal()"
+                        class="inline-flex items-center px-3 py-1.5 bg-blackbook-600 text-white text-xs font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-1">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Type
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter by category -->
+        <div class="px-6 py-3 bg-blackbook-50 border-b border-blackbook-200">
+            <label class="text-sm text-blackbook-600 mr-2">Filter by category:</label>
+            <select id="type-category-filter" onchange="filterTypesByCategory(this.value)"
+                    class="text-sm border-blackbook-300 rounded-md focus:ring-blackbook-500 focus:border-blackbook-500">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div id="types-list">
+            {% include "settings/_organization_types_list.html" %}
+        </div>
+    </div>
+
+    <!-- Investment Profile Options Section -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-blackbook-200 bg-blackbook-50">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blackbook-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                    </svg>
+                    <h3 class="text-base font-semibold text-blackbook-900">Investment Profile Options</h3>
+                    <span class="text-sm text-blackbook-500">({{ options|length }} total)</span>
+                </div>
+                <button onclick="showAddOptionModal()"
+                        class="inline-flex items-center px-3 py-1.5 bg-blackbook-600 text-white text-xs font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-1">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Option
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter by option type -->
+        <div class="px-6 py-3 bg-blackbook-50 border-b border-blackbook-200">
+            <label class="text-sm text-blackbook-600 mr-2">Filter by type:</label>
+            <select id="option-type-filter" onchange="filterOptionsByType(this.value)"
+                    class="text-sm border-blackbook-300 rounded-md focus:ring-blackbook-500 focus:border-blackbook-500">
+                <option value="">All Types</option>
+                {% for option_type in option_types %}
+                <option value="{{ option_type }}">{{ option_type|replace('_', ' ')|title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div id="options-list">
+            {% include "settings/_organization_options_list.html" %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Category Modal -->
+<div id="add-category-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-blackbook-200">
+            <h3 class="text-lg font-semibold text-blackbook-900">Add Category</h3>
+        </div>
+        <form hx-post="/api/lookups/admin/categories"
+              hx-target="#categories-list"
+              hx-swap="innerHTML"
+              hx-on::after-request="closeModal('add-category-modal')">
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Code *</label>
+                    <input type="text" name="code" required
+                           placeholder="e.g., INVESTMENT_FIRM"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Name *</label>
+                    <input type="text" name="name" required
+                           placeholder="e.g., Investment Firm"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Description</label>
+                    <textarea name="description" rows="2"
+                              placeholder="Optional description"
+                              class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"></textarea>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="has_investment_profile" id="cat-has-profile" value="true"
+                           class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                    <label for="cat-has-profile" class="ml-2 text-sm text-blackbook-700">Has Investment Profile</label>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-blackbook-50 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('add-category-modal')"
+                        class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700">
+                    Add Category
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Type Modal -->
+<div id="add-type-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-blackbook-200">
+            <h3 class="text-lg font-semibold text-blackbook-900">Add Type</h3>
+        </div>
+        <form hx-post="/api/lookups/admin/types"
+              hx-target="#types-list"
+              hx-swap="innerHTML"
+              hx-on::after-request="closeModal('add-type-modal')">
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Category *</label>
+                    <select name="category_id" required
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                        <option value="">Select Category...</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Code *</label>
+                    <input type="text" name="code" required
+                           placeholder="e.g., VC"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Name *</label>
+                    <input type="text" name="name" required
+                           placeholder="e.g., Venture Capital"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Description</label>
+                    <textarea name="description" rows="2"
+                              placeholder="Optional description"
+                              class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Profile Style</label>
+                    <select name="profile_style"
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                        <option value="">None</option>
+                        <option value="vc_style">VC Style</option>
+                        <option value="pe_style">PE Style</option>
+                        <option value="credit_style">Credit Style</option>
+                        <option value="multi_strategy">Multi-Strategy</option>
+                        <option value="public_markets">Public Markets</option>
+                    </select>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-blackbook-50 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('add-type-modal')"
+                        class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700">
+                    Add Type
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Option Modal -->
+<div id="add-option-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-blackbook-200">
+            <h3 class="text-lg font-semibold text-blackbook-900">Add Option</h3>
+        </div>
+        <form hx-post="/api/lookups/admin/options"
+              hx-target="#options-list"
+              hx-swap="innerHTML"
+              hx-on::after-request="closeModal('add-option-modal')">
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Option Type *</label>
+                    <select name="option_type" required
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                        <option value="">Select Type...</option>
+                        <option value="vc_stage">VC Stage</option>
+                        <option value="vc_sector">VC Sector</option>
+                        <option value="pe_deal_type">PE Deal Type</option>
+                        <option value="pe_industry">PE Industry</option>
+                        <option value="control_preference">Control Preference</option>
+                        <option value="credit_strategy">Credit Strategy</option>
+                        <option value="investment_style">Investment Style</option>
+                        <option value="asset_class">Asset Class</option>
+                        <option value="trading_strategy">Trading Strategy</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Code *</label>
+                    <input type="text" name="code" required
+                           placeholder="e.g., SEED"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Name *</label>
+                    <input type="text" name="name" required
+                           placeholder="e.g., Seed Stage"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-blackbook-50 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('add-option-modal')"
+                        class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700">
+                    Add Option
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div id="edit-category-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-blackbook-200">
+            <h3 class="text-lg font-semibold text-blackbook-900">Edit Category</h3>
+        </div>
+        <form id="edit-category-form"
+              hx-target="#categories-list"
+              hx-swap="innerHTML"
+              hx-on::after-request="closeModal('edit-category-modal')">
+            <div class="p-6 space-y-4">
+                <input type="hidden" name="id" id="edit-cat-id">
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Code *</label>
+                    <input type="text" name="code" id="edit-cat-code" required
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Name *</label>
+                    <input type="text" name="name" id="edit-cat-name" required
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Description</label>
+                    <textarea name="description" id="edit-cat-description" rows="2"
+                              class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"></textarea>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="has_investment_profile" id="edit-cat-has-profile" value="true"
+                           class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                    <label for="edit-cat-has-profile" class="ml-2 text-sm text-blackbook-700">Has Investment Profile</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_active" id="edit-cat-is-active" value="true"
+                           class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                    <label for="edit-cat-is-active" class="ml-2 text-sm text-blackbook-700">Active</label>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-blackbook-50 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('edit-category-modal')"
+                        class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Type Modal -->
+<div id="edit-type-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-blackbook-200">
+            <h3 class="text-lg font-semibold text-blackbook-900">Edit Type</h3>
+        </div>
+        <form id="edit-type-form"
+              hx-target="#types-list"
+              hx-swap="innerHTML"
+              hx-on::after-request="closeModal('edit-type-modal')">
+            <div class="p-6 space-y-4">
+                <input type="hidden" name="id" id="edit-type-id">
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Category *</label>
+                    <select name="category_id" id="edit-type-category" required
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Code *</label>
+                    <input type="text" name="code" id="edit-type-code" required
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Name *</label>
+                    <input type="text" name="name" id="edit-type-name" required
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Description</label>
+                    <textarea name="description" id="edit-type-description" rows="2"
+                              class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Profile Style</label>
+                    <select name="profile_style" id="edit-type-profile-style"
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                        <option value="">None</option>
+                        <option value="vc_style">VC Style</option>
+                        <option value="pe_style">PE Style</option>
+                        <option value="credit_style">Credit Style</option>
+                        <option value="multi_strategy">Multi-Strategy</option>
+                        <option value="public_markets">Public Markets</option>
+                    </select>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_active" id="edit-type-is-active" value="true"
+                           class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                    <label for="edit-type-is-active" class="ml-2 text-sm text-blackbook-700">Active</label>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-blackbook-50 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('edit-type-modal')"
+                        class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Option Modal -->
+<div id="edit-option-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-blackbook-200">
+            <h3 class="text-lg font-semibold text-blackbook-900">Edit Option</h3>
+        </div>
+        <form id="edit-option-form"
+              hx-target="#options-list"
+              hx-swap="innerHTML"
+              hx-on::after-request="closeModal('edit-option-modal')">
+            <div class="p-6 space-y-4">
+                <input type="hidden" name="id" id="edit-option-id">
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Option Type *</label>
+                    <select name="option_type" id="edit-option-type" required
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                        <option value="vc_stage">VC Stage</option>
+                        <option value="vc_sector">VC Sector</option>
+                        <option value="pe_deal_type">PE Deal Type</option>
+                        <option value="pe_industry">PE Industry</option>
+                        <option value="control_preference">Control Preference</option>
+                        <option value="credit_strategy">Credit Strategy</option>
+                        <option value="investment_style">Investment Style</option>
+                        <option value="asset_class">Asset Class</option>
+                        <option value="trading_strategy">Trading Strategy</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Code *</label>
+                    <input type="text" name="code" id="edit-option-code" required
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Name *</label>
+                    <input type="text" name="name" id="edit-option-name" required
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_active" id="edit-option-is-active" value="true"
+                           class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                    <label for="edit-option-is-active" class="ml-2 text-sm text-blackbook-700">Active</label>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-blackbook-50 flex justify-end gap-3">
+                <button type="button" onclick="closeModal('edit-option-modal')"
+                        class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showAddCategoryModal() {
+    document.getElementById('add-category-modal').classList.remove('hidden');
+    document.getElementById('add-category-modal').classList.add('flex');
+}
+
+function showAddTypeModal() {
+    document.getElementById('add-type-modal').classList.remove('hidden');
+    document.getElementById('add-type-modal').classList.add('flex');
+}
+
+function showAddOptionModal() {
+    document.getElementById('add-option-modal').classList.remove('hidden');
+    document.getElementById('add-option-modal').classList.add('flex');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+    document.getElementById(modalId).classList.remove('flex');
+}
+
+function editCategory(id, code, name, description, hasProfile, isActive) {
+    document.getElementById('edit-cat-id').value = id;
+    document.getElementById('edit-cat-code').value = code;
+    document.getElementById('edit-cat-name').value = name;
+    document.getElementById('edit-cat-description').value = description || '';
+    document.getElementById('edit-cat-has-profile').checked = hasProfile;
+    document.getElementById('edit-cat-is-active').checked = isActive;
+
+    const form = document.getElementById('edit-category-form');
+    form.setAttribute('hx-put', '/api/lookups/admin/categories/' + id);
+    htmx.process(form);
+
+    document.getElementById('edit-category-modal').classList.remove('hidden');
+    document.getElementById('edit-category-modal').classList.add('flex');
+}
+
+function editType(id, categoryId, code, name, description, profileStyle, isActive) {
+    document.getElementById('edit-type-id').value = id;
+    document.getElementById('edit-type-category').value = categoryId;
+    document.getElementById('edit-type-code').value = code;
+    document.getElementById('edit-type-name').value = name;
+    document.getElementById('edit-type-description').value = description || '';
+    document.getElementById('edit-type-profile-style').value = profileStyle || '';
+    document.getElementById('edit-type-is-active').checked = isActive;
+
+    const form = document.getElementById('edit-type-form');
+    form.setAttribute('hx-put', '/api/lookups/admin/types/' + id);
+    htmx.process(form);
+
+    document.getElementById('edit-type-modal').classList.remove('hidden');
+    document.getElementById('edit-type-modal').classList.add('flex');
+}
+
+function editOption(id, optionType, code, name, isActive) {
+    document.getElementById('edit-option-id').value = id;
+    document.getElementById('edit-option-type').value = optionType;
+    document.getElementById('edit-option-code').value = code;
+    document.getElementById('edit-option-name').value = name;
+    document.getElementById('edit-option-is-active').checked = isActive;
+
+    const form = document.getElementById('edit-option-form');
+    form.setAttribute('hx-put', '/api/lookups/admin/options/' + id);
+    htmx.process(form);
+
+    document.getElementById('edit-option-modal').classList.remove('hidden');
+    document.getElementById('edit-option-modal').classList.add('flex');
+}
+
+function filterTypesByCategory(categoryId) {
+    const url = categoryId
+        ? '/settings/organization-types/types-list?category_id=' + categoryId
+        : '/settings/organization-types/types-list';
+    htmx.ajax('GET', url, {target: '#types-list', swap: 'innerHTML'});
+}
+
+function filterOptionsByType(optionType) {
+    const url = optionType
+        ? '/settings/organization-types/options-list?option_type=' + optionType
+        : '/settings/organization-types/options-list';
+    htmx.ajax('GET', url, {target: '#options-list', swap: 'innerHTML'});
+}
+
+// Map profile styles to related option types
+const profileStyleToOptionTypes = {
+    'vc_style': ['vc_stage', 'vc_sector'],
+    'pe_style': ['pe_deal_type', 'pe_industry', 'control_preference'],
+    'credit_style': ['credit_strategy'],
+    'multi_strategy': ['investment_style', 'asset_class'],
+    'public_markets': ['trading_strategy', 'asset_class']
+};
+
+function showProfileStyleOptions(profileStyle) {
+    // Get the first related option type for filtering
+    const optionTypes = profileStyleToOptionTypes[profileStyle];
+    if (optionTypes && optionTypes.length > 0) {
+        // Update the filter dropdown to show the first related type
+        const filterSelect = document.getElementById('option-type-filter');
+        if (filterSelect) {
+            filterSelect.value = optionTypes[0];
+        }
+        // Filter the options list
+        filterOptionsByType(optionTypes[0]);
+    }
+
+    // Scroll to the Investment Profile Options section
+    const optionsSection = document.getElementById('options-list');
+    if (optionsSection) {
+        optionsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+// Close modal when clicking outside
+document.querySelectorAll('[id$="-modal"]').forEach(modal => {
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeModal(this.id);
+        }
+    });
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('[id$="-modal"]').forEach(modal => {
+            if (!modal.classList.contains('hidden')) {
+                closeModal(modal.id);
+            }
+        });
+    }
+});
+</script>

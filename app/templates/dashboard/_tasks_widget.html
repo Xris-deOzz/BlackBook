@@ -1,0 +1,316 @@
+{% if no_accounts %}
+<div class="text-center py-8 text-blackbook-400">
+    <svg class="mx-auto h-12 w-12 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+    </svg>
+    <p class="mt-2 text-sm">No Google account connected</p>
+    <a href="/settings#google-accounts" class="mt-2 inline-block text-sm text-blue-400 hover:text-blue-300">
+        Connect Google Account
+    </a>
+</div>
+{% elif error %}
+<div class="text-center py-8 text-blackbook-400">
+    <svg class="mx-auto h-12 w-12 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+    </svg>
+    <p class="mt-2 text-sm">{{ error }}</p>
+</div>
+{% elif todays_tasks %}
+<!-- Today's Tasks - Only showing tasks due today or overdue -->
+<div class="space-y-2 max-h-[400px] overflow-y-auto" id="tasks-container">
+    <!-- Overdue Tasks -->
+    {% if overdue_tasks %}
+    <div class="mb-3">
+        <div class="text-xs font-medium text-red-400 px-2 py-1 uppercase tracking-wide flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Overdue ({{ overdue_tasks|length }})
+        </div>
+        {% for task in overdue_tasks %}
+        <div class="flex items-start gap-3 p-3 rounded-lg bg-red-900/30 group task-item mb-1"
+             data-list-id="{{ task.list_id }}"
+             data-task-id="{{ task.id }}"
+             data-title="{{ task.title|e }}"
+             data-notes="{{ task.notes|e }}"
+             data-due-date="{{ task.due_date or '' }}">
+            <!-- Checkbox -->
+            <div class="flex-shrink-0 mt-0.5">
+                <button type="button" class="task-toggle w-6 h-6 rounded-full border-2 border-red-500 hover:bg-red-500 hover:border-red-500 transition-all flex items-center justify-center group/check"
+                        title="Mark as complete">
+                    <svg class="w-3 h-3 text-white opacity-0 group-hover/check:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Task Content -->
+            <div class="flex-1 min-w-0 task-content cursor-pointer">
+                <p class="text-sm font-medium text-blackbook-100">{{ task.title }}</p>
+                <p class="text-xs text-red-400 mt-0.5">
+                    <svg class="w-3 h-3 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    {{ task.due_date_display }}
+                </p>
+                {% if task.notes %}
+                <p class="text-xs text-blackbook-400 truncate mt-0.5">{{ task.notes }}</p>
+                {% endif %}
+                <p class="text-xs text-blackbook-500 mt-1">{{ task.list_name }}</p>
+            </div>
+
+            <!-- Edit icon -->
+            <div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button type="button" class="p-1 text-blackbook-400 hover:text-blackbook-200 task-edit">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Due Today -->
+    {% if due_today_tasks %}
+    <div>
+        <div class="text-xs font-medium text-amber-400 px-2 py-1 uppercase tracking-wide flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            Due Today ({{ due_today_tasks|length }})
+        </div>
+        {% for task in due_today_tasks %}
+        <div class="flex items-start gap-3 p-3 rounded-lg bg-amber-900/30 group task-item mb-1"
+             data-list-id="{{ task.list_id }}"
+             data-task-id="{{ task.id }}"
+             data-title="{{ task.title|e }}"
+             data-notes="{{ task.notes|e }}"
+             data-due-date="{{ task.due_date or '' }}">
+            <!-- Checkbox -->
+            <div class="flex-shrink-0 mt-0.5">
+                <button type="button" class="task-toggle w-6 h-6 rounded-full border-2 border-amber-500 hover:bg-amber-500 hover:border-amber-500 transition-all flex items-center justify-center group/check"
+                        title="Mark as complete">
+                    <svg class="w-3 h-3 text-white opacity-0 group-hover/check:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Task Content -->
+            <div class="flex-1 min-w-0 task-content cursor-pointer">
+                <p class="text-sm font-medium text-blackbook-100">{{ task.title }}</p>
+                {% if task.notes %}
+                <p class="text-xs text-blackbook-400 truncate mt-0.5">{{ task.notes }}</p>
+                {% endif %}
+                <p class="text-xs text-blackbook-500 mt-1">{{ task.list_name }}</p>
+            </div>
+
+            <!-- Edit icon -->
+            <div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button type="button" class="p-1 text-blackbook-400 hover:text-blackbook-200 task-edit">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Edit Modal -->
+<div id="task-edit-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
+    <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-md mx-4 border border-blackbook-600">
+        <h3 class="text-lg font-semibold text-blackbook-100 mb-4">Edit Task</h3>
+        <form id="task-edit-form" class="space-y-3">
+            <input type="hidden" id="edit-list-id">
+            <input type="hidden" id="edit-task-id">
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Title</label>
+                <input type="text" id="edit-title"
+                       class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Notes</label>
+                <textarea id="edit-notes" rows="3"
+                          class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-300 focus:outline-none focus:border-blue-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
+                <div class="flex gap-2">
+                    <input type="date" id="edit-due-date"
+                           class="flex-1 px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    <button type="button" id="clear-due-date"
+                            class="px-3 py-2 text-sm text-blackbook-400 hover:text-blackbook-200 border border-blackbook-600 rounded">
+                        Clear
+                    </button>
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button type="submit"
+                        class="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Save
+                </button>
+                <button type="button" id="cancel-edit"
+                        class="flex-1 px-4 py-2 text-sm bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function() {
+    const container = document.getElementById('tasks-container');
+    if (!container) return;
+
+    // ========== TASK TOGGLE ==========
+    container.querySelectorAll('.task-toggle').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const taskItem = btn.closest('.task-item');
+            if (!taskItem) return;
+
+            const listId = taskItem.dataset.listId;
+            const taskId = taskItem.dataset.taskId;
+
+            if (!listId || !taskId) {
+                console.error('Missing list_id or task_id');
+                return;
+            }
+
+            // Visual feedback - show loading state
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `<svg class="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>`;
+
+            try {
+                const response = await fetch(`/tasks/${listId}/${taskId}/toggle`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    // Show success briefly
+                    btn.innerHTML = `<svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>`;
+
+                    // Refresh the widget after a brief delay
+                    setTimeout(() => {
+                        htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                        // Also refresh expanded view if visible
+                        const expandedContainer = document.getElementById('tasks-expanded-content');
+                        if (expandedContainer) {
+                            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-expanded-content');
+                        }
+                    }, 300);
+                } else {
+                    const data = await response.json();
+                    console.error('Error toggling task:', data.error);
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50');
+                }
+            } catch (error) {
+                console.error('Error toggling task:', error);
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            }
+        });
+    });
+
+    // ========== TASK EDIT ==========
+    container.querySelectorAll('.task-edit, .task-content').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const taskItem = el.closest('.task-item');
+            openEditModal(taskItem);
+        });
+    });
+
+    const modal = document.getElementById('task-edit-modal');
+    const form = document.getElementById('task-edit-form');
+
+    function openEditModal(taskItem) {
+        document.getElementById('edit-list-id').value = taskItem.dataset.listId;
+        document.getElementById('edit-task-id').value = taskItem.dataset.taskId;
+        document.getElementById('edit-title').value = taskItem.dataset.title;
+        document.getElementById('edit-notes').value = taskItem.dataset.notes;
+        document.getElementById('edit-due-date').value = taskItem.dataset.dueDate;
+        modal.classList.remove('hidden');
+        document.getElementById('edit-title').focus();
+    }
+
+    function closeEditModal() {
+        modal.classList.add('hidden');
+    }
+
+    document.getElementById('cancel-edit')?.addEventListener('click', closeEditModal);
+    document.getElementById('clear-due-date')?.addEventListener('click', () => {
+        document.getElementById('edit-due-date').value = '';
+    });
+
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) closeEditModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+            closeEditModal();
+        }
+    });
+
+    form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const listId = document.getElementById('edit-list-id').value;
+        const taskId = document.getElementById('edit-task-id').value;
+        const title = document.getElementById('edit-title').value;
+        const notes = document.getElementById('edit-notes').value;
+        const dueDate = document.getElementById('edit-due-date').value;
+
+        try {
+            const response = await fetch(`/tasks/${listId}/${taskId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: title,
+                    notes: notes,
+                    due_date: dueDate || null
+                })
+            });
+            if (response.ok) {
+                closeEditModal();
+                htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                // Also refresh expanded view if visible
+                const expandedContainer = document.getElementById('tasks-expanded-content');
+                if (expandedContainer) {
+                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-expanded-content');
+                }
+            }
+        } catch (error) {
+            console.error('Error saving task:', error);
+        }
+    });
+})();
+</script>
+{% else %}
+<!-- Empty state - no tasks due today -->
+<div class="text-center py-8 text-blackbook-400">
+    <svg class="mx-auto h-12 w-12 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <p class="mt-2 text-sm">No tasks due today</p>
+    <p class="text-xs text-blackbook-500">You're all caught up!</p>
+</div>
+{% endif %}

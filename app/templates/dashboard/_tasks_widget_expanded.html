@@ -1,0 +1,591 @@
+{% if no_accounts %}
+<div class="text-center py-8 text-blackbook-400">
+    <svg class="mx-auto h-12 w-12 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+    </svg>
+    <p class="mt-2 text-sm">No Google account connected</p>
+    <a href="/settings#google-accounts" class="mt-2 inline-block text-sm text-blue-400 hover:text-blue-300">
+        Connect Google Account
+    </a>
+</div>
+{% elif error %}
+<div class="text-center py-8 text-blackbook-400">
+    <svg class="mx-auto h-12 w-12 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+    </svg>
+    <p class="mt-2 text-sm">{{ error }}</p>
+</div>
+{% elif task_lists %}
+<!-- Multi-column task board layout like Google Tasks -->
+<div class="overflow-x-auto" id="tasks-expanded-container">
+    <div class="flex gap-4 pb-4 min-w-max" id="task-lists-container">
+        {% for task_list in task_lists %}
+        <div class="task-list-column bg-blackbook-800 rounded-lg w-72 flex-shrink-0 flex flex-col max-h-[600px] transition-transform"
+             data-list-id="{{ task_list.list_id }}">
+            <!-- List Header (drag handle) -->
+            <div class="column-drag-handle px-4 py-3 border-b border-blackbook-700 flex items-center justify-between cursor-grab active:cursor-grabbing select-none">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <!-- Drag grip icon -->
+                    <svg class="w-4 h-4 text-blackbook-500 flex-shrink-0 opacity-50 hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 24 24">
+                        <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                        <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                        <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                    </svg>
+                    <h3 class="font-semibold text-blackbook-100 truncate">{{ task_list.list_name }}</h3>
+                </div>
+                <span class="text-xs text-blackbook-400 ml-2">({{ task_list.tasks|length }})</span>
+            </div>
+
+            <!-- Add Task Button -->
+            <button type="button" class="add-task-btn flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:text-blue-300 hover:bg-blackbook-700/50 transition-colors border-b border-blackbook-700"
+                    data-list-id="{{ task_list.list_id }}">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add a task
+            </button>
+
+            <!-- Tasks Container (scrollable) -->
+            <div class="flex-1 overflow-y-auto p-2 space-y-1">
+                <!-- Priority Tasks (overdue/due soon) -->
+                {% if task_list.priority_tasks %}
+                <div class="mb-3">
+                    <div class="text-xs font-medium text-amber-400 px-2 py-1 uppercase tracking-wide">Priority</div>
+                    {% for task in task_list.priority_tasks %}
+                    <div class="task-item-expanded rounded-lg p-3 hover:bg-blackbook-700/50 cursor-pointer transition-colors group
+                                {% if task.is_overdue %}bg-red-900/20{% elif task.is_priority %}bg-amber-900/20{% endif %}"
+                         data-list-id="{{ task_list.list_id }}"
+                         data-task-id="{{ task.id }}"
+                         data-title="{{ task.title|e }}"
+                         data-notes="{{ task.notes|e }}"
+                         data-due-date="{{ task.due_date or '' }}">
+                        <div class="flex items-start gap-3">
+                            <!-- Checkbox -->
+                            <button type="button" class="task-toggle-expanded flex-shrink-0 mt-0.5 focus:outline-none">
+                                {% if task.completed %}
+                                <svg class="w-5 h-5 text-green-400 hover:text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                {% else %}
+                                <div class="w-5 h-5 rounded-full border-2 {% if task.is_overdue %}border-red-500 hover:bg-red-500/30{% else %}border-amber-500 hover:bg-amber-500/30{% endif %} transition-colors"></div>
+                                {% endif %}
+                            </button>
+
+                            <!-- Task Content -->
+                            <div class="flex-1 min-w-0 task-content-expanded">
+                                <p class="text-sm font-medium text-blackbook-100 {% if task.completed %}line-through text-blackbook-500{% endif %}">
+                                    {{ task.title }}
+                                </p>
+                                {% if task.due_date_display %}
+                                <p class="text-xs mt-1 {% if task.is_overdue %}text-red-400{% else %}text-amber-400{% endif %}">
+                                    <svg class="w-3 h-3 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    {{ task.due_date_display }}
+                                </p>
+                                {% endif %}
+                                {% if task.notes %}
+                                <p class="text-xs text-blackbook-400 mt-1 line-clamp-2">{{ task.notes }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Edit button (visible on hover) -->
+                            <button type="button" class="task-edit-expanded opacity-0 group-hover:opacity-100 p-1 text-blackbook-400 hover:text-blackbook-200 transition-opacity">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Other Tasks (no due date) -->
+                {% if task_list.other_tasks %}
+                <div>
+                    {% if task_list.priority_tasks %}
+                    <div class="text-xs font-medium text-blackbook-500 px-2 py-1 uppercase tracking-wide">Other</div>
+                    {% endif %}
+                    {% for task in task_list.other_tasks %}
+                    <div class="task-item-expanded rounded-lg p-3 hover:bg-blackbook-700/50 cursor-pointer transition-colors group"
+                         data-list-id="{{ task_list.list_id }}"
+                         data-task-id="{{ task.id }}"
+                         data-title="{{ task.title|e }}"
+                         data-notes="{{ task.notes|e }}"
+                         data-due-date="{{ task.due_date or '' }}">
+                        <div class="flex items-start gap-3">
+                            <!-- Checkbox -->
+                            <button type="button" class="task-toggle-expanded flex-shrink-0 mt-0.5 focus:outline-none">
+                                {% if task.completed %}
+                                <svg class="w-5 h-5 text-green-400 hover:text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                {% else %}
+                                <div class="w-5 h-5 rounded-full border-2 border-blackbook-500 hover:bg-blackbook-500/30 transition-colors"></div>
+                                {% endif %}
+                            </button>
+
+                            <!-- Task Content -->
+                            <div class="flex-1 min-w-0 task-content-expanded">
+                                <p class="text-sm text-blackbook-100 {% if task.completed %}line-through text-blackbook-500{% endif %}">
+                                    {{ task.title }}
+                                </p>
+                                {% if task.notes %}
+                                <p class="text-xs text-blackbook-400 mt-1 line-clamp-2">{{ task.notes }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Edit button (visible on hover) -->
+                            <button type="button" class="task-edit-expanded opacity-0 group-hover:opacity-100 p-1 text-blackbook-400 hover:text-blackbook-200 transition-opacity">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if not task_list.tasks %}
+                <div class="text-center py-4 text-blackbook-500 text-sm">
+                    No tasks
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Create Task Modal -->
+<div id="task-create-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
+    <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-md mx-4 border border-blackbook-600">
+        <h3 class="text-lg font-semibold text-blackbook-100 mb-4">Add Task</h3>
+        <form id="task-create-form" class="space-y-3">
+            <input type="hidden" id="create-list-id">
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Title</label>
+                <input type="text" id="create-title" required
+                       class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500"
+                       placeholder="What needs to be done?">
+            </div>
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Notes</label>
+                <textarea id="create-notes" rows="3"
+                          class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-300 focus:outline-none focus:border-blue-500"
+                          placeholder="Add details..."></textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
+                <input type="date" id="create-due-date"
+                       class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button type="submit"
+                        class="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Add Task
+                </button>
+                <button type="button" id="cancel-create"
+                        class="flex-1 px-4 py-2 text-sm bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal (same as compact view) -->
+<div id="task-edit-modal-expanded" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
+    <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-md mx-4 border border-blackbook-600">
+        <h3 class="text-lg font-semibold text-blackbook-100 mb-4">Edit Task</h3>
+        <form id="task-edit-form-expanded" class="space-y-3">
+            <input type="hidden" id="edit-list-id-expanded">
+            <input type="hidden" id="edit-task-id-expanded">
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Title</label>
+                <input type="text" id="edit-title-expanded"
+                       class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Notes</label>
+                <textarea id="edit-notes-expanded" rows="3"
+                          class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-300 focus:outline-none focus:border-blue-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
+                <div class="flex gap-2">
+                    <input type="date" id="edit-due-date-expanded"
+                           class="flex-1 px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    <button type="button" id="clear-due-date-expanded"
+                            class="px-3 py-2 text-sm text-blackbook-400 hover:text-blackbook-200 border border-blackbook-600 rounded">
+                        Clear
+                    </button>
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button type="submit"
+                        class="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Save
+                </button>
+                <button type="button" id="cancel-edit-expanded"
+                        class="flex-1 px-4 py-2 text-sm bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function() {
+    const container = document.getElementById('tasks-expanded-container');
+    if (!container) return;
+
+    const listsContainer = document.getElementById('task-lists-container');
+
+    // ========== COLUMN DRAG AND DROP ==========
+    let draggedColumn = null;
+    let placeholder = null;
+    let startX = 0;
+    let scrollLeft = 0;
+    let isDragging = false;
+
+    function initColumnDrag() {
+        const handles = container.querySelectorAll('.column-drag-handle');
+
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', startDrag);
+        });
+    }
+
+    function startDrag(e) {
+        // Only left mouse button
+        if (e.button !== 0) return;
+
+        const column = e.target.closest('.task-list-column');
+        if (!column) return;
+
+        e.preventDefault();
+        isDragging = false;
+        startX = e.clientX;
+        scrollLeft = container.scrollLeft;
+
+        // Set up for potential drag
+        draggedColumn = column;
+
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', endDrag);
+    }
+
+    function onDrag(e) {
+        if (!draggedColumn) return;
+
+        const deltaX = Math.abs(e.clientX - startX);
+
+        // Start actual drag after moving 5px (to distinguish from clicks)
+        if (!isDragging && deltaX > 5) {
+            isDragging = true;
+
+            // Create placeholder
+            placeholder = document.createElement('div');
+            placeholder.className = 'task-list-placeholder bg-blackbook-700/50 border-2 border-dashed border-blackbook-500 rounded-lg w-72 flex-shrink-0 h-32';
+
+            // Insert placeholder
+            draggedColumn.parentNode.insertBefore(placeholder, draggedColumn);
+
+            // Style the dragged column
+            const rect = draggedColumn.getBoundingClientRect();
+            draggedColumn.style.position = 'fixed';
+            draggedColumn.style.zIndex = '1000';
+            draggedColumn.style.width = rect.width + 'px';
+            draggedColumn.style.top = rect.top + 'px';
+            draggedColumn.style.left = rect.left + 'px';
+            draggedColumn.style.opacity = '0.9';
+            draggedColumn.style.boxShadow = '0 10px 40px rgba(0,0,0,0.4)';
+            draggedColumn.style.pointerEvents = 'none';
+            draggedColumn.classList.add('scale-[1.02]');
+        }
+
+        if (isDragging) {
+            // Move the dragged column with cursor
+            const containerRect = container.getBoundingClientRect();
+            draggedColumn.style.left = (e.clientX - 144) + 'px'; // 144 = half of 288px (w-72)
+
+            // Auto-scroll when near edges
+            const scrollMargin = 100;
+            if (e.clientX - containerRect.left < scrollMargin) {
+                container.scrollLeft -= 10;
+            } else if (containerRect.right - e.clientX < scrollMargin) {
+                container.scrollLeft += 10;
+            }
+
+            // Find drop position
+            const columns = Array.from(listsContainer.querySelectorAll('.task-list-column:not([style*="position: fixed"])'));
+            let insertBefore = null;
+
+            for (const col of columns) {
+                const colRect = col.getBoundingClientRect();
+                const colCenter = colRect.left + colRect.width / 2;
+
+                if (e.clientX < colCenter) {
+                    insertBefore = col;
+                    break;
+                }
+            }
+
+            // Move placeholder
+            if (insertBefore && insertBefore !== placeholder.nextSibling) {
+                listsContainer.insertBefore(placeholder, insertBefore);
+            } else if (!insertBefore && placeholder.nextSibling) {
+                listsContainer.appendChild(placeholder);
+            }
+        }
+    }
+
+    function endDrag(e) {
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', endDrag);
+
+        if (isDragging && draggedColumn && placeholder) {
+            // Reset styles
+            draggedColumn.style.position = '';
+            draggedColumn.style.zIndex = '';
+            draggedColumn.style.width = '';
+            draggedColumn.style.top = '';
+            draggedColumn.style.left = '';
+            draggedColumn.style.opacity = '';
+            draggedColumn.style.boxShadow = '';
+            draggedColumn.style.pointerEvents = '';
+            draggedColumn.classList.remove('scale-[1.02]');
+
+            // Insert column at placeholder position
+            listsContainer.insertBefore(draggedColumn, placeholder);
+            placeholder.remove();
+
+            // Save new order
+            saveColumnOrder();
+        }
+
+        draggedColumn = null;
+        placeholder = null;
+        isDragging = false;
+    }
+
+    function saveColumnOrder() {
+        const columns = listsContainer.querySelectorAll('.task-list-column');
+        const order = Array.from(columns).map(col => col.dataset.listId);
+
+        fetch('/tasks/reorder-lists', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order: order })
+        }).then(response => {
+            if (!response.ok) {
+                console.error('Failed to save column order');
+            }
+        }).catch(error => {
+            console.error('Error saving column order:', error);
+        });
+    }
+
+    // Initialize column drag
+    initColumnDrag();
+
+    // ========== TASK TOGGLE ==========
+    container.querySelectorAll('.task-toggle-expanded').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const taskItem = btn.closest('.task-item-expanded');
+            const listId = taskItem.dataset.listId;
+            const taskId = taskItem.dataset.taskId;
+
+            try {
+                const response = await fetch(`/tasks/${listId}/${taskId}/toggle`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-expanded-content');
+                    // Also refresh compact view if visible
+                    const compactContainer = document.getElementById('todays-tasks');
+                    if (compactContainer) {
+                        htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                    }
+                }
+            } catch (error) {
+                console.error('Error toggling task:', error);
+            }
+        });
+    });
+
+    // ========== TASK EDIT ==========
+    container.querySelectorAll('.task-edit-expanded, .task-content-expanded').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const taskItem = el.closest('.task-item-expanded');
+            openEditModal(taskItem);
+        });
+    });
+
+    const modal = document.getElementById('task-edit-modal-expanded');
+    const form = document.getElementById('task-edit-form-expanded');
+
+    function openEditModal(taskItem) {
+        document.getElementById('edit-list-id-expanded').value = taskItem.dataset.listId;
+        document.getElementById('edit-task-id-expanded').value = taskItem.dataset.taskId;
+        document.getElementById('edit-title-expanded').value = taskItem.dataset.title;
+        document.getElementById('edit-notes-expanded').value = taskItem.dataset.notes;
+        document.getElementById('edit-due-date-expanded').value = taskItem.dataset.dueDate;
+        modal.classList.remove('hidden');
+        document.getElementById('edit-title-expanded').focus();
+    }
+
+    function closeEditModal() {
+        modal.classList.add('hidden');
+    }
+
+    document.getElementById('cancel-edit-expanded')?.addEventListener('click', closeEditModal);
+    document.getElementById('clear-due-date-expanded')?.addEventListener('click', () => {
+        document.getElementById('edit-due-date-expanded').value = '';
+    });
+
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) closeEditModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+            closeEditModal();
+        }
+    });
+
+    form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const listId = document.getElementById('edit-list-id-expanded').value;
+        const taskId = document.getElementById('edit-task-id-expanded').value;
+        const title = document.getElementById('edit-title-expanded').value;
+        const notes = document.getElementById('edit-notes-expanded').value;
+        const dueDate = document.getElementById('edit-due-date-expanded').value;
+
+        try {
+            const response = await fetch(`/tasks/${listId}/${taskId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: title,
+                    notes: notes,
+                    due_date: dueDate || null
+                })
+            });
+            if (response.ok) {
+                closeEditModal();
+                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-expanded-content');
+                // Also refresh compact view if visible
+                const compactContainer = document.getElementById('todays-tasks');
+                if (compactContainer) {
+                    htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                }
+            }
+        } catch (error) {
+            console.error('Error saving task:', error);
+        }
+    });
+
+    // ========== CREATE TASK ==========
+    const createModal = document.getElementById('task-create-modal');
+    const createForm = document.getElementById('task-create-form');
+
+    // Add task button click handlers
+    container.querySelectorAll('.add-task-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const listId = btn.dataset.listId;
+            openCreateModal(listId);
+        });
+    });
+
+    function openCreateModal(listId) {
+        document.getElementById('create-list-id').value = listId;
+        document.getElementById('create-title').value = '';
+        document.getElementById('create-notes').value = '';
+        document.getElementById('create-due-date').value = '';
+        createModal.classList.remove('hidden');
+        document.getElementById('create-title').focus();
+    }
+
+    function closeCreateModal() {
+        createModal.classList.add('hidden');
+    }
+
+    document.getElementById('cancel-create')?.addEventListener('click', closeCreateModal);
+
+    createModal?.addEventListener('click', (e) => {
+        if (e.target === createModal) closeCreateModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && createModal && !createModal.classList.contains('hidden')) {
+            closeCreateModal();
+        }
+    });
+
+    createForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const listId = document.getElementById('create-list-id').value;
+        const title = document.getElementById('create-title').value.trim();
+        const notes = document.getElementById('create-notes').value.trim();
+        const dueDate = document.getElementById('create-due-date').value;
+
+        if (!title) {
+            document.getElementById('create-title').focus();
+            return;
+        }
+
+        // Disable submit button during request
+        const submitBtn = createForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Adding...';
+
+        try {
+            const response = await fetch(`/tasks/${listId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: title,
+                    notes: notes || null,
+                    due_date: dueDate || null
+                })
+            });
+            if (response.ok) {
+                closeCreateModal();
+                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-expanded-content');
+                // Also refresh compact view if visible
+                const compactContainer = document.getElementById('todays-tasks');
+                if (compactContainer) {
+                    htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                }
+            } else {
+                const data = await response.json();
+                alert('Error creating task: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error creating task:', error);
+            alert('Error creating task. Please try again.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Add Task';
+        }
+    });
+})();
+</script>
+{% else %}
+<!-- Empty state -->
+<div class="text-center py-8 text-blackbook-400">
+    <svg class="mx-auto h-12 w-12 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <p class="mt-2 text-sm">No tasks found</p>
+    <p class="text-xs text-blackbook-500">All caught up!</p>
+</div>
+{% endif %}

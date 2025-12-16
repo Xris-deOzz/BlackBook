@@ -1,0 +1,41 @@
+<h3 class="text-sm font-medium text-blackbook-900 mb-3">Linked CRM Contacts</h3>
+
+{% if email.person_links %}
+<div class="space-y-2">
+    {% for link in email.person_links %}
+    <div class="flex items-center justify-between p-2 bg-blackbook-50 rounded">
+        <a href="/people/{{ link.person.id }}" class="flex items-center space-x-3 hover:text-blue-600">
+            {% if link.person.profile_picture %}
+            <img src="{{ link.person.profile_picture }}" alt="" class="w-8 h-8 rounded-full object-cover">
+            {% else %}
+            <div class="w-8 h-8 bg-blackbook-200 rounded-full flex items-center justify-center">
+                <span class="text-sm font-medium text-blackbook-600">
+                    {{ link.person.full_name[0]|upper }}
+                </span>
+            </div>
+            {% endif %}
+            <div>
+                <p class="text-sm font-medium">{{ link.person.full_name }}</p>
+                <p class="text-xs text-blackbook-500">{{ link.link_type }}</p>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-sm text-blackbook-500">No linked contacts</p>
+{% endif %}
+
+<!-- Quick actions -->
+<div class="mt-4 pt-4 border-t border-blackbook-200">
+    <p class="text-xs text-blackbook-500 mb-2">
+        Contacts are automatically linked by email address. You can also link manually.
+    </p>
+    <a href="/emails/{{ email.id }}/link"
+       class="inline-flex items-center text-sm text-blue-600 hover:text-blue-700">
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+        </svg>
+        Link to Contact
+    </a>
+</div>

@@ -1,0 +1,240 @@
+<!-- People Section for Organization Edit Form -->
+<div id="people-section">
+    <h3 class="text-lg font-semibold text-blackbook-900 mb-4">Affiliated People</h3>
+
+    <!-- Current Affiliations -->
+    {% if organization.affiliated_persons %}
+    <div class="space-y-2 mb-4">
+        {% for po in organization.affiliated_persons %}
+        <div class="flex items-center justify-between bg-blackbook-50 rounded-lg p-3 border border-blackbook-200" id="affiliation-{{ po.id }}">
+            <div class="flex items-center gap-3 flex-1">
+                <!-- Person name -->
+                <div class="flex-1">
+                    {% if po.person %}
+                    <a href="/persons/{{ po.person.id }}" class="font-medium text-blackbook-800 hover:text-blackbook-600">
+                        {{ po.person.full_name }}
+                    </a>
+                    {% else %}
+                    <span class="font-medium text-blackbook-600 italic">{{ po.person_name or 'Unknown' }}</span>
+                    {% endif %}
+                    {% if po.role %}
+                    <span class="text-blackbook-500 text-sm ml-2">- {{ po.role }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- Relationship type badge -->
+                <span class="px-2 py-1 text-xs font-medium rounded-full
+                    {% if po.relationship.value == 'contact_at' %}bg-blue-100 text-blue-800
+                    {% elif po.relationship.value == 'key_person' %}bg-purple-100 text-purple-800
+                    {% elif po.relationship.value == 'current_employee' %}bg-green-100 text-green-800
+                    {% elif po.relationship.value == 'former_employee' %}bg-gray-100 text-gray-800
+                    {% elif po.relationship.value == 'board_member' %}bg-yellow-100 text-yellow-800
+                    {% elif po.relationship.value == 'advisor' %}bg-indigo-100 text-indigo-800
+                    {% elif po.relationship.value == 'investor' %}bg-emerald-100 text-emerald-800
+                    {% elif po.relationship.value == 'founder' %}bg-orange-100 text-orange-800
+                    {% else %}bg-blackbook-100 text-blackbook-800{% endif %}">
+                    {{ po.relationship.value | replace('_', ' ') | title }}
+                </span>
+
+                <!-- Is current indicator -->
+                {% if not po.is_current %}
+                <span class="px-2 py-1 text-xs font-medium rounded-full bg-blackbook-200 text-blackbook-600">
+                    Former
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Edit/Delete buttons -->
+            <div class="flex items-center gap-2 ml-4">
+                <button type="button"
+                        onclick="editAffiliation('{{ po.id }}', '{{ po.relationship.value }}', '{{ po.role or '' }}', {{ 'true' if po.is_current else 'false' }})"
+                        class="p-1 text-blackbook-400 hover:text-blackbook-600"
+                        title="Edit">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                    </svg>
+                </button>
+                <button type="button"
+                        hx-delete="/organizations/{{ organization.id }}/affiliations/{{ po.id }}"
+                        hx-target="#people-section"
+                        hx-swap="outerHTML"
+                        hx-confirm="Remove {{ po.display_name }} from this organization?"
+                        class="p-1 text-red-400 hover:text-red-600"
+                        title="Remove">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-blackbook-500 text-sm mb-4">No people affiliated with this organization yet.</p>
+    {% endif %}
+
+    <!-- Add New Affiliation Form -->
+    <div class="border border-blackbook-200 rounded-lg p-4 bg-white">
+        <h4 class="text-sm font-medium text-blackbook-700 mb-3">Add Person</h4>
+        <form hx-post="/organizations/{{ organization.id }}/affiliations"
+              hx-target="#people-section"
+              hx-swap="outerHTML"
+              class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Person Select -->
+                <div>
+                    <label for="person_id" class="block text-xs font-medium text-blackbook-600 mb-1">Select Person</label>
+                    <select name="person_id" id="person_id"
+                            class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                        <option value="">-- Select existing person --</option>
+                        {% for person in all_persons %}
+                        <option value="{{ person.id }}">{{ person.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Or enter name manually -->
+                <div>
+                    <label for="person_name" class="block text-xs font-medium text-blackbook-600 mb-1">Or Enter Name</label>
+                    <input type="text" name="person_name" id="person_name"
+                           placeholder="New person name"
+                           class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <!-- Relationship Type -->
+                <div>
+                    <label for="relationship" class="block text-xs font-medium text-blackbook-600 mb-1">Relationship</label>
+                    <select name="relationship" id="relationship"
+                            class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                        <option value="contact_at" selected>Contact At</option>
+                        <option value="key_person">Key Person</option>
+                        <option value="affiliated_with">Affiliated With</option>
+                        <option value="connection">Connection</option>
+                        <option value="current_employee">Current Employee</option>
+                        <option value="former_employee">Former Employee</option>
+                        <option value="board_member">Board Member</option>
+                        <option value="advisor">Advisor</option>
+                        <option value="investor">Investor</option>
+                        <option value="founder">Founder</option>
+                    </select>
+                </div>
+
+                <!-- Role -->
+                <div>
+                    <label for="role" class="block text-xs font-medium text-blackbook-600 mb-1">Role/Title</label>
+                    <input type="text" name="role" id="role"
+                           placeholder="e.g., Managing Director"
+                           class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                </div>
+
+                <!-- Is Current -->
+                <div class="flex items-end">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="is_current" value="true" checked
+                               class="w-4 h-4 rounded border-blackbook-300 text-blackbook-600 focus:ring-blackbook-500">
+                        <span class="text-sm text-blackbook-700">Currently affiliated</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit"
+                        class="px-4 py-2 bg-blackbook-600 text-white text-sm font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+                    Add Person
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Edit Modal (hidden by default) -->
+    <div id="edit-affiliation-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 class="text-lg font-semibold text-blackbook-900 mb-4">Edit Affiliation</h3>
+            <form id="edit-affiliation-form"
+                  hx-target="#people-section"
+                  hx-swap="outerHTML"
+                  class="space-y-4">
+                <div>
+                    <label for="edit_relationship" class="block text-sm font-medium text-blackbook-700 mb-1">Relationship</label>
+                    <select name="relationship" id="edit_relationship"
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                        <option value="contact_at">Contact At</option>
+                        <option value="key_person">Key Person</option>
+                        <option value="affiliated_with">Affiliated With</option>
+                        <option value="connection">Connection</option>
+                        <option value="current_employee">Current Employee</option>
+                        <option value="former_employee">Former Employee</option>
+                        <option value="board_member">Board Member</option>
+                        <option value="advisor">Advisor</option>
+                        <option value="investor">Investor</option>
+                        <option value="founder">Founder</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="edit_role" class="block text-sm font-medium text-blackbook-700 mb-1">Role/Title</label>
+                    <input type="text" name="role" id="edit_role"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                </div>
+
+                <div>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="is_current" id="edit_is_current" value="true"
+                               class="w-4 h-4 rounded border-blackbook-300 text-blackbook-600 focus:ring-blackbook-500">
+                        <span class="text-sm text-blackbook-700">Currently affiliated</span>
+                    </label>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeEditModal()"
+                            class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function editAffiliation(affiliationId, relationship, role, isCurrent) {
+            const modal = document.getElementById('edit-affiliation-modal');
+            const form = document.getElementById('edit-affiliation-form');
+
+            // Set form action
+            form.setAttribute('hx-put', '/organizations/{{ organization.id }}/affiliations/' + affiliationId);
+            htmx.process(form);
+
+            // Set values
+            document.getElementById('edit_relationship').value = relationship;
+            document.getElementById('edit_role').value = role;
+            document.getElementById('edit_is_current').checked = isCurrent;
+
+            // Show modal
+            modal.classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-affiliation-modal').classList.add('hidden');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('edit-affiliation-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEditModal();
+            }
+        });
+
+        // Close modal after successful form submission
+        document.body.addEventListener('htmx:afterRequest', function(event) {
+            if (event.detail.elt.id === 'edit-affiliation-form' && event.detail.successful) {
+                closeEditModal();
+            }
+        });
+    </script>
+</div>

@@ -1,0 +1,1148 @@
+<!-- Person Form - Used for Create and Edit -->
+{% from "partials/_components.html" import collapsible_section, profile_picture_upload %}
+
+<div class="space-y-6">
+    <form
+        {% if person %}
+        hx-put="/people/{{ person.id }}"
+        {% else %}
+        hx-post="/people"
+        {% endif %}
+        hx-target="#main-content"
+        hx-swap="innerHTML"
+        id="person-form"
+        class="space-y-6"
+    >
+        {# =====================================================================
+           HEADER / PROFILE SECTION
+        ===================================================================== #}
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex flex-col md:flex-row gap-6">
+                {# Profile Picture Upload #}
+                {% if person %}
+                <div class="flex-shrink-0">
+                    {{ profile_picture_upload(person.id, person.profile_picture, person.full_name) }}
+                </div>
+                {% endif %}
+
+                {# Name Fields #}
+                <div class="flex-1 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="first_name" class="block text-sm font-medium text-blackbook-700 mb-1">First Name</label>
+                            <input type="text" name="first_name" id="first_name"
+                                   value="{{ person.first_name or '' if person else '' }}"
+                                   class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label for="last_name" class="block text-sm font-medium text-blackbook-700 mb-1">Last Name</label>
+                            <input type="text" name="last_name" id="last_name"
+                                   value="{{ person.last_name or '' if person else '' }}"
+                                   class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="full_name" class="block text-sm font-medium text-blackbook-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="full_name" id="full_name" required
+                               value="{{ person.full_name or '' if person else '' }}"
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="title" class="block text-sm font-medium text-blackbook-700 mb-1">Title / Role</label>
+                        <input type="text" name="title" id="title"
+                               value="{{ person.title or '' if person else '' }}"
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# =====================================================================
+           TAGS SECTION
+        ===================================================================== #}
+        <details id="section-tags" class="bg-white rounded-lg shadow-md overflow-hidden group" open>
+            <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-blackbook-50 transition-colors">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blackbook-400 transform transition-transform group-open:rotate-90"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Tags</h2>
+                </div>
+            </summary>
+            <div class="p-4 pt-0 border-t border-blackbook-100">
+                {% if all_tags is defined and all_tags %}
+                <div class="flex flex-wrap gap-3">
+                    {% for tag in all_tags %}
+                    <label class="inline-flex items-center cursor-pointer group/tag">
+                        <input type="checkbox" name="tag_ids" value="{{ tag.id }}"
+                               {% if person_tag_ids is defined and tag.id in person_tag_ids %}checked{% endif %}
+                               class="h-4 w-4 text-blackbook-600 border-blackbook-300 rounded focus:ring-blackbook-500">
+                        <span class="ml-2 px-2 py-0.5 text-sm font-medium rounded-full group-hover/tag:opacity-80"
+                              style="background-color: {{ tag.color or '#e5e7eb' }}20; color: {{ tag.color or '#374151' }}; border: 1px solid {{ tag.color or '#d1d5db' }};">
+                            {{ tag.name }}
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-blackbook-500 italic">No tags available. <a href="/tags/new" class="text-blue-600 hover:underline">Create a tag</a></p>
+                {% endif %}
+            </div>
+        </details>
+
+        {# =====================================================================
+           CONTACT INFORMATION SECTION
+        ===================================================================== #}
+        <details id="section-contact-info" class="bg-white rounded-lg shadow-md overflow-hidden group" open>
+            <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-blackbook-50 transition-colors">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blackbook-400 transform transition-transform group-open:rotate-90"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Contact Information</h2>
+                </div>
+            </summary>
+            <div class="p-4 pt-0 border-t border-blackbook-100 space-y-6">
+                {# Primary Email/Phone (from Person table) #}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-blackbook-700 mb-1">Primary Email</label>
+                        <input type="email" name="email" id="email"
+                               value="{{ person.email or '' if person else '' }}"
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-blackbook-700 mb-1">Primary Phone</label>
+                        <input type="tel" name="phone" id="phone"
+                               value="{{ person.phone or '' if person else '' }}"
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                </div>
+
+                {# Additional Emails (from person_emails) #}
+                {% if person and person.emails %}
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-2">Additional Emails</label>
+                    <div id="emails-list" class="space-y-2">
+                        {% for email_obj in person.emails %}
+                        <div class="flex items-center gap-2" id="email-row-{{ email_obj.id }}">
+                            <input type="text" value="{{ email_obj.email }}" disabled
+                                   class="flex-1 px-3 py-2 border border-blackbook-200 rounded-md bg-blackbook-50 text-blackbook-700">
+                            <span class="px-2 py-1 text-xs bg-blackbook-100 text-blackbook-600 rounded">{{ email_obj.label.value|title if email_obj.label else 'Other' }}</span>
+                            {% if email_obj.is_primary %}
+                            <span class="px-2 py-1 text-xs bg-purple-100 text-purple-600 rounded">Primary</span>
+                            {% endif %}
+                            <button type="button" onclick="deleteEmail('{{ person.id }}', '{{ email_obj.id }}')"
+                                    class="p-1.5 text-red-500 hover:bg-red-50 rounded">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Additional Phones (from person_phones) #}
+                {% if person and person.phones %}
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-2">Additional Phones</label>
+                    <div id="phones-list" class="space-y-2">
+                        {% for phone_obj in person.phones %}
+                        <div class="flex items-center gap-2" id="phone-row-{{ phone_obj.id }}">
+                            <input type="text" value="{{ phone_obj.phone }}" disabled
+                                   class="flex-1 px-3 py-2 border border-blackbook-200 rounded-md bg-blackbook-50 text-blackbook-700">
+                            <span class="px-2 py-1 text-xs bg-blackbook-100 text-blackbook-600 rounded">{{ phone_obj.label.value|title if phone_obj.label else 'Other' }}</span>
+                            <button type="button" onclick="deletePhone('{{ person.id }}', '{{ phone_obj.id }}')"
+                                    class="p-1.5 text-red-500 hover:bg-red-50 rounded">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Birthday and Location #}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="birthday" class="block text-sm font-medium text-blackbook-700 mb-1">Birthday</label>
+                        <input type="date" name="birthday" id="birthday"
+                               value="{{ person.birthday.strftime('%Y-%m-%d') if person and person.birthday else '' }}"
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="location" class="block text-sm font-medium text-blackbook-700 mb-1">Location</label>
+                        <input type="text" name="location" id="location"
+                               value="{{ person.location or '' if person else '' }}"
+                               placeholder="City, State, Country"
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                </div>
+
+                {# Contacted Checkbox #}
+                <div class="flex items-center">
+                    <input type="checkbox" name="contacted" id="contacted" value="true"
+                           {% if person and person.contacted %}checked{% endif %}
+                           class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                    <label for="contacted" class="ml-2 text-sm text-blackbook-700">Already Contacted</label>
+                </div>
+            </div>
+        </details>
+
+        {# =====================================================================
+           WEBSITES SECTION
+        ===================================================================== #}
+        <details id="section-websites" class="bg-white rounded-lg shadow-md overflow-hidden group" open>
+            <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-blackbook-50 transition-colors">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blackbook-400 transform transition-transform group-open:rotate-90"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Websites</h2>
+                </div>
+                {% if person %}
+                <button type="button" onclick="event.stopPropagation(); showAddWebsiteModal()"
+                        class="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 font-medium rounded-md hover:bg-blue-100">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add
+                </button>
+                {% endif %}
+            </summary>
+            <div class="p-4 pt-0 border-t border-blackbook-100">
+                {# Websites List #}
+                <div id="websites-list" class="space-y-2">
+                    {% if person and person.websites %}
+                    {% for site in person.websites %}
+                    <div class="flex items-center gap-2" id="website-row-{{ site.id }}">
+                        <svg class="h-4 w-4 text-blackbook-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/>
+                        </svg>
+                        <a href="{{ site.url }}" target="_blank" class="flex-1 text-blue-600 hover:underline truncate">{{ site.url }}</a>
+                        {% if site.label %}
+                        <span class="px-2 py-0.5 text-xs bg-blackbook-100 text-blackbook-600 rounded">{{ site.label }}</span>
+                        {% endif %}
+                        <button type="button" onclick="deleteWebsite('{{ person.id }}', '{{ site.id }}')"
+                                class="p-1.5 text-red-500 hover:bg-red-50 rounded">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-blackbook-400 italic text-sm" id="no-websites-msg">No websites added</p>
+                    {% endif %}
+                </div>
+
+                {# Legacy website field (person.website) #}
+                <div class="mt-4 pt-4 border-t border-blackbook-100">
+                    <label for="website" class="block text-sm font-medium text-blackbook-700 mb-1">Primary Website</label>
+                    <input type="url" name="website" id="website"
+                           value="{{ person.website or '' if person else '' }}"
+                           placeholder="https://..."
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                </div>
+            </div>
+        </details>
+
+        {# =====================================================================
+           ADDRESSES SECTION
+        ===================================================================== #}
+        <details id="section-addresses" class="bg-white rounded-lg shadow-md overflow-hidden group">
+            <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-blackbook-50 transition-colors">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blackbook-400 transform transition-transform group-open:rotate-90"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Addresses</h2>
+                </div>
+                {% if person %}
+                <button type="button" onclick="event.stopPropagation(); showAddAddressModal()"
+                        class="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 font-medium rounded-md hover:bg-blue-100">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add
+                </button>
+                {% endif %}
+            </summary>
+            <div class="p-4 pt-0 border-t border-blackbook-100">
+                <div id="addresses-list" class="space-y-4">
+                    {% if person and person.addresses %}
+                    {% for addr in person.addresses %}
+                    <div class="flex items-start gap-3 p-3 bg-blackbook-50 rounded-lg" id="address-row-{{ addr.id }}">
+                        <svg class="h-5 w-5 text-blackbook-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <div class="flex-1">
+                            <span class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">{{ addr.address_type|title }} Address</span>
+                            <div class="text-blackbook-700 mt-1">
+                                {% if addr.street %}{{ addr.street }}<br>{% endif %}
+                                {% if addr.city or addr.state or addr.zip %}{{ addr.city }}{% if addr.city and addr.state %}, {% endif %}{{ addr.state }} {{ addr.zip }}<br>{% endif %}
+                                {% if addr.country %}{{ addr.country }}{% endif %}
+                            </div>
+                        </div>
+                        <button type="button" onclick="deleteAddress('{{ person.id }}', '{{ addr.id }}')"
+                                class="p-1.5 text-red-500 hover:bg-red-100 rounded">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-blackbook-400 italic text-sm" id="no-addresses-msg">No addresses added</p>
+                    {% endif %}
+                </div>
+            </div>
+        </details>
+
+        {# =====================================================================
+           EMPLOYMENT SECTION
+        ===================================================================== #}
+        <details id="section-employment" class="bg-white rounded-lg shadow-md overflow-hidden group" open>
+            <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-blackbook-50 transition-colors">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blackbook-400 transform transition-transform group-open:rotate-90"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Employment</h2>
+                </div>
+                {% if person %}
+                <button type="button" onclick="event.stopPropagation(); showAddEmploymentModal()"
+                        class="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 font-medium rounded-md hover:bg-blue-100">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add
+                </button>
+                {% endif %}
+            </summary>
+            <div class="p-4 pt-0 border-t border-blackbook-100">
+                <div id="employment-list" class="space-y-3">
+                    {% if person and person.employment %}
+                    {% for emp in person.employment %}
+                    <div class="border-l-4 {{ 'border-green-500' if emp.is_current else 'border-blackbook-300' }} pl-3 py-2 flex justify-between items-start"
+                         id="employment-row-{{ emp.id }}">
+                        <div>
+                            <div class="font-medium text-blackbook-900">
+                                {% if emp.organization %}{{ emp.organization.name }}{% else %}{{ emp.organization_name or 'Unknown' }}{% endif %}
+                            </div>
+                            {% if emp.title %}<div class="text-sm text-blackbook-600">{{ emp.title }}</div>{% endif %}
+                            <div class="flex items-center gap-2 mt-1 flex-wrap">
+                                {% if emp.affiliation_type %}
+                                <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700">{{ emp.affiliation_type.name }}</span>
+                                {% endif %}
+                                {% if emp.is_current %}
+                                <span class="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">Current</span>
+                                {% else %}
+                                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">Past</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <button type="button" onclick="deleteEmployment('{{ person.id }}', '{{ emp.id }}')"
+                                class="p-1.5 text-red-500 hover:bg-red-50 rounded">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-blackbook-400 italic text-sm" id="no-employment-msg">No employment history</p>
+                    {% endif %}
+                </div>
+            </div>
+        </details>
+
+        {# =====================================================================
+           EDUCATION SECTION
+        ===================================================================== #}
+        <details id="section-education" class="bg-white rounded-lg shadow-md overflow-hidden group">
+            <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-blackbook-50 transition-colors">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blackbook-400 transform transition-transform group-open:rotate-90"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Education</h2>
+                </div>
+                {% if person %}
+                <button type="button" onclick="event.stopPropagation(); showAddEducationModal()"
+                        class="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 font-medium rounded-md hover:bg-blue-100">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add
+                </button>
+                {% endif %}
+            </summary>
+            <div class="p-4 pt-0 border-t border-blackbook-100">
+                <div id="education-list" class="space-y-3">
+                    {% if person and person.education %}
+                    {% for edu in person.education %}
+                    <div class="border-l-4 border-purple-400 pl-3 py-2 flex justify-between items-start"
+                         id="education-row-{{ edu.id }}">
+                        <div>
+                            <div class="font-medium text-blackbook-900">{{ edu.school_name }}</div>
+                            {% if edu.degree_type or edu.field_of_study %}
+                            <div class="text-sm text-blackbook-600">
+                                {{ edu.degree_type or '' }}{% if edu.degree_type and edu.field_of_study %} in {% endif %}{{ edu.field_of_study or '' }}
+                            </div>
+                            {% endif %}
+                            {% if edu.graduation_year %}
+                            <div class="text-xs text-blackbook-500 mt-1">Class of {{ edu.graduation_year }}</div>
+                            {% endif %}
+                        </div>
+                        <button type="button" onclick="deleteEducation('{{ person.id }}', '{{ edu.id }}')"
+                                class="p-1.5 text-red-500 hover:bg-red-50 rounded">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-blackbook-400 italic text-sm" id="no-education-msg">No education history</p>
+                    {% endif %}
+                </div>
+            </div>
+        </details>
+
+        {# =====================================================================
+           RELATIONSHIPS SECTION
+        ===================================================================== #}
+        <details id="section-relationships" class="bg-white rounded-lg shadow-md overflow-hidden group">
+            <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-blackbook-50 transition-colors">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blackbook-400 transform transition-transform group-open:rotate-90"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Relationships</h2>
+                </div>
+                {% if person %}
+                <button type="button" onclick="event.stopPropagation(); showAddRelationshipModal()"
+                        class="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 font-medium rounded-md hover:bg-blue-100">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add
+                </button>
+                {% endif %}
+            </summary>
+            <div class="p-4 pt-0 border-t border-blackbook-100">
+                <div id="relationships-list" class="space-y-3">
+                    {% if person and person.relationships_from %}
+                    {% for rel in person.relationships_from %}
+                    <div class="flex items-center justify-between p-3 bg-blackbook-50 rounded-lg" id="relationship-row-{{ rel.id }}">
+                        <div class="flex items-center gap-3">
+                            {% if rel.related_person.profile_picture %}
+                            <img src="{{ rel.related_person.profile_picture }}" alt="{{ rel.related_person.full_name }}"
+                                 class="w-10 h-10 rounded-full object-cover">
+                            {% else %}
+                            <div class="w-10 h-10 rounded-full bg-blackbook-200 flex items-center justify-center">
+                                <span class="text-sm font-medium text-blackbook-600">{{ rel.related_person.full_name[0]|upper }}</span>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <a href="/people/{{ rel.related_person.id }}" class="font-medium text-blackbook-900 hover:text-blue-600">
+                                    {{ rel.related_person.full_name }}
+                                </a>
+                                {% if rel.related_person.title %}
+                                <div class="text-xs text-blackbook-500">{{ rel.related_person.title }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            {% if rel.relationship_type %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-700">{{ rel.relationship_type.name }}</span>
+                            {% endif %}
+                            {% if rel.context_organization %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">@ {{ rel.context_organization.name }}</span>
+                            {% endif %}
+                            <button type="button" onclick="deleteRelationship('{{ person.id }}', '{{ rel.id }}')"
+                                    class="p-1.5 text-red-500 hover:bg-red-100 rounded">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-blackbook-400 italic text-sm" id="no-relationships-msg">No relationships</p>
+                    {% endif %}
+                </div>
+            </div>
+        </details>
+
+        {# =====================================================================
+           SOCIAL PROFILES SECTION
+        ===================================================================== #}
+        <details id="section-social" class="bg-white rounded-lg shadow-md overflow-hidden group">
+            <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-blackbook-50 transition-colors">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blackbook-400 transform transition-transform group-open:rotate-90"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Social Profiles</h2>
+                </div>
+            </summary>
+            <div class="p-4 pt-0 border-t border-blackbook-100">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="linkedin" class="block text-sm font-medium text-blackbook-700 mb-1">LinkedIn URL</label>
+                        <input type="url" name="linkedin" id="linkedin"
+                               value="{{ person.linkedin or '' if person else '' }}"
+                               placeholder="https://linkedin.com/in/..."
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="twitter" class="block text-sm font-medium text-blackbook-700 mb-1">Twitter URL</label>
+                        <input type="url" name="twitter" id="twitter"
+                               value="{{ person.twitter or '' if person else '' }}"
+                               placeholder="https://twitter.com/..."
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="crunchbase" class="block text-sm font-medium text-blackbook-700 mb-1">Crunchbase URL</label>
+                        <input type="url" name="crunchbase" id="crunchbase"
+                               value="{{ person.crunchbase or '' if person else '' }}"
+                               placeholder="https://crunchbase.com/person/..."
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="angellist" class="block text-sm font-medium text-blackbook-700 mb-1">AngelList URL</label>
+                        <input type="url" name="angellist" id="angellist"
+                               value="{{ person.angellist or '' if person else '' }}"
+                               placeholder="https://angel.co/..."
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        {# =====================================================================
+           INVESTMENT DETAILS SECTION
+        ===================================================================== #}
+        <details id="section-investment" class="bg-white rounded-lg shadow-md overflow-hidden group">
+            <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-blackbook-50 transition-colors">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blackbook-400 transform transition-transform group-open:rotate-90"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Investment Details</h2>
+                </div>
+            </summary>
+            <div class="p-4 pt-0 border-t border-blackbook-100">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="investment_type" class="block text-sm font-medium text-blackbook-700 mb-1">Investment Type</label>
+                        <input type="text" name="investment_type" id="investment_type"
+                               value="{{ person.investment_type or '' if person else '' }}"
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="amount_funded" class="block text-sm font-medium text-blackbook-700 mb-1">Amount Funded</label>
+                        <input type="text" name="amount_funded" id="amount_funded"
+                               value="{{ person.amount_funded or '' if person else '' }}"
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="potential_intro_vc" class="block text-sm font-medium text-blackbook-700 mb-1">Potential Intro VC</label>
+                        <input type="text" name="potential_intro_vc" id="potential_intro_vc"
+                               value="{{ person.potential_intro_vc or '' if person else '' }}"
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        {# =====================================================================
+           NOTES SECTION
+        ===================================================================== #}
+        <details id="section-notes" class="bg-white rounded-lg shadow-md overflow-hidden group" open>
+            <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-blackbook-50 transition-colors">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-blackbook-400 transform transition-transform group-open:rotate-90"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Notes</h2>
+                </div>
+            </summary>
+            <div class="p-4 pt-0 border-t border-blackbook-100">
+                <textarea name="notes" id="notes" rows="4"
+                          class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent"
+                          placeholder="Add any notes about this person...">{{ person.notes or '' if person else '' }}</textarea>
+            </div>
+        </details>
+
+        {# =====================================================================
+           FORM ACTIONS
+        ===================================================================== #}
+        <div class="flex items-center justify-end gap-3 pt-4">
+            {% if person %}
+            <a href="/people/{{ person.id }}"
+               class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                Cancel
+            </a>
+            {% else %}
+            <a href="/people"
+               class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                Cancel
+            </a>
+            {% endif %}
+            <button type="submit"
+                    class="px-6 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+                {% if person %}Save Changes{% else %}Create Person{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+{# =====================================================================
+   MODALS FOR ADDING NEW ENTRIES
+===================================================================== #}
+{% if person %}
+<!-- Modal Container -->
+<div id="modal-container"></div>
+
+<!-- Add Website Modal -->
+<dialog id="add-website-modal" class="p-0 rounded-lg shadow-xl bg-white max-w-md w-full">
+    <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-blackbook-900">Add Website</h3>
+            <button type="button" onclick="document.getElementById('add-website-modal').close()"
+                    class="text-blackbook-400 hover:text-blackbook-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form onsubmit="submitWebsite(event)" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">URL *</label>
+                <input type="url" id="website-url" required placeholder="https://..."
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Label</label>
+                <input type="text" id="website-label" placeholder="e.g., Blog, Portfolio"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('add-website-modal').close()"
+                        class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700">Add</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Add Address Modal -->
+<dialog id="add-address-modal" class="p-0 rounded-lg shadow-xl bg-white max-w-md w-full">
+    <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-blackbook-900">Add Address</h3>
+            <button type="button" onclick="document.getElementById('add-address-modal').close()"
+                    class="text-blackbook-400 hover:text-blackbook-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form onsubmit="submitAddress(event)" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Type *</label>
+                <select id="address-type" required
+                        class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                    <option value="home">Home</option>
+                    <option value="work">Work</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Street</label>
+                <input type="text" id="address-street"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">City</label>
+                    <input type="text" id="address-city"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">State</label>
+                    <input type="text" id="address-state"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Zip</label>
+                    <input type="text" id="address-zip"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">Country</label>
+                    <input type="text" id="address-country"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('add-address-modal').close()"
+                        class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700">Add</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Add Employment Modal -->
+<dialog id="add-employment-modal" class="p-0 rounded-lg shadow-xl bg-white max-w-md w-full">
+    <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-blackbook-900">Add Employment</h3>
+            <button type="button" onclick="document.getElementById('add-employment-modal').close()"
+                    class="text-blackbook-400 hover:text-blackbook-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form onsubmit="submitEmployment(event)" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Company/Organization *</label>
+                <input type="text" id="employment-org-name" required placeholder="Company name"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Title/Role</label>
+                <input type="text" id="employment-title" placeholder="e.g., Senior Engineer"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Affiliation Type</label>
+                <select id="employment-affiliation-type"
+                        class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                    <option value="">-- Select --</option>
+                    {% if affiliation_types is defined %}
+                    {% for atype in affiliation_types %}
+                    <option value="{{ atype.id }}">{{ atype.name }}</option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+            <div class="flex items-center">
+                <input type="checkbox" id="employment-is-current" class="h-4 w-4 text-blackbook-600 border-blackbook-300 rounded">
+                <label for="employment-is-current" class="ml-2 text-sm text-blackbook-700">Current employment</label>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('add-employment-modal').close()"
+                        class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700">Add</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Add Education Modal -->
+<dialog id="add-education-modal" class="p-0 rounded-lg shadow-xl bg-white max-w-md w-full">
+    <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-blackbook-900">Add Education</h3>
+            <button type="button" onclick="document.getElementById('add-education-modal').close()"
+                    class="text-blackbook-400 hover:text-blackbook-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form onsubmit="submitEducation(event)" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">School Name *</label>
+                <input type="text" id="education-school" required placeholder="University/College name"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Degree Type</label>
+                <select id="education-degree"
+                        class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                    <option value="">-- Select --</option>
+                    <option value="BA">BA</option>
+                    <option value="BS">BS</option>
+                    <option value="MA">MA</option>
+                    <option value="MS">MS</option>
+                    <option value="MBA">MBA</option>
+                    <option value="PhD">PhD</option>
+                    <option value="JD">JD</option>
+                    <option value="MD">MD</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Field of Study</label>
+                <input type="text" id="education-field" placeholder="e.g., Computer Science"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Graduation Year</label>
+                <input type="number" id="education-year" placeholder="2020" min="1900" max="2100"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('add-education-modal').close()"
+                        class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700">Add</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Add Relationship Modal -->
+<dialog id="add-relationship-modal" class="p-0 rounded-lg shadow-xl bg-white max-w-md w-full">
+    <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-blackbook-900">Add Relationship</h3>
+            <button type="button" onclick="document.getElementById('add-relationship-modal').close()"
+                    class="text-blackbook-400 hover:text-blackbook-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <form onsubmit="submitRelationship(event)" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Related Person *</label>
+                <input type="text" id="relationship-person-search" placeholder="Search for a person..."
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                       oninput="searchPersons(this.value)">
+                <input type="hidden" id="relationship-person-id">
+                <div id="person-search-results" class="mt-1 bg-white border border-blackbook-200 rounded-md shadow-lg hidden max-h-40 overflow-y-auto"></div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Relationship Type</label>
+                <select id="relationship-type"
+                        class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                    <option value="">-- Select --</option>
+                    {% if relationship_types is defined %}
+                    {% for rtype in relationship_types %}
+                    <option value="{{ rtype.id }}">{{ rtype.name }}</option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-blackbook-700 mb-1">Context (optional)</label>
+                <input type="text" id="relationship-context" placeholder="e.g., Met at conference"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('add-relationship-modal').close()"
+                        class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700">Add</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+const personId = '{{ person.id }}';
+
+// Modal openers
+function showAddWebsiteModal() {
+    document.getElementById('website-url').value = '';
+    document.getElementById('website-label').value = '';
+    document.getElementById('add-website-modal').showModal();
+}
+
+function showAddAddressModal() {
+    document.getElementById('address-type').value = 'home';
+    document.getElementById('address-street').value = '';
+    document.getElementById('address-city').value = '';
+    document.getElementById('address-state').value = '';
+    document.getElementById('address-zip').value = '';
+    document.getElementById('address-country').value = '';
+    document.getElementById('add-address-modal').showModal();
+}
+
+function showAddEmploymentModal() {
+    document.getElementById('employment-org-name').value = '';
+    document.getElementById('employment-title').value = '';
+    document.getElementById('employment-affiliation-type').value = '';
+    document.getElementById('employment-is-current').checked = false;
+    document.getElementById('add-employment-modal').showModal();
+}
+
+function showAddEducationModal() {
+    document.getElementById('education-school').value = '';
+    document.getElementById('education-degree').value = '';
+    document.getElementById('education-field').value = '';
+    document.getElementById('education-year').value = '';
+    document.getElementById('add-education-modal').showModal();
+}
+
+function showAddRelationshipModal() {
+    document.getElementById('relationship-person-search').value = '';
+    document.getElementById('relationship-person-id').value = '';
+    document.getElementById('relationship-type').value = '';
+    document.getElementById('relationship-context').value = '';
+    document.getElementById('person-search-results').classList.add('hidden');
+    document.getElementById('add-relationship-modal').showModal();
+}
+
+// Submit handlers
+async function submitWebsite(event) {
+    event.preventDefault();
+    const data = {
+        url: document.getElementById('website-url').value,
+        label: document.getElementById('website-label').value || null
+    };
+    try {
+        const res = await fetch(`/api/people/${personId}/websites`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            document.getElementById('add-website-modal').close();
+            location.reload();
+        } else {
+            const err = await res.json();
+            alert(err.detail || 'Failed to add website');
+        }
+    } catch (e) { alert('Error adding website'); }
+}
+
+async function submitAddress(event) {
+    event.preventDefault();
+    const data = {
+        address_type: document.getElementById('address-type').value,
+        street: document.getElementById('address-street').value || null,
+        city: document.getElementById('address-city').value || null,
+        state: document.getElementById('address-state').value || null,
+        zip: document.getElementById('address-zip').value || null,
+        country: document.getElementById('address-country').value || null
+    };
+    try {
+        const res = await fetch(`/api/people/${personId}/addresses`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            document.getElementById('add-address-modal').close();
+            location.reload();
+        } else {
+            const err = await res.json();
+            alert(err.detail || 'Failed to add address');
+        }
+    } catch (e) { alert('Error adding address'); }
+}
+
+async function submitEmployment(event) {
+    event.preventDefault();
+    const affiliationType = document.getElementById('employment-affiliation-type').value;
+    const data = {
+        organization_name: document.getElementById('employment-org-name').value,
+        title: document.getElementById('employment-title').value || null,
+        affiliation_type_id: affiliationType || null,
+        is_current: document.getElementById('employment-is-current').checked
+    };
+    try {
+        const res = await fetch(`/api/people/${personId}/employment`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            document.getElementById('add-employment-modal').close();
+            location.reload();
+        } else {
+            const err = await res.json();
+            alert(err.detail || 'Failed to add employment');
+        }
+    } catch (e) { alert('Error adding employment'); }
+}
+
+async function submitEducation(event) {
+    event.preventDefault();
+    const year = document.getElementById('education-year').value;
+    const data = {
+        school_name: document.getElementById('education-school').value,
+        degree_type: document.getElementById('education-degree').value || null,
+        field_of_study: document.getElementById('education-field').value || null,
+        graduation_year: year ? parseInt(year) : null
+    };
+    try {
+        const res = await fetch(`/api/people/${personId}/education`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            document.getElementById('add-education-modal').close();
+            location.reload();
+        } else {
+            const err = await res.json();
+            alert(err.detail || 'Failed to add education');
+        }
+    } catch (e) { alert('Error adding education'); }
+}
+
+async function submitRelationship(event) {
+    event.preventDefault();
+    const relatedPersonId = document.getElementById('relationship-person-id').value;
+    if (!relatedPersonId) {
+        alert('Please select a person');
+        return;
+    }
+    const data = {
+        related_person_id: relatedPersonId,
+        relationship_type_id: document.getElementById('relationship-type').value || null,
+        context_text: document.getElementById('relationship-context').value || null
+    };
+    try {
+        const res = await fetch(`/api/people/${personId}/relationships`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            document.getElementById('add-relationship-modal').close();
+            location.reload();
+        } else {
+            const err = await res.json();
+            alert(err.detail || 'Failed to add relationship');
+        }
+    } catch (e) { alert('Error adding relationship'); }
+}
+
+// Delete handlers
+async function deleteWebsite(pid, id) {
+    if (!confirm('Delete this website?')) return;
+    try {
+        const res = await fetch(`/api/people/${pid}/websites/${id}`, {method: 'DELETE'});
+        if (res.ok) {
+            document.getElementById(`website-row-${id}`)?.remove();
+        } else { alert('Failed to delete'); }
+    } catch (e) { alert('Error deleting'); }
+}
+
+async function deleteAddress(pid, id) {
+    if (!confirm('Delete this address?')) return;
+    try {
+        const res = await fetch(`/api/people/${pid}/addresses/${id}`, {method: 'DELETE'});
+        if (res.ok) {
+            document.getElementById(`address-row-${id}`)?.remove();
+        } else { alert('Failed to delete'); }
+    } catch (e) { alert('Error deleting'); }
+}
+
+async function deleteEmployment(pid, id) {
+    if (!confirm('Delete this employment record?')) return;
+    try {
+        const res = await fetch(`/api/people/${pid}/employment/${id}`, {method: 'DELETE'});
+        if (res.ok) {
+            document.getElementById(`employment-row-${id}`)?.remove();
+        } else { alert('Failed to delete'); }
+    } catch (e) { alert('Error deleting'); }
+}
+
+async function deleteEducation(pid, id) {
+    if (!confirm('Delete this education record?')) return;
+    try {
+        const res = await fetch(`/api/people/${pid}/education/${id}`, {method: 'DELETE'});
+        if (res.ok) {
+            document.getElementById(`education-row-${id}`)?.remove();
+        } else { alert('Failed to delete'); }
+    } catch (e) { alert('Error deleting'); }
+}
+
+async function deleteRelationship(pid, id) {
+    if (!confirm('Delete this relationship?')) return;
+    try {
+        const res = await fetch(`/api/people/${pid}/relationships/${id}`, {method: 'DELETE'});
+        if (res.ok) {
+            document.getElementById(`relationship-row-${id}`)?.remove();
+        } else { alert('Failed to delete'); }
+    } catch (e) { alert('Error deleting'); }
+}
+
+async function deleteEmail(pid, id) {
+    if (!confirm('Delete this email?')) return;
+    try {
+        const res = await fetch(`/api/people/${pid}/emails/${id}`, {method: 'DELETE'});
+        if (res.ok) {
+            document.getElementById(`email-row-${id}`)?.remove();
+        } else { alert('Failed to delete'); }
+    } catch (e) { alert('Error deleting'); }
+}
+
+async function deletePhone(pid, id) {
+    if (!confirm('Delete this phone?')) return;
+    try {
+        const res = await fetch(`/api/people/${pid}/phones/${id}`, {method: 'DELETE'});
+        if (res.ok) {
+            document.getElementById(`phone-row-${id}`)?.remove();
+        } else { alert('Failed to delete'); }
+    } catch (e) { alert('Error deleting'); }
+}
+
+// Person search for relationships
+let searchTimeout;
+async function searchPersons(query) {
+    clearTimeout(searchTimeout);
+    const resultsDiv = document.getElementById('person-search-results');
+    if (query.length < 2) {
+        resultsDiv.classList.add('hidden');
+        return;
+    }
+    searchTimeout = setTimeout(async () => {
+        try {
+            const res = await fetch(`/api/people?search=${encodeURIComponent(query)}&limit=10`);
+            if (res.ok) {
+                const data = await res.json();
+                const people = data.items || data;
+                if (people.length > 0) {
+                    resultsDiv.innerHTML = people.map(p => `
+                        <div class="px-3 py-2 hover:bg-blackbook-50 cursor-pointer" onclick="selectPerson('${p.id}', '${p.full_name}')">
+                            <div class="font-medium text-blackbook-900">${p.full_name}</div>
+                            ${p.title ? `<div class="text-xs text-blackbook-500">${p.title}</div>` : ''}
+                        </div>
+                    `).join('');
+                    resultsDiv.classList.remove('hidden');
+                } else {
+                    resultsDiv.innerHTML = '<div class="px-3 py-2 text-blackbook-500">No results</div>';
+                    resultsDiv.classList.remove('hidden');
+                }
+            }
+        } catch (e) {
+            console.error('Search error:', e);
+        }
+    }, 300);
+}
+
+function selectPerson(id, name) {
+    document.getElementById('relationship-person-id').value = id;
+    document.getElementById('relationship-person-search').value = name;
+    document.getElementById('person-search-results').classList.add('hidden');
+}
+</script>
+{% endif %}

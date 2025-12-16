@@ -1,0 +1,6 @@
+{# Organization Notes Section - View Mode #}
+{% if organization.notes %}
+<div class="prose prose-sm max-w-none text-blackbook-700 whitespace-pre-wrap rich-text-content">{{ organization.notes | safe }}</div>
+{% else %}
+<p class="text-blackbook-400 italic">No notes</p>
+{% endif %}

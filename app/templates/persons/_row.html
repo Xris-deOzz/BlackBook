@@ -1,0 +1,97 @@
+<!-- Single Person Row Partial -->
+<tr class="hover:bg-blackbook-50 transition-colors person-row" data-person-id="{{ person.id }}">
+    <!-- Checkbox -->
+    <td class="px-3 py-4 text-center">
+        <input
+            type="checkbox"
+            class="person-checkbox h-4 w-4 text-blackbook-600 border-blackbook-300 rounded focus:ring-blackbook-500"
+            data-person-id="{{ person.id }}"
+            data-email="{{ person.primary_email or '' }}"
+            onchange="updateSelectionUI()"
+        >
+    </td>
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/people/{{ person.id }}" class="text-blackbook-900 font-medium hover:text-blackbook-600">
+            {{ person.full_name }}
+        </a>
+        {% if person.email %}
+        <div class="text-sm text-blackbook-500">
+            {{ person.email }}
+        </div>
+        {% endif %}
+    </td>
+
+    <!-- First Name -->
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-blackbook-600">
+        {{ person.first_name or '-' }}
+    </td>
+
+    <!-- Last Name -->
+    <td class="px-4 py-4 whitespace-nowrap text-sm text-blackbook-600">
+        {{ person.last_name or '-' }}
+    </td>
+
+    <!-- Title -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-900 max-w-xs truncate" title="{{ person.title or '' }}">
+            {{ person.title or '-' }}
+        </div>
+    </td>
+
+    <!-- Organization -->
+    <td class="px-6 py-4">
+        {% if person.organizations %}
+            {% set current_orgs = person.organizations|selectattr('is_current', 'true')|list %}
+            {% if current_orgs %}
+                {% for po in current_orgs[:2] %}
+                <div class="text-sm text-blackbook-900">
+                    <a href="/organizations/{{ po.organization.id }}" class="hover:text-blackbook-600">
+                        {{ po.organization.name }}
+                    </a>
+                    {% if po.role %}
+                    <span class="text-blackbook-500">({{ po.role }})</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% if current_orgs|length > 2 %}
+                <div class="text-xs text-blackbook-400">
+                    +{{ current_orgs|length - 2 }} more
+                </div>
+                {% endif %}
+            {% else %}
+                <span class="text-blackbook-400">-</span>
+            {% endif %}
+        {% else %}
+            <span class="text-blackbook-400">-</span>
+        {% endif %}
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1 max-w-xs">
+            {% for tag in person.tags[:3] %}
+            <span
+                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                style="background-color: {{ tag.color or '#e2e8f0' }}20; color: {{ tag.color or '#475569' }}; border: 1px solid {{ tag.color or '#cbd5e1' }}40;"
+            >
+                {{ tag.name }}
+            </span>
+            {% endfor %}
+            {% if person.tags|length > 3 %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blackbook-100 text-blackbook-600">
+                +{{ person.tags|length - 3 }}
+            </span>
+            {% endif %}
+        </div>
+    </td>
+
+    <!-- Last Contact -->
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-blackbook-600">
+        {% if person.last_contact %}
+            {{ person.last_contact.strftime('%b %d, %Y') }}
+        {% else %}
+            <span class="text-blackbook-400">-</span>
+        {% endif %}
+    </td>
+</tr>

@@ -1,0 +1,111 @@
+{% if birthdays %}
+{% set todays_birthdays = birthdays | selectattr('is_today') | list %}
+{% set future_birthdays = birthdays | rejectattr('is_today') | list %}
+
+<div class="space-y-4" x-data="{ showMore: false }">
+    <!-- Today's Birthdays (always visible) -->
+    {% if todays_birthdays %}
+    <div class="space-y-3">
+        <h4 class="text-sm font-semibold text-pink-400 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z"/>
+                <path d="M9 11H3v5a2 2 0 002 2h4v-7zM11 18h4a2 2 0 002-2v-5h-6v7z"/>
+            </svg>
+            Today's Birthdays
+        </h4>
+        {% for item in todays_birthdays %}
+        <a href="/people/{{ item.person.id }}"
+           class="flex items-center justify-between p-3 rounded-lg transition-colors bg-pink-900/40 border border-pink-700 hover:bg-pink-900/60">
+            <div class="flex items-center gap-3">
+                <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-pink-800 text-pink-200">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z"/>
+                        <path d="M9 11H3v5a2 2 0 002 2h4v-7zM11 18h4a2 2 0 002-2v-5h-6v7z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-medium text-blackbook-100">{{ item.person.full_name }}</p>
+                    <p class="text-sm text-blackbook-400">
+                        <span class="font-semibold text-pink-400">Today!</span> - Turning {{ item.age }}
+                    </p>
+                </div>
+            </div>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-800 text-pink-200">
+                Today
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-4 text-blackbook-400 bg-blackbook-700/30 rounded-lg">
+        <p class="text-sm">No birthdays today</p>
+    </div>
+    {% endif %}
+
+    <!-- Future Birthdays (collapsible) -->
+    {% if future_birthdays %}
+    <div>
+        <button @click="showMore = !showMore"
+                class="w-full flex items-center justify-between p-2 rounded-lg bg-blackbook-700/50 hover:bg-blackbook-700 transition-colors text-sm">
+            <span class="text-blackbook-300 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Upcoming Birthdays ({{ future_birthdays | length }})
+            </span>
+            <svg class="w-4 h-4 text-blackbook-400 transition-transform" :class="{ 'rotate-180': showMore }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+
+        <div x-show="showMore" x-collapse class="mt-3 space-y-2">
+            {% for item in future_birthdays %}
+            <a href="/people/{{ item.person.id }}"
+               class="flex items-center justify-between p-3 rounded-lg transition-colors
+                      {% if item.is_tomorrow %}bg-orange-900/40 border border-orange-700 hover:bg-orange-900/60{% elif item.is_this_week %}bg-yellow-900/40 border border-yellow-700 hover:bg-yellow-900/60{% else %}bg-blackbook-700/50 border border-blackbook-600 hover:bg-blackbook-700{% endif %}">
+                <div class="flex items-center gap-3">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center
+                                {% if item.is_tomorrow %}bg-orange-800 text-orange-200{% elif item.is_this_week %}bg-yellow-800 text-yellow-200{% else %}bg-blackbook-600 text-blackbook-300{% endif %}">
+                        <span class="text-sm font-semibold">{{ item.birthday_date.strftime('%d') }}</span>
+                    </div>
+                    <div>
+                        <p class="font-medium text-blackbook-100">{{ item.person.full_name }}</p>
+                        <p class="text-sm text-blackbook-400">
+                            {% if item.is_tomorrow %}
+                                <span class="font-semibold text-orange-400">Tomorrow</span> - Turning {{ item.age }}
+                            {% else %}
+                                {{ item.birthday_date.strftime('%B %d') }} - Turning {{ item.age }}
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex-shrink-0">
+                    {% if item.is_tomorrow %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-800 text-orange-200">
+                        Tomorrow
+                    </span>
+                    {% elif item.is_this_week %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-800 text-yellow-200">
+                        In {{ item.days_until }} days
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blackbook-600 text-blackbook-300">
+                        In {{ item.days_until }} days
+                    </span>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="text-center py-8 text-blackbook-400">
+    <svg class="mx-auto h-12 w-12 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0A2.704 2.704 0 003 15.546V12a9 9 0 1118 0v3.546z"/>
+    </svg>
+    <p class="mt-2 text-sm">No upcoming birthdays in the next {{ days_range }} days</p>
+    <p class="mt-1 text-xs text-blackbook-500">Add birthday information to your contacts to see reminders here</p>
+</div>
+{% endif %}

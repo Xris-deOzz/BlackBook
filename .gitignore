@@ -1,0 +1,52 @@
+# Perun's BlackBook - Git Ignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment
+.env
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+data/*.csv
+*.log
+*.tmp
+backups/
+assets/blackbook-icons/
+
+# Docker volumes (if local)
+data/postgres/
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node (if TailwindCSS build is added later)
+node_modules/

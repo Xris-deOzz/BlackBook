@@ -1,0 +1,22 @@
+# Perun's BlackBook - Import Script Container
+# This container runs the Airtable import script
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install dependencies
+RUN pip install --no-cache-dir \
+    psycopg2-binary>=2.9.9 \
+    python-dotenv>=1.0.0 \
+    tqdm>=4.66.0
+
+# Copy scripts
+COPY scripts/ /app/scripts/
+COPY data/ /app/data/
+
+# Set working directory to scripts
+WORKDIR /app/scripts
+
+# Default command: run import
+CMD ["python", "import_airtable.py"]

@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<nav class="bg-white border-b border-blackbook-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="/" class="text-blackbook-500 hover:text-blackbook-700">Home</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li>
+                <a href="/settings" class="text-blackbook-500 hover:text-blackbook-700">Settings</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li>
+                <a href="/settings/duplicates/fuzzy" class="text-blackbook-500 hover:text-blackbook-700">Similar Names</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li class="text-blackbook-900 font-medium">Merge: {{ group.last_name }}</li>
+        </ol>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto" id="main-content">
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-blackbook-900">Merge Similar Names</h1>
+                <p class="text-blackbook-500 mt-1">
+                    {{ group.match_reason }} — {{ group.last_name }}
+                </p>
+            </div>
+            <a href="/settings/duplicates/fuzzy" class="text-blackbook-600 hover:text-blackbook-800 text-sm inline-flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to Similar Names
+            </a>
+        </div>
+    </div>
+
+    <!-- Confidence Indicators -->
+    <div class="bg-white rounded-lg border border-blackbook-200 p-4 mb-6">
+        <div class="flex items-center space-x-4">
+            {% if group.confidence == 'high' %}
+            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                ✓ High Confidence Match
+            </span>
+            {% else %}
+            <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+                ⚠ Medium Confidence - Review Carefully
+            </span>
+            {% endif %}
+            
+            {% if group.has_shared_email_domain %}
+            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
+                📧 Shares Email Domain
+            </span>
+            {% endif %}
+            {% if group.has_shared_organization %}
+            <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm">
+                🏢 Shares Organization
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- How Merging Works -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div class="flex">
+            <svg class="h-5 w-5 text-blue-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="text-sm text-blue-800">
+                <p class="font-medium">How merging works</p>
+                <p class="mt-1">
+                    <strong>Step 1:</strong> Select which records are the same person (uncheck any that are different people).
+                </p>
+                <p class="mt-1">
+                    <strong>Step 2:</strong> Choose which record to keep as the primary. All data from selected records will be merged into it.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Merge Form -->
+    <form action="/settings/duplicates/fuzzy/merge" method="POST" id="merge-form">
+        <input type="hidden" name="all_person_ids" value="{{ person_ids }}">
+        
+        <!-- Step 1: Select Records to Merge -->
+        <div class="bg-white rounded-lg border border-blackbook-200 mb-6">
+            <div class="px-6 py-4 border-b border-blackbook-200 bg-blackbook-50">
+                <h2 class="text-lg font-semibold text-blackbook-900">Step 1: Select Records That Are the Same Person</h2>
+                <p class="text-sm text-blackbook-500">Uncheck any records that are actually different people (e.g., different middle initials = different person)</p>
+            </div>
+            <div class="p-6 space-y-4">
+                {% for person in group.persons %}
+                <label class="flex items-start space-x-4 p-4 border rounded-lg cursor-pointer hover:bg-blackbook-50 transition-colors merge-candidate"
+                       data-person-id="{{ person.id }}">
+                    <div class="pt-1">
+                        <input type="checkbox" name="selected_ids" value="{{ person.id }}" 
+                               checked
+                               class="h-5 w-5 text-blackbook-600 rounded focus:ring-blackbook-500 person-checkbox"
+                               onchange="updateMergeUI()">
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-3">
+                            {% if person.profile_picture %}
+                            <img src="{{ person.profile_picture }}" class="w-12 h-12 rounded-full object-cover">
+                            {% else %}
+                            <div class="w-12 h-12 rounded-full bg-blackbook-200 flex items-center justify-center">
+                                <span class="text-blackbook-600 font-medium text-lg">{{ person.full_name[0] }}</span>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <div class="font-semibold text-blackbook-900 text-lg">{{ person.full_name }}</div>
+                                {% if person.title %}
+                                <div class="text-blackbook-600">{{ person.title }}</div>
+                                {% endif %}
+                            </div>
+                            {% if loop.first %}
+                            <span class="px-2 py-0.5 bg-blackbook-100 text-blackbook-600 rounded text-xs">Oldest</span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Key identifying info -->
+                        <div class="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                            <div>
+                                <span class="text-blackbook-400 font-medium">Emails:</span>
+                                {% if person.emails %}
+                                <div class="text-blackbook-700">
+                                    {% for email_obj in person.emails %}
+                                    <div>{{ email_obj.email }}</div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="text-blackbook-400 italic">None</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <span class="text-blackbook-400 font-medium">Phones:</span>
+                                {% if person.phones %}
+                                <div class="text-blackbook-700">
+                                    {% for phone_obj in person.phones %}
+                                    <div>{{ phone_obj.phone }}</div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="text-blackbook-400 italic">None</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <span class="text-blackbook-400 font-medium">Organizations:</span>
+                                {% if person.organizations %}
+                                <div class="text-blackbook-700">
+                                    {% for po in person.organizations %}
+                                    <div>{{ po.organization.name if po.organization else 'Unknown' }}{% if po.role %} <span class="text-blackbook-400">({{ po.role }})</span>{% endif %}</div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="text-blackbook-400 italic">None</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <span class="text-blackbook-400 font-medium">LinkedIn:</span>
+                                {% if person.linkedin %}
+                                <div class="text-blue-600 truncate" style="max-width: 200px;">
+                                    <a href="{{ person.linkedin }}" target="_blank" class="hover:underline">
+                                        {{ person.linkedin | replace('https://www.linkedin.com/in/', '') | replace('https://linkedin.com/in/', '') }}
+                                    </a>
+                                </div>
+                                {% else %}
+                                <div class="text-blackbook-400 italic">None</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Tags -->
+                        {% if person.tags %}
+                        <div class="mt-3">
+                            <span class="text-blackbook-400 font-medium text-sm">Tags:</span>
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                {% for tag in person.tags %}
+                                <span class="px-2 py-0.5 rounded text-xs" style="background-color: {{ tag.color }}20; color: {{ tag.color }}">
+                                    {{ tag.name }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Notes Preview -->
+                        {% if person.notes %}
+                        <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div class="flex items-center text-yellow-800 text-sm font-medium mb-1">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                Notes:
+                            </div>
+                            <div class="text-yellow-900 text-sm whitespace-pre-wrap">{{ person.notes | truncate(500) }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Footer with metadata -->
+                        <div class="mt-3 pt-3 border-t border-blackbook-100 flex items-center justify-between text-xs text-blackbook-400">
+                            <span>Created {{ person.created_at.strftime('%b %d, %Y at %H:%M') }}</span>
+                            <a href="/people/{{ person.id }}" target="_blank" class="text-blackbook-600 hover:text-blackbook-800 inline-flex items-center">
+                                View Full Profile
+                                <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+                
+                <div id="selection-warning" class="hidden mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
+                    ⚠️ Select at least 2 records to merge, or click "Skip for now" to leave all records unchanged.
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Choose Primary Record (only shown when 2+ selected) -->
+        <div id="primary-selection" class="bg-white rounded-lg border border-blackbook-200 mb-6">
+            <div class="px-6 py-4 border-b border-blackbook-200 bg-blackbook-50">
+                <h2 class="text-lg font-semibold text-blackbook-900">Step 2: Select Primary Record</h2>
+                <p class="text-sm text-blackbook-500">This record's ID will be preserved. Data from other selected records will be merged into it.</p>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-{{ group.count if group.count <= 3 else 3 }} gap-4">
+                    {% for person in group.persons %}
+                    <label class="relative cursor-pointer primary-option" data-person-id="{{ person.id }}">
+                        <input type="radio" name="keep_id" value="{{ person.id }}" 
+                               class="peer sr-only" {% if loop.first %}checked{% endif %}>
+                        <div class="p-4 border-2 rounded-lg peer-checked:border-blackbook-600 peer-checked:bg-blackbook-50 border-blackbook-200 hover:border-blackbook-400 transition-all">
+                            <div class="flex items-center space-x-3">
+                                {% if person.profile_picture %}
+                                <img src="{{ person.profile_picture }}" class="w-10 h-10 rounded-full object-cover">
+                                {% else %}
+                                <div class="w-10 h-10 rounded-full bg-blackbook-200 flex items-center justify-center">
+                                    <span class="text-blackbook-600 font-medium">{{ person.full_name[0] }}</span>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="font-medium text-blackbook-900">{{ person.full_name }}</div>
+                                    <div class="text-xs text-blackbook-500">Created {{ person.created_at.strftime('%b %d, %Y') }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Field Selection -->
+        <div id="field-selection" class="bg-white rounded-lg border border-blackbook-200 mb-6">
+            <div class="px-6 py-4 border-b border-blackbook-200 bg-blackbook-50">
+                <h2 class="text-lg font-semibold text-blackbook-900">Step 3: Choose Field Values</h2>
+                <p class="text-sm text-blackbook-500">Select which value to use for each field.</p>
+            </div>
+            <div class="divide-y divide-blackbook-100">
+                
+                <!-- Full Name -->
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-blackbook-900">Full Name</span>
+                    </div>
+                    <div class="space-y-2">
+                        {% set first_names_list = group.persons | map(attribute='first_name') | select | list | unique | list %}
+                        {% if first_names_list | length > 1 %}
+                        <!-- Option to combine names -->
+                        {% set sorted_names = first_names_list | sort %}
+                        <label class="flex items-center space-x-2 cursor-pointer bg-green-50 p-2 rounded border border-green-200">
+                            <input type="radio" name="field_full_name" value="combine" 
+                                   class="text-green-600" checked>
+                            <span class="text-green-800 font-medium">
+                                {% for name in sorted_names %}{{ name }}{% if not loop.last %} {% endif %}{% endfor %} {{ group.last_name }}
+                            </span>
+                            <span class="text-green-600 text-sm">(recommended - searchable by all name variants)</span>
+                        </label>
+                        <div class="text-xs text-blackbook-500 ml-6 mb-2">— or choose one name only —</div>
+                        {% endif %}
+                        {% for person in group.persons %}
+                        {% if person.full_name %}
+                        <label class="flex items-center space-x-2 cursor-pointer name-option" data-person-id="{{ person.id }}">
+                            <input type="radio" name="field_full_name" value="{{ person.id }}" 
+                                   class="text-blackbook-600" {% if first_names_list | length <= 1 and loop.first %}checked{% endif %}>
+                            <span class="text-blackbook-700">{{ person.full_name }}</span>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Title -->
+                {% set has_title = group.persons | selectattr('title') | list | length > 0 %}
+                {% if has_title %}
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-blackbook-900">Title / Position</span>
+                    </div>
+                    <div class="space-y-2">
+                        {% for person in group.persons %}
+                        {% if person.title %}
+                        <label class="flex items-center space-x-2 cursor-pointer title-option" data-person-id="{{ person.id }}">
+                            <input type="radio" name="field_title" value="{{ person.id }}" 
+                                   class="text-blackbook-600" {% if loop.first %}checked{% endif %}>
+                            <span class="text-blackbook-700">{{ person.title }}</span>
+                            <span class="text-blackbook-400 text-sm">(from {{ person.first_name }})</span>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="field_title" value="" class="text-blackbook-600">
+                            <span class="text-blackbook-400 italic">None / Clear</span>
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- LinkedIn -->
+                {% set has_linkedin = group.persons | selectattr('linkedin') | list | length > 0 %}
+                {% if has_linkedin %}
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-blackbook-900">LinkedIn</span>
+                    </div>
+                    <div class="space-y-2">
+                        {% for person in group.persons %}
+                        {% if person.linkedin %}
+                        <label class="flex items-center space-x-2 cursor-pointer linkedin-option" data-person-id="{{ person.id }}">
+                            <input type="radio" name="field_linkedin" value="{{ person.id }}" 
+                                   class="text-blackbook-600" {% if loop.first %}checked{% endif %}>
+                            <span class="text-blackbook-700 text-sm">{{ person.linkedin }}</span>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Auto-Combined Data Summary -->
+                <div class="px-6 py-4 bg-green-50">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-medium text-green-800">✓ Data that will be automatically combined from selected records</span>
+                    </div>
+                    <p class="text-sm text-green-700">All emails, phones, tags, organizations, and interactions from the checked records above will be merged together. Notes will be concatenated.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-between bg-white rounded-lg border border-blackbook-200 p-4">
+            <a href="/settings/duplicates/fuzzy" class="text-blackbook-600 hover:text-blackbook-800">
+                ← Skip for now
+            </a>
+            <div class="flex items-center space-x-3">
+                <span id="merge-count" class="text-sm text-blackbook-500"></span>
+                <button type="submit" 
+                        id="merge-button"
+                        class="px-6 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 inline-flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        onclick="return confirm('Merge the selected records? All data will be combined. This cannot be undone.');">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                    Merge Selected Records
+                </button>
+            </div>
+        </div>
+    </form>
+    
+    <!-- Not Duplicates Form (separate form) -->
+    <form action="/settings/duplicates/fuzzy/not-duplicates" method="POST" class="mt-4">
+        <input type="hidden" name="all_person_ids" value="{{ person_ids }}">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-red-800 font-medium">These are different people?</h3>
+                    <p class="text-red-600 text-sm mt-1">If none of these records are duplicates, mark them as "Not Duplicates" to remove this group from the list permanently.</p>
+                </div>
+                <button type="submit" 
+                        class="px-4 py-2 bg-red-600 text-white font-medium rounded-md hover:bg-red-700 inline-flex items-center"
+                        onclick="return confirm('Mark all {{ group.count }} records as NOT duplicates? They will no longer appear together in duplicate detection.');">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                    </svg>
+                    Not Duplicates
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function updateMergeUI() {
+    const checkboxes = document.querySelectorAll('.person-checkbox');
+    const selectedIds = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+    const selectedCount = selectedIds.length;
+    
+    // Update visual styling for unchecked items
+    document.querySelectorAll('.merge-candidate').forEach(el => {
+        const checkbox = el.querySelector('.person-checkbox');
+        if (checkbox.checked) {
+            el.classList.remove('opacity-50', 'bg-blackbook-50');
+        } else {
+            el.classList.add('opacity-50', 'bg-blackbook-50');
+        }
+    });
+    
+    // Show/hide primary selection options based on what's selected
+    document.querySelectorAll('.primary-option').forEach(el => {
+        const personId = el.dataset.personId;
+        if (selectedIds.includes(personId)) {
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+            // Uncheck if this was selected as primary
+            const radio = el.querySelector('input[type="radio"]');
+            if (radio.checked) {
+                // Select first available checked person as primary
+                const firstAvailable = document.querySelector(`.primary-option[data-person-id="${selectedIds[0]}"] input[type="radio"]`);
+                if (firstAvailable) firstAvailable.checked = true;
+            }
+        }
+    });
+    
+    // Update merge button state
+    const mergeButton = document.getElementById('merge-button');
+    const mergeCount = document.getElementById('merge-count');
+    const selectionWarning = document.getElementById('selection-warning');
+    const primarySection = document.getElementById('primary-selection');
+    const fieldSection = document.getElementById('field-selection');
+    
+    if (selectedCount < 2) {
+        mergeButton.disabled = true;
+        selectionWarning.classList.remove('hidden');
+        primarySection.classList.add('opacity-50');
+        fieldSection.classList.add('opacity-50');
+        mergeCount.textContent = '';
+    } else {
+        mergeButton.disabled = false;
+        selectionWarning.classList.add('hidden');
+        primarySection.classList.remove('opacity-50');
+        fieldSection.classList.remove('opacity-50');
+        mergeCount.textContent = `${selectedCount} records will be merged`;
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', updateMergeUI);
+</script>
+{% endblock %}

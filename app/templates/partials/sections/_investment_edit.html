@@ -1,0 +1,40 @@
+{# Investment Details Section - Edit Mode #}
+<form hx-put="/api/people/{{ person.id }}/sections/investment"
+      hx-target="#section-investment-content"
+      hx-swap="innerHTML"
+      class="space-y-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-blackbook-700 mb-1">Investment Type</label>
+            <input type="text" name="investment_type" value="{{ person.investment_type or '' }}"
+                   placeholder="e.g., Angel, Seed, Series A"
+                   class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-blackbook-700 mb-1">Amount Funded</label>
+            <input type="text" name="amount_funded" value="{{ person.amount_funded or '' }}"
+                   placeholder="e.g., $50M"
+                   class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-blackbook-700 mb-1">Potential Intro VC</label>
+            <input type="text" name="potential_intro_vc" value="{{ person.potential_intro_vc or '' }}"
+                   placeholder="VC firm name"
+                   class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+        </div>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+        <button type="button"
+                hx-get="/api/people/{{ person.id }}/sections/investment/view"
+                hx-target="#section-investment-content"
+                hx-swap="innerHTML"
+                class="px-3 py-1.5 text-sm text-blackbook-600 hover:text-blackbook-800">
+            Cancel
+        </button>
+        <button type="submit"
+                class="px-3 py-1.5 text-sm bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700">
+            Save
+        </button>
+    </div>
+</form>

@@ -1,0 +1,56 @@
+{% if error %}
+<div class="text-center py-8 text-red-400">
+    <p class="text-sm">{{ error }}</p>
+</div>
+{% elif day_columns %}
+<div class="grid grid-cols-5 gap-2">
+    {% for day in day_columns %}
+    <div class="flex flex-col">
+        <!-- Day Header -->
+        <div class="text-center py-2 border-b border-blackbook-600 mb-2">
+            <div class="text-xs text-blackbook-400 uppercase">{{ day.day_name }}</div>
+            <div class="text-lg font-semibold {% if day.is_today %}text-blue-400{% else %}text-blackbook-100{% endif %}">
+                {{ day.day_num }}
+            </div>
+            <div class="text-xs text-blackbook-500">{{ day.month_name }}</div>
+        </div>
+
+        <!-- Events for this day -->
+        <div class="flex-1 space-y-1.5 min-h-[200px]">
+            {% if day.events %}
+                {% for item in day.events %}
+                <div class="p-2 rounded bg-blackbook-700/70 border-l-2 border-blue-500 hover:bg-blackbook-700 transition-colors text-xs">
+                    <div class="font-medium text-blackbook-100 truncate" title="{{ item.event.summary }}">
+                        {{ item.event.summary or 'Untitled' }}
+                    </div>
+                    {% if not item.event.is_all_day %}
+                    <div class="text-blackbook-400 mt-0.5">
+                        {{ item.event.start_time_local.strftime('%I:%M %p') }}
+                    </div>
+                    {% else %}
+                    <div class="text-blackbook-400 mt-0.5">All day</div>
+                    {% endif %}
+                    {% if item.known_count > 0 %}
+                    <div class="text-green-400 mt-1 text-[10px]">
+                        {{ item.known_count }} known
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-blackbook-500 text-xs py-4">
+                    No events
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-8 text-blackbook-400">
+    <svg class="mx-auto h-12 w-12 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+    </svg>
+    <p class="mt-2 text-sm">No upcoming events</p>
+</div>
+{% endif %}

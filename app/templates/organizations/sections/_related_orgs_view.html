@@ -1,0 +1,71 @@
+{# Organization Related Organizations Section - View Mode #}
+{% set has_relationships = outgoing_relationships or incoming_relationships %}
+{% if has_relationships %}
+<div class="space-y-4">
+    <!-- Outgoing relationships (this org is the "from" org) -->
+    {% if outgoing_by_type %}
+    {% for rel_type, relationships in outgoing_by_type.items() %}
+    <div class="mb-3">
+        <h4 class="text-sm font-medium text-blackbook-600 mb-2">
+            {% if rel_type == 'invested_in' %}Portfolio Companies
+            {% elif rel_type == 'subsidiary_of' %}Subsidiaries
+            {% elif rel_type == 'parent_company' %}Parent Company Of
+            {% elif rel_type == 'partner' %}Partners
+            {% elif rel_type == 'acquired' %}Acquired
+            {% elif rel_type == 'acquired_by' %}Acquired By
+            {% elif rel_type == 'spun_off_from' %}Spun Off From
+            {% else %}{{ rel_type | replace('_', ' ') | title }}{% endif %}
+        </h4>
+        <div class="space-y-1">
+            {% for rel in relationships %}
+            <div class="flex items-center justify-between py-1.5">
+                <a href="/organizations/{{ rel.to_organization.id }}" class="text-sm font-medium text-blackbook-800 hover:text-blackbook-600">
+                    {{ rel.to_organization.name }}
+                </a>
+                {% if rel.year %}
+                <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
+                    {{ rel.year }}
+                </span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Incoming relationships (this org is the "to" org) -->
+    {% if incoming_by_type %}
+    {% for rel_type, relationships in incoming_by_type.items() %}
+    <div class="mb-3">
+        <h4 class="text-sm font-medium text-blue-600 mb-2">
+            {% if rel_type == 'invested_in' %}Investors
+            {% elif rel_type == 'subsidiary_of' %}Parent Organization
+            {% elif rel_type == 'parent_company' %}Subsidiary Of
+            {% elif rel_type == 'partner' %}Partners
+            {% elif rel_type == 'acquired' %}Acquired By
+            {% elif rel_type == 'acquired_by' %}Acquired
+            {% elif rel_type == 'spun_off_from' %}Spin-Off Parent
+            {% else %}{{ rel_type | replace('_', ' ') | title }} (Incoming){% endif %}
+        </h4>
+        <div class="space-y-1">
+            {% for rel in relationships %}
+            <div class="flex items-center justify-between py-1.5">
+                <a href="/organizations/{{ rel.from_organization.id }}" class="text-sm font-medium text-blackbook-800 hover:text-blackbook-600">
+                    {{ rel.from_organization.name }}
+                </a>
+                {% if rel.year %}
+                <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
+                    {{ rel.year }}
+                </span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+{% else %}
+<p class="text-blackbook-400 italic">No related organizations</p>
+{% endif %}

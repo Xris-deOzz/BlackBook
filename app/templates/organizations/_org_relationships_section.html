@@ -1,0 +1,454 @@
+<!-- Organization-to-Organization Relationships Section -->
+<div id="org-relationships-section">
+    <h3 class="text-lg font-semibold text-blackbook-900 mb-4">Related Organizations</h3>
+
+    <!-- Current Relationships Display -->
+    {% set has_relationships = outgoing_relationships or incoming_relationships %}
+    {% if has_relationships %}
+    <div class="space-y-4 mb-6">
+        <!-- Outgoing relationships (this org is the "from" org) -->
+        {% if outgoing_by_type %}
+        {% for rel_type, relationships in outgoing_by_type.items() %}
+        <div class="bg-blackbook-50 rounded-lg p-3 border border-blackbook-200">
+            <h4 class="text-sm font-medium text-blackbook-600 mb-2">
+                {% if rel_type == 'invested_in' %}Portfolio Companies (Invested In)
+                {% elif rel_type == 'subsidiary_of' %}Subsidiaries
+                {% elif rel_type == 'parent_company' %}Parent Company Of
+                {% elif rel_type == 'partner' %}Partners
+                {% elif rel_type == 'acquired' %}Acquired
+                {% elif rel_type == 'acquired_by' %}Acquired By
+                {% elif rel_type == 'spun_off_from' %}Spun Off From
+                {% else %}{{ rel_type | replace('_', ' ') | title }}{% endif %}
+            </h4>
+            <div class="space-y-2">
+                {% for rel in relationships %}
+                <div class="flex items-center justify-between bg-white rounded p-2 border border-blackbook-100" id="org-rel-{{ rel.id }}">
+                    <div class="flex items-center gap-3 flex-1">
+                        <a href="/organizations/{{ rel.to_organization.id }}" class="font-medium text-blackbook-800 hover:text-blackbook-600">
+                            {{ rel.to_organization.name }}
+                        </a>
+                        {% if rel.year %}
+                        <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
+                            {{ rel.year }}
+                        </span>
+                        {% endif %}
+                        {% if rel.notes %}
+                        <span class="text-blackbook-500 text-xs ml-2 truncate max-w-[200px]" title="{{ rel.notes }}">
+                            {{ rel.notes }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-2 ml-4">
+                        <button type="button"
+                                onclick="editOrgRelationship('{{ rel.id }}', '{{ rel.relationship_type.value if rel.relationship_type.value is defined else rel.relationship_type }}', {{ rel.year or 'null' }}, '{{ rel.notes or '' }}')"
+                                class="p-1 text-blackbook-400 hover:text-blackbook-600"
+                                title="Edit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            </svg>
+                        </button>
+                        <button type="button"
+                                hx-delete="/organizations/{{ organization.id }}/org-relationships/{{ rel.id }}"
+                                hx-target="#org-relationships-section"
+                                hx-swap="outerHTML"
+                                hx-confirm="Remove relationship with {{ rel.to_organization.name }}?"
+                                class="p-1 text-red-400 hover:text-red-600"
+                                title="Remove">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- Incoming relationships (this org is the "to" org) -->
+        {% if incoming_by_type %}
+        {% for rel_type, relationships in incoming_by_type.items() %}
+        <div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+            <h4 class="text-sm font-medium text-blue-600 mb-2">
+                {% if rel_type == 'invested_in' %}Investors (Received Investment From)
+                {% elif rel_type == 'subsidiary_of' %}Parent Organization
+                {% elif rel_type == 'parent_company' %}Subsidiary Of
+                {% elif rel_type == 'partner' %}Partners
+                {% elif rel_type == 'acquired' %}Acquired By
+                {% elif rel_type == 'acquired_by' %}Acquired
+                {% elif rel_type == 'spun_off_from' %}Spin-Off Parent
+                {% else %}{{ rel_type | replace('_', ' ') | title }} (Incoming){% endif %}
+            </h4>
+            <div class="space-y-2">
+                {% for rel in relationships %}
+                <div class="flex items-center justify-between bg-white rounded p-2 border border-blue-100" id="org-rel-{{ rel.id }}">
+                    <div class="flex items-center gap-3 flex-1">
+                        <a href="/organizations/{{ rel.from_organization.id }}" class="font-medium text-blackbook-800 hover:text-blackbook-600">
+                            {{ rel.from_organization.name }}
+                        </a>
+                        {% if rel.year %}
+                        <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
+                            {{ rel.year }}
+                        </span>
+                        {% endif %}
+                        {% if rel.notes %}
+                        <span class="text-blackbook-500 text-xs ml-2 truncate max-w-[200px]" title="{{ rel.notes }}">
+                            {{ rel.notes }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-2 ml-4">
+                        <button type="button"
+                                hx-delete="/organizations/{{ organization.id }}/org-relationships/{{ rel.id }}"
+                                hx-target="#org-relationships-section"
+                                hx-swap="outerHTML"
+                                hx-confirm="Remove relationship with {{ rel.from_organization.name }}?"
+                                class="p-1 text-red-400 hover:text-red-600"
+                                title="Remove">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+    {% else %}
+    <p class="text-blackbook-500 text-sm mb-4">No related organizations yet.</p>
+    {% endif %}
+
+    <!-- Add New Relationship Form -->
+    <div class="border border-blackbook-200 dark:border-blackbook-600 rounded-lg p-4 bg-white dark:bg-blackbook-800">
+        <h4 class="text-sm font-medium text-blackbook-700 dark:text-blackbook-200 mb-3">Add Organization Relationship</h4>
+        <form id="add-org-relationship-form"
+              hx-post="/organizations/{{ organization.id }}/org-relationships"
+              hx-target="#org-relationships-section"
+              hx-swap="outerHTML"
+              class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Target Organization Search -->
+                <div class="relative">
+                    <label for="org_search_input" class="block text-xs font-medium text-blackbook-600 dark:text-blackbook-400 mb-1">Organization</label>
+                    <input type="text"
+                           id="org_search_input"
+                           placeholder="Type to search organizations..."
+                           autocomplete="off"
+                           oninput="orgSearchHandleInput(this)"
+                           onfocus="orgSearchHandleFocus(this)"
+                           class="w-full px-3 py-2 text-sm border border-blackbook-300 dark:border-blackbook-600 dark:bg-blackbook-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                    <input type="hidden" name="target_org_id" id="target_org_id" required>
+
+                    <!-- Search Results Dropdown -->
+                    <div id="org_search_results" class="absolute z-50 w-full mt-1 bg-white dark:bg-blackbook-700 border border-blackbook-300 dark:border-blackbook-600 rounded-md shadow-lg max-h-60 overflow-y-auto hidden">
+                        <!-- Results will be populated by JavaScript -->
+                    </div>
+
+                    <!-- Selected Organization Display -->
+                    <div id="selected_org_display" class="hidden mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-md flex items-center justify-between">
+                        <span id="selected_org_name" class="text-sm text-green-800 dark:text-green-300"></span>
+                        <button type="button" onclick="clearSelectedOrg()" class="text-green-600 hover:text-green-800 dark:text-green-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Relationship Type -->
+                <div>
+                    <label for="relationship_type" class="block text-xs font-medium text-blackbook-600 dark:text-blackbook-400 mb-1">Relationship Type</label>
+                    <select name="relationship_type" id="relationship_type" required
+                            class="w-full px-3 py-2 text-sm border border-blackbook-300 dark:border-blackbook-600 dark:bg-blackbook-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                        <option value="invested_in">Invested In (Portfolio Company)</option>
+                        <option value="subsidiary_of">Subsidiary Of</option>
+                        <option value="parent_company">Parent Company Of</option>
+                        <option value="partner">Partner With</option>
+                        <option value="acquired">Acquired</option>
+                        <option value="acquired_by">Acquired By</option>
+                        <option value="spun_off_from">Spun Off From</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Year -->
+                <div>
+                    <label for="year" class="block text-xs font-medium text-blackbook-600 dark:text-blackbook-400 mb-1">Year (optional)</label>
+                    <input type="number" name="year" id="year"
+                           min="1900" max="2100"
+                           placeholder="e.g., 2023"
+                           class="w-full px-3 py-2 text-sm border border-blackbook-300 dark:border-blackbook-600 dark:bg-blackbook-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label for="notes" class="block text-xs font-medium text-blackbook-600 dark:text-blackbook-400 mb-1">Notes (optional)</label>
+                    <input type="text" name="notes" id="notes"
+                           placeholder="e.g., Series A"
+                           class="w-full px-3 py-2 text-sm border border-blackbook-300 dark:border-blackbook-600 dark:bg-blackbook-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit"
+                        class="px-4 py-2 bg-blackbook-600 text-white text-sm font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+                    Add Relationship
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Edit Modal (hidden by default) -->
+    <div id="edit-org-relationship-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 class="text-lg font-semibold text-blackbook-900 mb-4">Edit Relationship</h3>
+            <form id="edit-org-relationship-form"
+                  hx-target="#org-relationships-section"
+                  hx-swap="outerHTML"
+                  class="space-y-4">
+                <div>
+                    <label for="edit_org_relationship_type" class="block text-sm font-medium text-blackbook-700 mb-1">Relationship Type</label>
+                    <select name="relationship_type" id="edit_org_relationship_type"
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                        <option value="invested_in">Invested In (Portfolio Company)</option>
+                        <option value="subsidiary_of">Subsidiary Of</option>
+                        <option value="parent_company">Parent Company Of</option>
+                        <option value="partner">Partner With</option>
+                        <option value="acquired">Acquired</option>
+                        <option value="acquired_by">Acquired By</option>
+                        <option value="spun_off_from">Spun Off From</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="edit_org_year" class="block text-sm font-medium text-blackbook-700 mb-1">Year (optional)</label>
+                    <input type="number" name="year" id="edit_org_year"
+                           min="1900" max="2100"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                </div>
+
+                <div>
+                    <label for="edit_org_notes" class="block text-sm font-medium text-blackbook-700 mb-1">Notes (optional)</label>
+                    <input type="text" name="notes" id="edit_org_notes"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeOrgRelEditModal()"
+                            class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ============ ORGANIZATION SEARCH ============
+        // Define all functions globally so they work after HTMX swaps
+        // These get redefined on each swap, which is intentional
+
+        const ORG_SEARCH_CURRENT_ORG_ID = '{{ organization.id }}';
+        let orgSearchTimeout = null;
+
+        // Get fresh DOM references every time
+        function getOrgSearchElements() {
+            return {
+                searchInput: document.getElementById('org_search_input'),
+                searchResults: document.getElementById('org_search_results'),
+                targetOrgIdInput: document.getElementById('target_org_id'),
+                selectedOrgDisplay: document.getElementById('selected_org_display'),
+                selectedOrgName: document.getElementById('selected_org_name')
+            };
+        }
+
+        // Search organizations
+        async function orgSearchQuery(query) {
+            const els = getOrgSearchElements();
+            if (!els.searchResults) return;
+
+            try {
+                const response = await fetch(`/api/organizations/search?q=${encodeURIComponent(query)}&limit=10`);
+                const orgs = await response.json();
+
+                // Filter out the current organization
+                const filteredOrgs = orgs.filter(org => org.id !== ORG_SEARCH_CURRENT_ORG_ID);
+
+                if (filteredOrgs.length === 0) {
+                    // Show "no results" with option to create new
+                    els.searchResults.innerHTML = `
+                        <div class="p-3 text-center">
+                            <p class="text-sm text-blackbook-500 dark:text-blackbook-400 mb-2">No organizations found</p>
+                            <button type="button" onclick="orgSearchCreateNew('${query.replace(/'/g, "\\'")}')"
+                                    class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center justify-center gap-1 w-full">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Create "${query}"
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // Show search results
+                    els.searchResults.innerHTML = filteredOrgs.map(org => `
+                        <div class="px-3 py-2 hover:bg-blackbook-100 dark:hover:bg-blackbook-600 cursor-pointer flex justify-between items-center"
+                             onclick="orgSearchSelect('${org.id}', '${org.name.replace(/'/g, "\\'")}')">
+                            <span class="text-sm text-blackbook-800 dark:text-blackbook-200">${org.name}</span>
+                        </div>
+                    `).join('') + `
+                        <div class="px-3 py-2 border-t border-blackbook-200 dark:border-blackbook-600">
+                            <button type="button" onclick="orgSearchCreateNew('${query.replace(/'/g, "\\'")}')"
+                                    class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1 w-full">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Create new organization
+                            </button>
+                        </div>
+                    `;
+                }
+
+                els.searchResults.classList.remove('hidden');
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+
+        // Select organization
+        function orgSearchSelect(id, name) {
+            const els = getOrgSearchElements();
+            if (!els.targetOrgIdInput) return;
+
+            els.targetOrgIdInput.value = id;
+            els.selectedOrgName.textContent = name;
+            els.selectedOrgDisplay.classList.remove('hidden');
+            els.searchInput.value = '';
+            els.searchInput.classList.add('hidden');
+            els.searchResults.classList.add('hidden');
+        }
+
+        // Clear selected organization
+        function clearSelectedOrg() {
+            const els = getOrgSearchElements();
+            if (!els.targetOrgIdInput) return;
+
+            els.targetOrgIdInput.value = '';
+            els.selectedOrgName.textContent = '';
+            els.selectedOrgDisplay.classList.add('hidden');
+            els.searchInput.classList.remove('hidden');
+            els.searchInput.focus();
+        }
+
+        // Create new organization
+        async function orgSearchCreateNew(name) {
+            try {
+                const formData = new FormData();
+                formData.append('name', name);
+                formData.append('org_type', 'company');
+
+                const response = await fetch('/api/organizations/quick-create', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const newOrg = await response.json();
+
+                if (newOrg.id) {
+                    orgSearchSelect(newOrg.id, newOrg.name);
+
+                    if (newOrg.existing) {
+                        console.log('Existing organization selected:', newOrg.name);
+                    } else {
+                        console.log('New organization created:', newOrg.name);
+                    }
+                }
+            } catch (error) {
+                console.error('Create org error:', error);
+            }
+        }
+
+        // Handle input events - use oninput attribute instead of addEventListener to avoid duplicate listeners
+        function orgSearchHandleInput(inputEl) {
+            const query = inputEl.value.trim();
+            const els = getOrgSearchElements();
+
+            // Clear previous timeout
+            if (orgSearchTimeout) clearTimeout(orgSearchTimeout);
+
+            if (query.length < 1) {
+                els.searchResults.classList.add('hidden');
+                return;
+            }
+
+            // Debounce search
+            orgSearchTimeout = setTimeout(() => {
+                orgSearchQuery(query);
+            }, 200);
+        }
+
+        // Handle focus events
+        function orgSearchHandleFocus(inputEl) {
+            if (inputEl.value.trim().length >= 1) {
+                orgSearchQuery(inputEl.value.trim());
+            }
+        }
+
+        // Close search results when clicking outside - only add once
+        if (!window._orgSearchClickListenerAdded) {
+            document.addEventListener('click', function(e) {
+                const els = getOrgSearchElements();
+                if (els.searchInput && els.searchResults) {
+                    if (!els.searchInput.contains(e.target) && !els.searchResults.contains(e.target)) {
+                        els.searchResults.classList.add('hidden');
+                    }
+                }
+            });
+            window._orgSearchClickListenerAdded = true;
+        }
+
+        // ============ EDIT MODAL ============
+        function editOrgRelationship(relId, relType, year, notes) {
+            const modal = document.getElementById('edit-org-relationship-modal');
+            const form = document.getElementById('edit-org-relationship-form');
+
+            // Set form action
+            form.setAttribute('hx-put', '/organizations/{{ organization.id }}/org-relationships/' + relId);
+            htmx.process(form);
+
+            // Set values
+            document.getElementById('edit_org_relationship_type').value = relType;
+            document.getElementById('edit_org_year').value = year || '';
+            document.getElementById('edit_org_notes').value = notes || '';
+
+            // Show modal
+            modal.classList.remove('hidden');
+        }
+
+        function closeOrgRelEditModal() {
+            document.getElementById('edit-org-relationship-modal').classList.add('hidden');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('edit-org-relationship-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeOrgRelEditModal();
+            }
+        });
+
+        // Close modal after successful form submission
+        document.body.addEventListener('htmx:afterRequest', function(event) {
+            if (event.detail.elt.id === 'edit-org-relationship-form' && event.detail.successful) {
+                closeOrgRelEditModal();
+            }
+        });
+    </script>
+</div>

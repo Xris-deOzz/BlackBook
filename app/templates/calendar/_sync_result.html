@@ -1,0 +1,15 @@
+{% if success %}
+<span class="text-green-600 text-xs flex items-center gap-1">
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+    </svg>
+    Synced {{ events_synced }} event{% if events_synced != 1 %}s{% endif %}{% if pending_created > 0 %}, {{ pending_created }} new contact{% if pending_created != 1 %}s{% endif %}{% endif %}
+</span>
+{% else %}
+<span class="text-red-600 text-xs flex items-center gap-1">
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+    {{ message }}
+</span>
+{% endif %}

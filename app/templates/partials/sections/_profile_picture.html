@@ -1,0 +1,59 @@
+{# Profile Picture Section - for HTMX updates #}
+<div class="relative group">
+    {# Hidden file input for uploads #}
+    <input type="file"
+           id="profile-upload-input"
+           accept="image/*"
+           class="hidden"
+           hx-post="/api/people/{{ person.id }}/profile-picture"
+           hx-target="#profile-picture-section"
+           hx-swap="innerHTML"
+           hx-encoding="multipart/form-data"
+           name="file">
+
+    {% if person.profile_picture %}
+    {# Image - click to enlarge #}
+    <div id="profile-image-wrapper">
+        <img src="{{ person.profile_picture | replace('=s100', '=s400') }}"
+             alt="{{ person.full_name }}"
+             class="w-48 h-48 rounded-full object-cover border-4 border-blackbook-200 shadow-lg cursor-pointer hover:opacity-90 transition-opacity"
+             onclick="openProfilePictureModal()"
+             title="Click to enlarge"
+             onerror="this.parentElement.innerHTML = '<div class=\'w-48 h-48 rounded-full bg-blackbook-200 flex items-center justify-center border-4 border-blackbook-300 cursor-pointer hover:bg-blackbook-300 transition-colors\' onclick=\'document.getElementById(&quot;profile-upload-input&quot;).click()\' title=\'Click to upload photo\'><span class=\'text-6xl font-semibold text-blackbook-600\'>{{ person.full_name[0]|upper }}{% if person.last_name %}{{ person.last_name[0]|upper }}{% endif %}</span></div>';">
+    </div>
+
+    {# Change photo button - bottom of image on hover #}
+    <button type="button"
+            onclick="document.getElementById('profile-upload-input').click()"
+            class="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-black/70 text-white text-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/90 flex items-center gap-1.5"
+            title="Change photo">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        Change
+    </button>
+
+    {# Delete button - top right on hover #}
+    <button type="button"
+            hx-delete="/api/people/{{ person.id }}/profile-picture"
+            hx-target="#profile-picture-section"
+            hx-swap="innerHTML"
+            hx-confirm="Remove profile picture?"
+            class="absolute top-1 right-1 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md"
+            title="Remove picture">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+    </button>
+    {% else %}
+    {# No picture - click to upload #}
+    <div class="w-48 h-48 rounded-full bg-blackbook-200 flex items-center justify-center border-4 border-blackbook-300 cursor-pointer hover:bg-blackbook-300 transition-colors"
+         onclick="document.getElementById('profile-upload-input').click()"
+         title="Click to upload photo">
+        <span class="text-6xl font-semibold text-blackbook-600">
+            {{ person.full_name[0]|upper }}{% if person.last_name %}{{ person.last_name[0]|upper }}{% endif %}
+        </span>
+    </div>
+    {% endif %}
+</div>

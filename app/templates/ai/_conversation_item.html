@@ -1,0 +1,37 @@
+<!-- Single conversation item in sidebar -->
+<a href="/ai?conversation_id={{ conversation.id }}{% if person_id %}&person_id={{ person_id }}{% endif %}{% if org_id %}&org_id={{ org_id }}{% endif %}"
+   class="block p-3 rounded-lg hover:bg-blackbook-50 transition-colors group"
+   hx-get="/ai/conversations/{{ conversation.id }}"
+   hx-target="#chat-panel"
+   hx-swap="innerHTML"
+   hx-push-url="/ai?conversation_id={{ conversation.id }}">
+    <div class="flex items-start justify-between">
+        <div class="flex-1 min-w-0">
+            <h4 class="text-sm font-medium text-blackbook-900 truncate">
+                {{ conversation.title }}
+            </h4>
+            <p class="text-xs text-blackbook-500 mt-1">
+                {{ conversation.updated_at.strftime('%b %d, %Y') }}
+            </p>
+        </div>
+        <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button hx-delete="/ai/conversations/{{ conversation.id }}"
+                    hx-target="#conversation-list"
+                    hx-swap="innerHTML"
+                    hx-confirm="Delete this conversation?"
+                    onclick="event.preventDefault(); event.stopPropagation();"
+                    class="p-1 text-blackbook-400 hover:text-red-600 rounded">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    {% if conversation.provider_name %}
+    <div class="mt-2">
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blackbook-100 text-blackbook-600">
+            {{ conversation.provider_name }}
+        </span>
+    </div>
+    {% endif %}
+</a>

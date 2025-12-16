@@ -1,0 +1,69 @@
+{# Person Header - View Mode (Name only, larger text) #}
+{# Determine current employment for subtitle #}
+{# Note: Jinja2 can't reassign variables inside loops, so we use selectattr to find first current #}
+{% set current_employment_list = person.employment|selectattr('is_current')|list if person.employment is defined and person.employment else [] %}
+{% set current_org_list = person.organizations|selectattr('is_current')|list if person.organizations is defined and person.organizations else [] %}
+
+{# Get first current employment or organization #}
+{% set current_emp = current_employment_list[0] if current_employment_list else none %}
+{% set current_org = current_org_list[0] if current_org_list and not current_emp else none %}
+
+{# Extract org name and title #}
+{% set current_org_name = '' %}
+{% set current_title = person.title or '' %}
+
+{% if current_emp %}
+    {% if current_emp.organization %}
+        {% set current_org_name = current_emp.organization.name %}
+    {% elif current_emp.organization_name %}
+        {% set current_org_name = current_emp.organization_name %}
+    {% endif %}
+    {% if current_emp.title %}
+        {% set current_title = current_emp.title %}
+    {% endif %}
+{% elif current_org %}
+    {% if current_org.organization %}
+        {% set current_org_name = current_org.organization.name %}
+    {% endif %}
+    {% if current_org.role %}
+        {% set current_title = current_org.role %}
+    {% endif %}
+{% endif %}
+
+{# Build subtitle text #}
+{% set subtitle_text = '' %}
+{% if current_title and current_org_name %}
+    {% set subtitle_text = current_title ~ ' at ' ~ current_org_name %}
+{% elif current_title %}
+    {% set subtitle_text = current_title %}
+{% elif current_org_name %}
+    {% set subtitle_text = 'at ' ~ current_org_name %}
+{% endif %}
+
+<div id="person-header" class="flex items-center">
+    <div class="flex-1">
+        <div class="flex items-center gap-3">
+            <h1 class="text-4xl font-bold text-blackbook-900">{{ person.full_name }}</h1>
+            {% if person.nickname %}
+            <span class="text-2xl text-blackbook-500">"{{ person.nickname }}"</span>
+            {% endif %}
+            <button type="button"
+                    hx-get="/api/people/{{ person.id }}/sections/header/edit"
+                    hx-target="#person-header"
+                    hx-swap="outerHTML"
+                    class="p-1.5 text-blackbook-400 hover:text-blackbook-600"
+                    title="Edit name">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                </svg>
+            </button>
+        </div>
+        {% if subtitle_text %}
+        <p id="person-subtitle" class="text-xl text-blackbook-500 mt-1">{{ subtitle_text }}</p>
+        {% elif person.title %}
+        <p id="person-subtitle" class="text-xl text-blackbook-500 mt-1">{{ person.title }}</p>
+        {% else %}
+        <p id="person-subtitle" class="text-xl text-blackbook-500 mt-1 hidden"></p>
+        {% endif %}
+    </div>
+</div>

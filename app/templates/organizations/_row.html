@@ -1,0 +1,89 @@
+<tr class="hover:bg-blackbook-50">
+    <!-- Checkbox -->
+    <td class="px-3 py-4 text-center">
+        <input
+            type="checkbox"
+            class="org-row-checkbox h-4 w-4 text-blackbook-600 border-blackbook-300 rounded focus:ring-blackbook-500"
+            value="{{ org.id }}"
+            onchange="toggleOrgRowSelection(this)"
+        >
+    </td>
+    <!-- Name -->
+    <td class="px-6 py-4">
+        <a href="/organizations/{{ org.id }}" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600 line-clamp-2" title="{{ org.name }}">
+            {{ org.name }}
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-md line-clamp-3" title="{{ org.description or '' }}">
+            {{ org.description or '-' }}
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        {% set type_colors = {
+            'investment_firm': 'bg-blue-100 text-blue-800',
+            'company': 'bg-green-100 text-green-800',
+            'law_firm': 'bg-purple-100 text-purple-800',
+            'bank': 'bg-yellow-100 text-yellow-800',
+            'accelerator': 'bg-pink-100 text-pink-800',
+            'other': 'bg-gray-100 text-gray-800'
+        } %}
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ type_colors.get(org.org_type.value, 'bg-gray-100 text-gray-800') }}">
+            {{ org.org_type.value|replace('_', ' ')|title }}
+        </span>
+    </td>
+
+    <!-- Tags -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            {% if org.tags %}
+                {% for tag in org.tags[:3] %}
+                <span class="px-2 py-0.5 text-xs rounded-full" style="background-color: {{ tag.color }}20; color: {{ tag.color }}">
+                    {{ tag.name }}
+                </span>
+                {% endfor %}
+                {% if org.tags|length > 3 %}
+                <span class="px-2 py-0.5 text-xs rounded-full bg-blackbook-100 text-blackbook-600">
+                    +{{ org.tags|length - 3 }}
+                </span>
+                {% endif %}
+            {% else %}
+            <span class="text-sm text-blackbook-400">-</span>
+            {% endif %}
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            {% for person_org in org.affiliated_persons[:3] %}
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                {{ person_org.person.full_name }}
+            </span>
+            {% endfor %}
+            {% if org.affiliated_persons|length > 3 %}
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blackbook-100 text-blackbook-600">
+                +{{ org.affiliated_persons|length - 3 }}
+            </span>
+            {% endif %}
+            {% if org.affiliated_persons|length == 0 %}
+            <span class="text-sm text-blackbook-400">-</span>
+            {% endif %}
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        {% if org.website %}
+        <a href="{{ org.website }}" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            {{ org.website|replace('https://', '')|replace('http://', '')|truncate(30) }}
+        </a>
+        {% else %}
+        <span class="text-sm text-blackbook-400">-</span>
+        {% endif %}
+    </td>
+</tr>

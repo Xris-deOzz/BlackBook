@@ -1,0 +1,751 @@
+"""
+Calendar service for interacting with Google Calendar API.
+
+Handles fetching events, matching attendees to persons, and syncing calendar data.
+Supports timezone-aware date calculations for accurate "today" queries.
+"""
+
+from datetime import datetime, timezone, timedelta
+from typing import Any
+from uuid import UUID
+from zoneinfo import ZoneInfo
+
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from sqlalchemy.orm import Session
+
+from app.models import (
+    GoogleAccount,
+    Person,
+    PersonEmail,
+    CalendarEvent,
+    PendingContact,
+    PendingContactStatus,
+    Interaction,
+    InteractionMedium,
+    InteractionSource,
+)
+from app.services.google_auth import CALENDAR_SCOPES
+
+
+class CalendarServiceError(Exception):
+    """Base exception for Calendar service errors."""
+    pass
+
+
+class CalendarAuthError(CalendarServiceError):
+    """Raised when Calendar authentication fails."""
+    pass
+
+
+class CalendarAPIError(CalendarServiceError):
+    """Raised when Calendar API calls fail."""
+    pass
+
+
+class CalendarService:
+    """
+    Service for interacting with Google Calendar API.
+
+    Handles fetching events, caching them locally, and matching attendees to persons.
+    """
+
+    def __init__(self, db: Session):
+        """Initialize the Calendar service.
+
+        Args:
+            db: Database session for querying accounts and storing events
+        """
+        self.db = db
+        self._email_to_person_cache: dict[str, UUID | None] | None = None
+
+    def fetch_events(
+        self,
+        account_id: UUID,
+        time_min: datetime | None = None,
+        time_max: datetime | None = None,
+        max_results: int = 100,
+    ) -> list[CalendarEvent]:
+        """
+        Fetch calendar events from a Google account and cache them locally.
+
+        Args:
+            account_id: UUID of the Google account
+            time_min: Start of time range (defaults to now)
+            time_max: End of time range (defaults to 7 days from now)
+            max_results: Maximum number of events to fetch
+
+        Returns:
+            List of CalendarEvent objects (newly fetched and cached)
+
+        Raises:
+            CalendarServiceError: If account not found
+            CalendarAuthError: If authentication fails
+            CalendarAPIError: If API call fails
+        """
+        account = self.db.query(GoogleAccount).filter_by(id=account_id).first()
+        if not account:
+            raise CalendarServiceError(f"Account not found: {account_id}")
+
+        # Set default time range
+        if time_min is None:
+            time_min = datetime.now(timezone.utc)
+        if time_max is None:
+            time_max = time_min + timedelta(days=7)
+
+        try:
+            credentials = self._get_credentials(account)
+            service = build("calendar", "v3", credentials=credentials)
+
+            events_result = service.events().list(
+                calendarId="primary",
+                timeMin=time_min.isoformat(),
+                timeMax=time_max.isoformat(),
+                maxResults=max_results,
+                singleEvents=True,
+                orderBy="startTime",
+            ).execute()
+
+            events_data = events_result.get("items", [])
+
+            # Cache events in database
+            cached_events = []
+            for event_data in events_data:
+                cached_event = self._cache_event(account, event_data)
+                if cached_event:
+                    cached_events.append(cached_event)
+
+            self.db.commit()
+            return cached_events
+
+        except HttpError as e:
+            raise CalendarAPIError(f"Calendar API error: {e}")
+
+    def get_todays_events(self, local_tz: ZoneInfo | None = None) -> list[CalendarEvent]:
+        """
+        Get today's calendar events across all active accounts.
+
+        Args:
+            local_tz: Local timezone to determine "today". If None, uses UTC.
+
+        Returns:
+            List of CalendarEvent objects for today, sorted by start time
+        """
+        if local_tz:
+            # Calculate today's boundaries in local timezone, then convert to UTC
+            now_local = datetime.now(local_tz)
+            today_start_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+            today_end_local = today_start_local + timedelta(days=1)
+            # Convert to UTC for database queries
+            today_start = today_start_local.astimezone(timezone.utc)
+            today_end = today_end_local.astimezone(timezone.utc)
+        else:
+            # Fallback to UTC
+            now = datetime.now(timezone.utc)
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            today_end = today_start + timedelta(days=1)
+
+        # Fetch fresh events from all accounts
+        accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+        for account in accounts:
+            try:
+                self.fetch_events(
+                    account_id=account.id,
+                    time_min=today_start,
+                    time_max=today_end,
+                )
+            except (CalendarAuthError, CalendarAPIError):
+                # Continue with other accounts if one fails
+                continue
+
+        # Query cached events for today
+        events = (
+            self.db.query(CalendarEvent)
+            .filter(CalendarEvent.start_time >= today_start)
+            .filter(CalendarEvent.start_time < today_end)
+            .order_by(CalendarEvent.start_time)
+            .all()
+        )
+
+        return events
+
+    def get_upcoming_events(self, days: int = 7, offset: int = 0) -> list[CalendarEvent]:
+        """
+        Get upcoming calendar events across all active accounts.
+
+        Args:
+            days: Number of days to look ahead (default 7)
+            offset: Number of days to skip from today (default 0)
+
+        Returns:
+            List of CalendarEvent objects, sorted by start time
+        """
+        now = datetime.now(timezone.utc)
+        time_min = now + timedelta(days=offset)
+        time_max = time_min + timedelta(days=days)
+
+        # Fetch fresh events from all accounts
+        accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+        for account in accounts:
+            try:
+                self.fetch_events(
+                    account_id=account.id,
+                    time_min=time_min,
+                    time_max=time_max,
+                )
+            except (CalendarAuthError, CalendarAPIError):
+                continue
+
+        # Query cached events
+        events = (
+            self.db.query(CalendarEvent)
+            .filter(CalendarEvent.start_time >= time_min)
+            .filter(CalendarEvent.start_time < time_max)
+            .order_by(CalendarEvent.start_time)
+            .all()
+        )
+
+        return events
+
+    def create_event(
+        self,
+        summary: str,
+        start_datetime: datetime,
+        end_datetime: datetime | None = None,
+        description: str | None = None,
+        location: str | None = None,
+        attendee_email: str | None = None,
+        attendee_emails: list[str] | None = None,
+        add_video_conferencing: bool = False,
+        notification_minutes: int | None = None,
+        account_id: UUID | None = None,
+        timezone_str: str | None = None,
+        send_updates: str = "none",
+    ) -> str | None:
+        """
+        Create a new event in Google Calendar.
+
+        Args:
+            summary: Event title
+            start_datetime: Start date/time (can be naive or timezone-aware)
+            end_datetime: End date/time (default: 1 hour after start)
+            description: Event description/notes
+            location: Event location (address or place name)
+            attendee_email: Optional single email to add as attendee (legacy)
+            attendee_emails: Optional list of emails to add as attendees
+            add_video_conferencing: Whether to add Google Meet video conferencing
+            notification_minutes: Minutes before event to send reminder (e.g., 10, 30, 60)
+            account_id: Optional specific Google account to use
+            timezone_str: Timezone string (e.g., "America/New_York"). If not provided,
+                          uses the datetime's timezone or defaults to "America/New_York"
+            send_updates: Whether to send invite emails ("all", "externalOnly", "none")
+
+        Returns:
+            Google Calendar event ID if successful, None otherwise
+
+        Raises:
+            CalendarServiceError: If no active account found
+            CalendarAuthError: If authentication fails
+            CalendarAPIError: If API call fails
+        """
+        # Get specific account or first active Google account
+        if account_id:
+            account = self.db.query(GoogleAccount).filter_by(id=account_id, is_active=True).first()
+        else:
+            account = self.db.query(GoogleAccount).filter_by(is_active=True).first()
+        if not account:
+            raise CalendarServiceError("No active Google account found")
+
+        # Default end time to 1 hour after start
+        if end_datetime is None:
+            end_datetime = start_datetime + timedelta(hours=1)
+
+        # Determine timezone to use
+        # Priority: explicit timezone_str > datetime's timezone > default
+        if timezone_str:
+            tz_to_use = timezone_str
+        elif start_datetime.tzinfo is not None:
+            tz_to_use = str(start_datetime.tzinfo)
+        else:
+            # Default timezone - Google Calendar API requires timezone for proper event creation
+            tz_to_use = "America/New_York"
+
+        # Build event body - always include timezone for reliability
+        # Format datetime without timezone suffix, let timeZone field handle it
+        if start_datetime.tzinfo is not None:
+            # If datetime has timezone, convert to the target timezone first
+            start_str = start_datetime.strftime("%Y-%m-%dT%H:%M:%S")
+        else:
+            # Naive datetime - use as-is (assumed to be in tz_to_use)
+            start_str = start_datetime.strftime("%Y-%m-%dT%H:%M:%S")
+
+        if end_datetime.tzinfo is not None:
+            end_str = end_datetime.strftime("%Y-%m-%dT%H:%M:%S")
+        else:
+            end_str = end_datetime.strftime("%Y-%m-%dT%H:%M:%S")
+
+        start_entry = {
+            "dateTime": start_str,
+            "timeZone": tz_to_use,
+        }
+        end_entry = {
+            "dateTime": end_str,
+            "timeZone": tz_to_use,
+        }
+
+        event_body = {
+            "summary": summary,
+            "start": start_entry,
+            "end": end_entry,
+        }
+
+        if description:
+            event_body["description"] = description
+
+        if location:
+            event_body["location"] = location
+
+        # Handle attendees - combine single email and list of emails
+        attendees = []
+        if attendee_email:
+            attendees.append({"email": attendee_email})
+        if attendee_emails:
+            for email in attendee_emails:
+                if email and email.strip():
+                    attendees.append({"email": email.strip()})
+        if attendees:
+            event_body["attendees"] = attendees
+
+        # Add Google Meet video conferencing
+        if add_video_conferencing:
+            event_body["conferenceData"] = {
+                "createRequest": {
+                    "requestId": f"meet-{start_datetime.strftime('%Y%m%d%H%M%S')}",
+                    "conferenceSolutionKey": {"type": "hangoutsMeet"},
+                }
+            }
+
+        # Add notification/reminder
+        if notification_minutes is not None and notification_minutes >= 0:
+            event_body["reminders"] = {
+                "useDefault": False,
+                "overrides": [
+                    {"method": "popup", "minutes": notification_minutes},
+                ],
+            }
+
+        try:
+            credentials = self._get_credentials(account)
+            service = build("calendar", "v3", credentials=credentials)
+
+            # If adding video conferencing, we need conferenceDataVersion=1
+            conference_version = 1 if add_video_conferencing else 0
+
+            created_event = service.events().insert(
+                calendarId="primary",
+                body=event_body,
+                sendUpdates=send_updates,
+                conferenceDataVersion=conference_version,
+            ).execute()
+
+            return created_event.get("id")
+
+        except HttpError as e:
+            raise CalendarAPIError(f"Failed to create calendar event: {e}")
+
+    def match_attendees_to_persons(
+        self,
+        event: CalendarEvent,
+    ) -> list[dict[str, Any]]:
+        """
+        Match event attendees to persons in the database.
+
+        Args:
+            event: CalendarEvent to match attendees for
+
+        Returns:
+            List of attendee dicts with person_id if matched:
+            [{"email": str, "name": str, "person_id": UUID|None, "person_name": str|None}]
+        """
+        if not event.attendees:
+            return []
+
+        matched = []
+        for attendee in event.attendees:
+            email = attendee.get("email", "").lower()
+            name = attendee.get("displayName") or attendee.get("name", "")
+
+            person_id = self._find_person_by_email(email)
+            person_name = None
+
+            if person_id:
+                person = self.db.query(Person).filter_by(id=person_id).first()
+                if person:
+                    person_name = person.full_name
+
+            matched.append({
+                "email": email,
+                "name": name,
+                "response_status": attendee.get("responseStatus"),
+                "person_id": str(person_id) if person_id else None,
+                "person_name": person_name,
+            })
+
+        return matched
+
+    def sync_past_events(self, days: int = 30) -> dict[str, int]:
+        """
+        Sync past calendar events for interaction creation.
+
+        Args:
+            days: Number of days to look back (default 30)
+
+        Returns:
+            Dict with sync statistics: {"events_synced": int, "pending_contacts_created": int}
+        """
+        now = datetime.now(timezone.utc)
+        time_min = now - timedelta(days=days)
+
+        events_synced = 0
+        pending_created = 0
+
+        # Fetch past events from all accounts
+        accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+        for account in accounts:
+            try:
+                events = self.fetch_events(
+                    account_id=account.id,
+                    time_min=time_min,
+                    time_max=now,
+                    max_results=250,
+                )
+                events_synced += len(events)
+
+                # Process attendees for pending contacts
+                for event in events:
+                    pending_created += self._process_attendees_for_pending(event)
+
+            except (CalendarAuthError, CalendarAPIError):
+                continue
+
+        self.db.commit()
+        return {
+            "events_synced": events_synced,
+            "pending_contacts_created": pending_created,
+        }
+
+    def auto_create_interactions(
+        self,
+        days: int = 30,
+        only_past: bool = True,
+    ) -> dict[str, int]:
+        """
+        Automatically create interactions for calendar events with known attendees.
+
+        Args:
+            days: Number of days to look back (default 30)
+            only_past: Only create interactions for past events (default True)
+
+        Returns:
+            Dict with statistics: {"events_processed": int, "interactions_created": int}
+        """
+        now = datetime.now(timezone.utc)
+        time_min = now - timedelta(days=days)
+
+        # Query events that are past and have attendees
+        query = (
+            self.db.query(CalendarEvent)
+            .filter(CalendarEvent.start_time >= time_min)
+            .filter(CalendarEvent.attendees.isnot(None))
+        )
+
+        if only_past:
+            query = query.filter(CalendarEvent.end_time < now)
+
+        events = query.all()
+
+        events_processed = 0
+        interactions_created = 0
+
+        for event in events:
+            events_processed += 1
+            created = self._create_interactions_for_event(event)
+            interactions_created += created
+
+        self.db.commit()
+        return {
+            "events_processed": events_processed,
+            "interactions_created": interactions_created,
+        }
+
+    def _create_interactions_for_event(self, event: CalendarEvent) -> int:
+        """
+        Create interactions for all known attendees of an event.
+
+        Args:
+            event: CalendarEvent to process
+
+        Returns:
+            Number of interactions created
+        """
+        if not event.attendees:
+            return 0
+
+        # Determine interaction medium
+        medium = InteractionMedium.video_call if event.is_video_call else InteractionMedium.meeting
+
+        created = 0
+        for attendee in event.attendees:
+            email = attendee.get("email", "").lower()
+            if not email:
+                continue
+
+            # Skip self
+            if attendee.get("self"):
+                continue
+
+            # Find person by email
+            person_id = self._find_person_by_email(email)
+            if not person_id:
+                continue
+
+            # Check if interaction already exists
+            existing = (
+                self.db.query(Interaction)
+                .filter_by(
+                    person_id=person_id,
+                    calendar_event_id=event.google_event_id,
+                )
+                .first()
+            )
+            if existing:
+                continue
+
+            # Create interaction
+            interaction = Interaction(
+                person_id=person_id,
+                medium=medium,
+                interaction_date=event.start_time,
+                notes=f"Calendar: {event.summary or 'Meeting'}",
+                calendar_event_id=event.google_event_id,
+                source=InteractionSource.calendar,
+            )
+            self.db.add(interaction)
+            created += 1
+
+        return created
+
+    def full_sync(self, days: int = 30) -> dict[str, Any]:
+        """
+        Perform a full calendar sync: fetch events, create pending contacts,
+        and auto-create interactions.
+
+        Args:
+            days: Number of days to look back (default 30)
+
+        Returns:
+            Dict with full sync statistics
+        """
+        # First sync past events
+        sync_result = self.sync_past_events(days=days)
+
+        # Then auto-create interactions
+        interaction_result = self.auto_create_interactions(days=days)
+
+        return {
+            "events_synced": sync_result["events_synced"],
+            "pending_contacts_created": sync_result["pending_contacts_created"],
+            "events_processed": interaction_result["events_processed"],
+            "interactions_created": interaction_result["interactions_created"],
+        }
+
+    def _get_credentials(self, account: GoogleAccount) -> Credentials:
+        """Get OAuth credentials for a Google account."""
+        try:
+            creds_dict = account.get_credentials()
+            return Credentials(
+                token=creds_dict.get("token"),
+                refresh_token=creds_dict.get("refresh_token"),
+                token_uri=creds_dict.get("token_uri", "https://oauth2.googleapis.com/token"),
+                client_id=creds_dict.get("client_id"),
+                client_secret=creds_dict.get("client_secret"),
+                scopes=creds_dict.get("scopes", CALENDAR_SCOPES),
+            )
+        except Exception as e:
+            raise CalendarAuthError(f"Failed to get credentials: {e}")
+
+    def _cache_event(
+        self,
+        account: GoogleAccount,
+        event_data: dict[str, Any],
+    ) -> CalendarEvent | None:
+        """Cache a calendar event in the database (upsert)."""
+        google_event_id = event_data.get("id")
+        if not google_event_id:
+            return None
+
+        # Parse start/end times
+        start = event_data.get("start", {})
+        end = event_data.get("end", {})
+
+        start_time = self._parse_event_time(start)
+        end_time = self._parse_event_time(end)
+
+        if not start_time or not end_time:
+            return None
+
+        # Parse attendees
+        attendees = []
+        for attendee in event_data.get("attendees", []):
+            attendees.append({
+                "email": attendee.get("email", ""),
+                "name": attendee.get("displayName", ""),
+                "response_status": attendee.get("responseStatus", ""),
+                "self": attendee.get("self", False),
+                "organizer": attendee.get("organizer", False),
+            })
+
+        # Get organizer email
+        organizer = event_data.get("organizer", {})
+        organizer_email = organizer.get("email")
+
+        # Check for recurring event
+        is_recurring = "recurringEventId" in event_data
+        recurring_event_id = event_data.get("recurringEventId")
+
+        # Upsert event
+        existing = (
+            self.db.query(CalendarEvent)
+            .filter_by(
+                google_account_id=account.id,
+                google_event_id=google_event_id,
+            )
+            .first()
+        )
+
+        if existing:
+            # Update existing event
+            existing.summary = event_data.get("summary")
+            existing.description = event_data.get("description")
+            existing.start_time = start_time
+            existing.end_time = end_time
+            existing.location = event_data.get("location")
+            existing.attendees = attendees if attendees else None
+            existing.is_recurring = is_recurring
+            existing.recurring_event_id = recurring_event_id
+            existing.organizer_email = organizer_email
+            return existing
+        else:
+            # Create new event
+            event = CalendarEvent(
+                google_account_id=account.id,
+                google_event_id=google_event_id,
+                summary=event_data.get("summary"),
+                description=event_data.get("description"),
+                start_time=start_time,
+                end_time=end_time,
+                location=event_data.get("location"),
+                attendees=attendees if attendees else None,
+                is_recurring=is_recurring,
+                recurring_event_id=recurring_event_id,
+                organizer_email=organizer_email,
+            )
+            self.db.add(event)
+            return event
+
+    def _parse_event_time(self, time_data: dict[str, str]) -> datetime | None:
+        """Parse event start/end time from Google Calendar API response."""
+        if "dateTime" in time_data:
+            # Regular event with specific time
+            dt_str = time_data["dateTime"]
+            try:
+                return datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+        elif "date" in time_data:
+            # All-day event
+            try:
+                date = datetime.strptime(time_data["date"], "%Y-%m-%d")
+                return date.replace(tzinfo=timezone.utc)
+            except ValueError:
+                return None
+        return None
+
+    def _find_person_by_email(self, email: str) -> UUID | None:
+        """Find a person by email address (cached lookup)."""
+        email_lower = email.lower()
+
+        # Build cache on first lookup
+        if self._email_to_person_cache is None:
+            self._email_to_person_cache = {}
+            person_emails = self.db.query(PersonEmail).all()
+            for pe in person_emails:
+                self._email_to_person_cache[pe.email.lower()] = pe.person_id
+
+            # Also check legacy email field
+            persons = self.db.query(Person).filter(Person.email.isnot(None)).all()
+            for p in persons:
+                if p.email and p.email.lower() not in self._email_to_person_cache:
+                    self._email_to_person_cache[p.email.lower()] = p.id
+
+        return self._email_to_person_cache.get(email_lower)
+
+    def _process_attendees_for_pending(self, event: CalendarEvent) -> int:
+        """
+        Process event attendees and create pending contacts for unknown ones.
+
+        Returns:
+            Number of new pending contacts created
+        """
+        if not event.attendees:
+            return 0
+
+        created = 0
+        for attendee in event.attendees:
+            email = attendee.get("email", "").lower()
+            if not email:
+                continue
+
+            # Skip self (the calendar owner)
+            if attendee.get("self"):
+                continue
+
+            # Check if person exists
+            person_id = self._find_person_by_email(email)
+            if person_id:
+                continue
+
+            # Check if already in pending contacts
+            existing = (
+                self.db.query(PendingContact)
+                .filter_by(email=email)
+                .first()
+            )
+
+            if existing:
+                # Increment occurrence count
+                existing.increment_occurrence()
+            else:
+                # Create new pending contact
+                pending = PendingContact(
+                    email=email,
+                    name=attendee.get("name") or attendee.get("displayName"),
+                    source_event_id=event.id,
+                )
+                self.db.add(pending)
+                created += 1
+
+        return created
+
+
+def get_calendar_service(db: Session) -> CalendarService:
+    """Get a Calendar service instance.
+
+    Args:
+        db: Database session
+
+    Returns:
+        CalendarService instance
+    """
+    return CalendarService(db)

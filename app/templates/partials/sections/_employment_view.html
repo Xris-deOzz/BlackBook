@@ -1,0 +1,167 @@
+{# Employment History Section - View Mode #}
+{# NOTE: This is a TEMPORARY implementation that displays person_organizations as employment.
+   FUTURE TODO: Implement full person_employment table migration (see docs/PERSON_PAGE_REDESIGN_2025.12.09.1.md)
+   and migrate data from person_organizations to person_employment where appropriate. #}
+
+{# Check for new employment table first, fallback to organizations #}
+{% set has_employment = person.employment|length > 0 if person.employment is defined else false %}
+{% set has_organizations = person.organizations|length > 0 %}
+
+{% if has_employment %}
+    {# Use new person_employment table (when implemented) #}
+    {% set current_employment = person.employment|selectattr('is_current')|list %}
+    {% set past_employment = person.employment|rejectattr('is_current')|list %}
+
+    <div class="space-y-4">
+        {# Current Employment #}
+        {% if current_employment %}
+        <div class="mb-4">
+            <h4 class="text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-2">Current</h4>
+            {% for emp in current_employment %}
+            <div class="border-l-4 border-green-500 pl-3 py-2 mb-2 bg-green-50 dark:bg-green-900/20 rounded-r">
+                <div class="font-medium text-blackbook-900">
+                    {% if emp.organization %}
+                    <a href="/organizations/{{ emp.organization.id }}" class="hover:text-blue-600">
+                        {{ emp.organization.name }}
+                    </a>
+                    {% else %}
+                    {{ emp.organization_name or 'Unknown' }}
+                    {% endif %}
+                </div>
+                {% if emp.title %}
+                <div class="text-sm text-blackbook-600">{{ emp.title }}</div>
+                {% endif %}
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    {% if emp.affiliation_type %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        {{ emp.affiliation_type.name }}
+                    </span>
+                    {% endif %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Current</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {# Past Employment #}
+        {% if past_employment %}
+        <div>
+            <h4 class="text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-2">Previous</h4>
+            {% for emp in past_employment %}
+            <div class="border-l-4 border-blackbook-300 pl-3 py-2 mb-2">
+                <div class="font-medium text-blackbook-900">
+                    {% if emp.organization %}
+                    <a href="/organizations/{{ emp.organization.id }}" class="hover:text-blue-600">
+                        {{ emp.organization.name }}
+                    </a>
+                    {% else %}
+                    {{ emp.organization_name or 'Unknown' }}
+                    {% endif %}
+                </div>
+                {% if emp.title %}
+                <div class="text-sm text-blackbook-600">{{ emp.title }}</div>
+                {% endif %}
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    {% if emp.affiliation_type %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        {{ emp.affiliation_type.name }}
+                    </span>
+                    {% endif %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Past</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+{% elif has_organizations %}
+    {# Fallback: Display person_organizations as employment history #}
+    {% set current_orgs = person.organizations|selectattr('is_current')|list %}
+    {% set past_orgs = person.organizations|rejectattr('is_current')|list %}
+
+    <div class="space-y-4">
+        {# Current Organizations #}
+        {% if current_orgs %}
+        <div class="mb-4">
+            <h4 class="text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-2">Current</h4>
+            {% for po in current_orgs %}
+            <div class="border-l-4 border-green-500 pl-3 py-2 mb-2 bg-green-50 dark:bg-green-900/20 rounded-r">
+                <div class="font-medium text-blackbook-900">
+                    <a href="/organizations/{{ po.organization.id }}" class="hover:text-blue-600">
+                        {{ po.organization.name }}
+                    </a>
+                </div>
+                {% if po.role %}
+                <div class="text-sm text-blackbook-600">{{ po.role }}</div>
+                {% endif %}
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    {% if po.relationship %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        {{ po.relationship.value|replace('_', ' ')|title }}
+                    </span>
+                    {% endif %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Current</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {# Past Organizations #}
+        {% if past_orgs %}
+        <div>
+            <h4 class="text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-2">Previous</h4>
+            {% for po in past_orgs %}
+            <div class="border-l-4 border-blackbook-300 pl-3 py-2 mb-2">
+                <div class="font-medium text-blackbook-900">
+                    <a href="/organizations/{{ po.organization.id }}" class="hover:text-blue-600">
+                        {{ po.organization.name }}
+                    </a>
+                </div>
+                {% if po.role %}
+                <div class="text-sm text-blackbook-600">{{ po.role }}</div>
+                {% endif %}
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    {% if po.relationship %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        {{ po.relationship.value|replace('_', ' ')|title }}
+                    </span>
+                    {% endif %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Past</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {# Show all if none have is_current set #}
+        {% if not current_orgs and not past_orgs %}
+        <div>
+            {% for po in person.organizations %}
+            <div class="border-l-4 border-blackbook-300 pl-3 py-2 mb-2">
+                <div class="font-medium text-blackbook-900">
+                    <a href="/organizations/{{ po.organization.id }}" class="hover:text-blue-600">
+                        {{ po.organization.name }}
+                    </a>
+                </div>
+                {% if po.role %}
+                <div class="text-sm text-blackbook-600">{{ po.role }}</div>
+                {% endif %}
+                {% if po.relationship %}
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        {{ po.relationship.value|replace('_', ' ')|title }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+{% else %}
+<p class="text-blackbook-400 italic">No employment history</p>
+{% endif %}

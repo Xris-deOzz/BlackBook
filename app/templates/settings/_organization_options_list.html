@@ -1,0 +1,67 @@
+<!-- Options List Partial -->
+<table class="min-w-full divide-y divide-blackbook-200">
+    <thead class="bg-blackbook-50">
+        <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Order</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Option Type</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Code</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Name</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Status</th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-blackbook-500 uppercase tracking-wider">Actions</th>
+        </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-blackbook-200">
+        {% for opt in options %}
+        <tr class="hover:bg-blackbook-50">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-blackbook-500">
+                {{ opt.sort_order }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                    {{ opt.option_type|replace('_', ' ')|title }}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <code class="text-sm bg-blackbook-100 px-2 py-0.5 rounded">{{ opt.code }}</code>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm font-medium text-blackbook-900">{{ opt.name }}</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                {% if opt.is_active %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Active</span>
+                {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Inactive</span>
+                {% endif %}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <div class="flex justify-end gap-2">
+                    <button onclick="editOption({{ opt.id }}, '{{ opt.option_type }}', '{{ opt.code }}', '{{ opt.name }}', {{ 'true' if opt.is_active else 'false' }})"
+                            class="text-blackbook-600 hover:text-blackbook-900" title="Edit">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                    </button>
+                    <button hx-delete="/api/lookups/admin/options/{{ opt.id }}"
+                            hx-target="#options-list"
+                            hx-swap="innerHTML"
+                            hx-confirm="Delete option '{{ opt.name }}'?"
+                            class="text-red-600 hover:text-red-900" title="Delete">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="6" class="px-6 py-8 text-center text-blackbook-500">
+                <p class="text-sm">No options found. Click "Add Option" to create one.</p>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

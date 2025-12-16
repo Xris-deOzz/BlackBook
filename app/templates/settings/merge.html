@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<nav class="bg-white border-b border-blackbook-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="/" class="text-blackbook-500 hover:text-blackbook-700">Home</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li>
+                <a href="/settings" class="text-blackbook-500 hover:text-blackbook-700">Settings</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li>
+                <a href="/settings/duplicates" class="text-blackbook-500 hover:text-blackbook-700">Duplicates</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li class="text-blackbook-900 font-medium">Merge: {{ group.full_name }}</li>
+        </ol>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto" id="main-content">
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-blackbook-900">Merge Duplicates</h1>
+                <p class="text-blackbook-500 mt-1">{{ group.full_name }} — {{ group.count }} records</p>
+            </div>
+            <a href="/settings/duplicates" class="text-blackbook-600 hover:text-blackbook-800 text-sm inline-flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to Duplicates
+            </a>
+        </div>
+    </div>
+
+    <!-- How Merging Works -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div class="flex">
+            <svg class="h-5 w-5 text-blue-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="text-sm text-blue-800">
+                <p class="font-medium">How merging works</p>
+                <p class="mt-1">
+                    <strong>Always combined:</strong> All emails, phones, tags, organizations, and interactions from all records will be merged together. Notes will be concatenated.
+                </p>
+                <p class="mt-1">
+                    <strong>Choose below:</strong> For fields like title where only one value can be kept, select which value you want to use.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Merge Form -->
+    <form action="/settings/duplicates/merge" method="POST" id="merge-form">
+        <input type="hidden" name="full_name" value="{{ group.full_name }}">
+
+        <!-- Select Primary Record -->
+        <div class="bg-white rounded-lg border border-blackbook-200 mb-6">
+            <div class="px-6 py-4 border-b border-blackbook-200 bg-blackbook-50">
+                <h2 class="text-lg font-semibold text-blackbook-900">Step 1: Select Primary Record</h2>
+                <p class="text-sm text-blackbook-500">This record's ID will be preserved. All other records will be deleted after merging.</p>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-{{ group.count if group.count <= 3 else 3 }} gap-4">
+                    {% for person in group.persons %}
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="keep_id" value="{{ person.id }}" 
+                               class="peer sr-only" {% if loop.first %}checked{% endif %}>
+                        <div class="p-4 border-2 rounded-lg peer-checked:border-blackbook-600 peer-checked:bg-blackbook-50 border-blackbook-200 hover:border-blackbook-400 transition-all">
+                            <div class="flex items-center space-x-3">
+                                {% if person.profile_picture %}
+                                <img src="{{ person.profile_picture }}" class="w-10 h-10 rounded-full object-cover">
+                                {% else %}
+                                <div class="w-10 h-10 rounded-full bg-blackbook-200 flex items-center justify-center">
+                                    <span class="text-blackbook-600 font-medium">{{ person.full_name[0] }}</span>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="font-medium text-blackbook-900">{{ person.full_name }}</div>
+                                    <div class="text-xs text-blackbook-500">Created {{ person.created_at.strftime('%b %d, %Y') }}</div>
+                                </div>
+                                {% if loop.first %}
+                                <span class="px-2 py-0.5 bg-blackbook-100 text-blackbook-600 rounded text-xs">Oldest</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Field Selection -->
+        <div class="bg-white rounded-lg border border-blackbook-200 mb-6">
+            <div class="px-6 py-4 border-b border-blackbook-200 bg-blackbook-50">
+                <h2 class="text-lg font-semibold text-blackbook-900">Step 2: Choose Field Values</h2>
+                <p class="text-sm text-blackbook-500">Select which value to use for each field. Empty values are skipped.</p>
+            </div>
+            <div class="divide-y divide-blackbook-100">
+
+                <!-- Title -->
+                {% set has_title = group.persons | selectattr('title') | list | length > 0 %}
+                {% if has_title %}
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-blackbook-900">Title / Position</span>
+                    </div>
+                    <div class="space-y-2">
+                        {% for person in group.persons %}
+                        {% if person.title %}
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="field_title" value="{{ person.id }}" 
+                                   class="text-blackbook-600" {% if loop.first %}checked{% endif %}>
+                            <span class="text-blackbook-700">{{ person.title }}</span>
+                            <span class="text-blackbook-400 text-sm">(created {{ person.created_at.strftime('%b %d') }})</span>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="field_title" value="" class="text-blackbook-600">
+                            <span class="text-blackbook-400 italic">None / Clear</span>
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- LinkedIn -->
+                {% set has_linkedin = group.persons | selectattr('linkedin') | list | length > 0 %}
+                {% if has_linkedin %}
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-blackbook-900">LinkedIn</span>
+                    </div>
+                    <div class="space-y-2">
+                        {% for person in group.persons %}
+                        {% if person.linkedin %}
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="field_linkedin" value="{{ person.id }}" 
+                                   class="text-blackbook-600" {% if loop.first %}checked{% endif %}>
+                            <span class="text-blackbook-700 text-sm">{{ person.linkedin }}</span>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Location -->
+                {% set has_location = group.persons | selectattr('location') | list | length > 0 %}
+                {% if has_location %}
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-blackbook-900">Location</span>
+                    </div>
+                    <div class="space-y-2">
+                        {% for person in group.persons %}
+                        {% if person.location %}
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="field_location" value="{{ person.id }}" 
+                                   class="text-blackbook-600" {% if loop.first %}checked{% endif %}>
+                            <span class="text-blackbook-700">{{ person.location }}</span>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="field_location" value="" class="text-blackbook-600">
+                            <span class="text-blackbook-400 italic">None / Clear</span>
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Birthday -->
+                {% set has_birthday = group.persons | selectattr('birthday') | list | length > 0 %}
+                {% if has_birthday %}
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-blackbook-900">Birthday</span>
+                    </div>
+                    <div class="space-y-2">
+                        {% for person in group.persons %}
+                        {% if person.birthday %}
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="field_birthday" value="{{ person.id }}" 
+                                   class="text-blackbook-600" {% if loop.first %}checked{% endif %}>
+                            <span class="text-blackbook-700">{{ person.birthday.strftime('%B %d, %Y') }}</span>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Profile Picture -->
+                {% set has_picture = group.persons | selectattr('profile_picture') | list | length > 0 %}
+                {% if has_picture %}
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-blackbook-900">Profile Picture</span>
+                    </div>
+                    <div class="flex space-x-4">
+                        {% for person in group.persons %}
+                        {% if person.profile_picture %}
+                        <label class="cursor-pointer">
+                            <input type="radio" name="field_profile_picture" value="{{ person.id }}" 
+                                   class="sr-only peer" {% if loop.first %}checked{% endif %}>
+                            <img src="{{ person.profile_picture }}" 
+                                 class="w-16 h-16 rounded-full object-cover border-2 border-transparent peer-checked:border-blackbook-600 peer-checked:ring-2 peer-checked:ring-blackbook-200">
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                        <label class="cursor-pointer flex items-center justify-center w-16 h-16 rounded-full border-2 border-dashed border-blackbook-300 hover:border-blackbook-400">
+                            <input type="radio" name="field_profile_picture" value="" class="sr-only peer">
+                            <span class="text-blackbook-400 text-xs text-center peer-checked:text-blackbook-600">None</span>
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Auto-Combined Data Summary -->
+                <div class="px-6 py-4 bg-green-50">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-medium text-green-800">✓ Data that will be automatically combined</span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                        <div>
+                            <span class="text-green-700 font-medium">Emails:</span>
+                            <span class="text-green-600">
+                                {{ group.persons | map(attribute='emails') | map('length') | sum }} total
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-green-700 font-medium">Phones:</span>
+                            <span class="text-green-600">
+                                {{ group.persons | map(attribute='phones') | map('length') | sum }} total
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-green-700 font-medium">Tags:</span>
+                            <span class="text-green-600">
+                                {{ group.persons | map(attribute='tags') | map('length') | sum }} total
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-green-700 font-medium">Organizations:</span>
+                            <span class="text-green-600">
+                                {{ group.persons | map(attribute='organizations') | map('length') | sum }} total
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-green-700 font-medium">Notes:</span>
+                            <span class="text-green-600">
+                                {{ group.persons | selectattr('notes') | list | length }} to combine
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Person Details (Collapsed Reference) -->
+        <details class="bg-white rounded-lg border border-blackbook-200 mb-6">
+            <summary class="px-6 py-4 cursor-pointer hover:bg-blackbook-50">
+                <span class="font-medium text-blackbook-900">View Full Record Details</span>
+                <span class="text-sm text-blackbook-500 ml-2">(click to expand)</span>
+            </summary>
+            <div class="border-t border-blackbook-200">
+                <div class="grid grid-cols-1 md:grid-cols-{{ group.count if group.count <= 3 else 3 }} divide-y md:divide-y-0 md:divide-x divide-blackbook-200">
+                    {% for person in group.persons %}
+                    <div class="p-6">
+                        <div class="flex items-center space-x-3 mb-4">
+                            {% if person.profile_picture %}
+                            <img src="{{ person.profile_picture }}" class="w-12 h-12 rounded-full object-cover">
+                            {% else %}
+                            <div class="w-12 h-12 rounded-full bg-blackbook-200 flex items-center justify-center">
+                                <span class="text-blackbook-600 font-medium text-lg">{{ person.full_name[0] }}</span>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <h3 class="font-semibold text-blackbook-900">{{ person.full_name }}</h3>
+                                {% if person.title %}
+                                <p class="text-sm text-blackbook-500">{{ person.title }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-start">
+                                <span class="text-blackbook-400 w-20 flex-shrink-0">Emails:</span>
+                                <div class="text-blackbook-700">
+                                    {% if person.emails %}
+                                        {% for email_obj in person.emails %}
+                                        <div>{{ email_obj.email }}</div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-blackbook-400 italic">None</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <span class="text-blackbook-400 w-20 flex-shrink-0">Phones:</span>
+                                <div class="text-blackbook-700">
+                                    {% if person.phones %}
+                                        {% for phone_obj in person.phones %}
+                                        <div>{{ phone_obj.phone }}</div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-blackbook-400 italic">None</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <span class="text-blackbook-400 w-20 flex-shrink-0">Orgs:</span>
+                                <div class="text-blackbook-700">
+                                    {% if person.organizations %}
+                                        {% for po in person.organizations %}
+                                        <div>{{ po.organization.name if po.organization else 'Unknown' }}{% if po.role %} ({{ po.role }}){% endif %}</div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-blackbook-400 italic">None</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <span class="text-blackbook-400 w-20 flex-shrink-0">Tags:</span>
+                                <div>
+                                    {% if person.tags %}
+                                        <div class="flex flex-wrap gap-1">
+                                            {% for tag in person.tags %}
+                                            <span class="px-2 py-0.5 rounded text-xs" style="background-color: {{ tag.color }}20; color: {{ tag.color }}">
+                                                {{ tag.name }}
+                                            </span>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-blackbook-400 italic">None</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <span class="text-blackbook-400 w-20 flex-shrink-0">Notes:</span>
+                                <span class="text-blackbook-700">
+                                    {% if person.notes %}
+                                        <span class="text-green-600">✓ Has notes</span>
+                                    {% else %}
+                                        <span class="text-blackbook-400 italic">None</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="flex items-start">
+                                <span class="text-blackbook-400 w-20 flex-shrink-0">Created:</span>
+                                <span class="text-blackbook-700">{{ person.created_at.strftime('%b %d, %Y %H:%M') }}</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-4 border-t border-blackbook-100">
+                            <a href="/people/{{ person.id }}" target="_blank" class="text-sm text-blackbook-600 hover:text-blackbook-800 inline-flex items-center">
+                                View Full Profile
+                                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </details>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-between bg-white rounded-lg border border-blackbook-200 p-4">
+            <a href="/settings/duplicates" class="text-blackbook-600 hover:text-blackbook-800">
+                ← Cancel
+            </a>
+            <div class="flex items-center space-x-3">
+                <span class="text-sm text-blackbook-500">
+                    {{ group.count - 1 }} record(s) will be merged and deleted
+                </span>
+                <button type="submit" 
+                        class="px-6 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 inline-flex items-center"
+                        onclick="return confirm('Merge these {{ group.count }} records? All emails, phones, tags, and organizations will be combined. This cannot be undone.');">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                    Merge Records
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

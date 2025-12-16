@@ -1,0 +1,644 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+    /* Custom styles for sort indicators */
+    .sort-indicator::after {
+        content: '';
+        margin-left: 0.25rem;
+    }
+    .sort-asc::after {
+        content: ' \2191';
+    }
+    .sort-desc::after {
+        content: ' \2193';
+    }
+    /* Tags Tom Select styling */
+    #tag_ids-ts-control {
+        min-height: 42px;
+        padding: 8px 12px;
+    }
+    .ts-dropdown-content {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-blackbook-900">Organizations</h1>
+            <p class="text-sm text-blackbook-500">{{ total_count }} total records</p>
+        </div>
+        <a href="/organizations/new"
+           class="inline-flex items-center px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            New Organization
+        </a>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="bg-white rounded-lg shadow-md p-4">
+        <form id="filter-form" class="space-y-3">
+            <!-- Row 1: Search and Action Buttons -->
+            <div class="flex gap-4 items-end">
+                <!-- Search Input -->
+                <div class="flex-1">
+                    <label for="search" class="block text-sm font-medium text-blackbook-700 mb-1">
+                        Search
+                    </label>
+                    <input
+                        type="search"
+                        id="search"
+                        name="q"
+                        value="{{ q }}"
+                        placeholder="Search name, category, description, notes..."
+                        class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                        hx-get="/organizations/table"
+                        hx-trigger="input changed delay:300ms, search"
+                        hx-target="#org-table-container"
+                        hx-include="#filter-form"
+                        onfocus="clearLetterFilter()"
+                    >
+                </div>
+
+                <!-- Per Page Selector -->
+                <div class="w-24">
+                    <label for="per_page" class="block text-sm font-medium text-blackbook-700 mb-1">
+                        Per Page
+                    </label>
+                    <select
+                        id="per_page"
+                        name="per_page"
+                        class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                        onchange="changePerPage(this.value)"
+                    >
+                        <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                        <option value="250" {% if per_page == 250 %}selected{% endif %}>250</option>
+                    </select>
+                </div>
+
+                <!-- Clear Filters Button -->
+                <a
+                    href="/organizations"
+                    class="inline-flex items-center h-[42px] px-4 text-sm bg-blackbook-100 text-blackbook-700 rounded-md hover:bg-blackbook-200"
+                >
+                    Clear Filters
+                </a>
+
+                <!-- Save View Button -->
+                <button
+                    type="button"
+                    onclick="saveCurrentView()"
+                    class="inline-flex items-center h-[42px] px-4 text-sm bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700 gap-1"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                    Save View
+                </button>
+            </div>
+
+            <!-- Row 2: Filter Dropdowns -->
+            <div class="flex gap-4 items-end">
+                <!-- Category Filter -->
+                <div class="w-44">
+                    <label for="category_id" class="block text-sm font-medium text-blackbook-700 mb-1">
+                        Category
+                    </label>
+                    <select
+                        id="category_id"
+                        name="category_id"
+                        class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                        onchange="updateTypeFilter()"
+                        hx-get="/organizations/table"
+                        hx-trigger="change"
+                        hx-target="#org-table-container"
+                        hx-include="#filter-form"
+                    >
+                        <option value="">All Categories</option>
+                        {% for cat in all_categories %}
+                        <option value="{{ cat.id }}" {% if category_id == cat.id %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Type Filter (cascading from category) -->
+                <div class="w-44">
+                    <label for="type_id" class="block text-sm font-medium text-blackbook-700 mb-1">
+                        Type
+                    </label>
+                    <select
+                        id="type_id"
+                        name="type_id"
+                        class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                        hx-get="/organizations/table"
+                        hx-trigger="change"
+                        hx-target="#org-table-container"
+                        hx-include="#filter-form"
+                    >
+                        <option value="">All Types</option>
+                    </select>
+                </div>
+
+                <!-- Tag Filter (Multi-select with AND/OR) -->
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-sm font-medium text-blackbook-700 mb-1">
+                        Tags
+                        <button
+                            type="button"
+                            id="tag-logic-toggle"
+                            onclick="toggleTagLogic()"
+                            class="ml-1 px-1.5 py-0.5 text-xs font-medium rounded border border-blackbook-300 hover:bg-blackbook-100 bg-blackbook-50"
+                            title="Toggle between AND (must have all tags) and OR (any of the tags)"
+                        >
+                            {{ tag_logic|default('or')|upper }}
+                        </button>
+                    </label>
+                    <div class="flex gap-2 items-center">
+                        <div class="flex-1">
+                            <select
+                                id="tag_ids"
+                                name="tag_ids"
+                                multiple
+                                placeholder="Select tags..."
+                                class="w-full"
+                            >
+                                {% for tag in all_tags %}
+                                <option value="{{ tag.id }}" {% if tag.id|string in selected_tag_ids %}selected{% endif %}>
+                                    {{ tag.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button
+                            type="button"
+                            onclick="applyTagFilter()"
+                            class="px-3 py-2 bg-blackbook-600 text-white text-sm font-medium rounded hover:bg-blackbook-700 h-[42px]"
+                            title="Apply tag filter"
+                        >
+                            Go
+                        </button>
+                    </div>
+                    <input type="hidden" id="tag_logic" name="tag_logic" value="{{ tag_logic|default('or') }}">
+                </div>
+            </div>
+
+            <!-- Hidden inputs for sort state -->
+            <input type="hidden" name="sort_by" id="sort_by" value="{{ sort_by }}">
+            <input type="hidden" name="sort_order" id="sort_order" value="{{ sort_order }}">
+            <input type="hidden" name="letter" id="letter" value="{{ letter }}">
+            <input type="hidden" name="page" id="page" value="1">
+        </form>
+    </div>
+
+    <!-- Alphabet Navigation -->
+    <div class="bg-white rounded-lg shadow-md p-3">
+        <div class="flex flex-wrap items-center gap-1">
+            <span class="text-sm font-medium text-blackbook-600 mr-2">Filter by Name:</span>
+            <button
+                onclick="filterByLetter('')"
+                class="px-2 py-1 text-sm rounded {% if not letter %}bg-blackbook-600 text-white{% else %}bg-blackbook-100 text-blackbook-700 hover:bg-blackbook-200{% endif %}"
+            >
+                All
+            </button>
+            {% for l in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' %}
+            <button
+                onclick="filterByLetter('{{ l }}')"
+                class="w-8 h-8 text-sm rounded {% if letter == l %}bg-blackbook-600 text-white{% else %}bg-blackbook-100 text-blackbook-700 hover:bg-blackbook-200{% endif %}"
+            >
+                {{ l }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Table Container -->
+    <div id="org-table-container">
+        {% include "organizations/_table.html" %}
+    </div>
+</div>
+
+<script>
+    // Types by category data from server
+    const typesByCategory = {{ types_by_category | default({}) | tojson | safe }};
+    const initialTypeId = {{ type_id | default('') | tojson | safe }};
+
+    // Update type dropdown based on selected category
+    function updateTypeFilter() {
+        const categoryId = document.getElementById('category_id').value;
+        const typeSelect = document.getElementById('type_id');
+        const currentTypeId = typeSelect.value;
+
+        // Clear current options
+        typeSelect.innerHTML = '<option value="">All Types</option>';
+
+        if (categoryId && typesByCategory[categoryId]) {
+            // Add types for selected category
+            typesByCategory[categoryId].forEach(function(type) {
+                const option = document.createElement('option');
+                option.value = type.id;
+                option.textContent = type.name;
+                if (type.id == currentTypeId) {
+                    option.selected = true;
+                }
+                typeSelect.appendChild(option);
+            });
+        } else {
+            // No category selected - show all types from all categories
+            Object.keys(typesByCategory).forEach(function(catId) {
+                typesByCategory[catId].forEach(function(type) {
+                    const option = document.createElement('option');
+                    option.value = type.id;
+                    option.textContent = type.name;
+                    if (type.id == currentTypeId) {
+                        option.selected = true;
+                    }
+                    typeSelect.appendChild(option);
+                });
+            });
+        }
+    }
+
+    // Helper function to get selected tag IDs
+    function getSelectedTagIds() {
+        const tagSelect = document.getElementById('tag_ids');
+        if (tagSelect && tagSelect.tomselect) {
+            return tagSelect.tomselect.getValue();
+        } else if (tagSelect) {
+            return Array.from(tagSelect.selectedOptions).map(opt => opt.value);
+        }
+        return [];
+    }
+
+    // Helper function to add tag params to URLSearchParams
+    function addTagParams(params) {
+        const selectedTags = getSelectedTagIds();
+        if (selectedTags && selectedTags.length > 0) {
+            params.set('tag_ids', selectedTags.join(','));
+        }
+        const tagLogic = document.getElementById('tag_logic').value;
+        if (tagLogic && tagLogic !== 'or') {
+            params.set('tag_logic', tagLogic);
+        }
+    }
+
+    // Clear letter filter when user starts searching
+    function clearLetterFilter() {
+        const letterInput = document.getElementById('letter');
+        if (letterInput && letterInput.value) {
+            letterInput.value = '';
+            // Also update the visual state of letter buttons
+            document.querySelectorAll('[onclick^="filterByLetter"]').forEach(btn => {
+                btn.classList.remove('bg-blackbook-600', 'text-white');
+                btn.classList.add('bg-blackbook-100', 'text-blackbook-700', 'hover:bg-blackbook-200');
+            });
+            // Highlight "All" button
+            const allBtn = document.querySelector("[onclick=\"filterByLetter('')\"]");
+            if (allBtn) {
+                allBtn.classList.remove('bg-blackbook-100', 'text-blackbook-700', 'hover:bg-blackbook-200');
+                allBtn.classList.add('bg-blackbook-600', 'text-white');
+            }
+        }
+    }
+
+    // Filter by letter - navigates to full page with letter filter
+    function filterByLetter(letter) {
+        let params = new URLSearchParams();
+
+        const q = document.getElementById('search').value;
+        if (q) params.set('q', q);
+
+        const categoryId = document.getElementById('category_id').value;
+        if (categoryId) params.set('category_id', categoryId);
+
+        const typeId = document.getElementById('type_id').value;
+        if (typeId) params.set('type_id', typeId);
+
+        addTagParams(params);
+
+        if (letter) params.set('letter', letter);
+
+        params.set('sort_by', document.getElementById('sort_by').value);
+        params.set('sort_order', document.getElementById('sort_order').value);
+        params.set('per_page', document.getElementById('per_page').value);
+
+        window.location.href = '/organizations?' + params.toString();
+    }
+
+    // Apply tag filter - full page navigation with tag filter (supports multiple tags)
+    function applyTagFilter() {
+        let params = new URLSearchParams();
+
+        const q = document.getElementById('search').value;
+        if (q) params.set('q', q);
+
+        const categoryId = document.getElementById('category_id').value;
+        if (categoryId) params.set('category_id', categoryId);
+
+        const typeId = document.getElementById('type_id').value;
+        if (typeId) params.set('type_id', typeId);
+
+        // Get selected tag IDs from Tom Select multi-select
+        if (window.tagTomSelect) {
+            const selectedTags = window.tagTomSelect.getValue();
+            console.log('Selected tags from Tom Select:', selectedTags);
+            if (selectedTags && selectedTags.length > 0) {
+                params.set('tag_ids', selectedTags.join(','));
+            }
+        } else {
+            // Fallback for regular multi-select
+            const tagSelect = document.getElementById('tag_ids');
+            if (tagSelect) {
+                const selectedOptions = Array.from(tagSelect.selectedOptions).map(opt => opt.value);
+                console.log('Selected tags from native select:', selectedOptions);
+                if (selectedOptions.length > 0) {
+                    params.set('tag_ids', selectedOptions.join(','));
+                }
+            }
+        }
+
+        // Get tag logic (AND/OR)
+        const tagLogic = document.getElementById('tag_logic').value;
+        if (tagLogic && tagLogic !== 'or') {
+            params.set('tag_logic', tagLogic);
+        }
+
+        const letter = document.getElementById('letter').value;
+        if (letter) params.set('letter', letter);
+
+        params.set('sort_by', document.getElementById('sort_by').value);
+        params.set('sort_order', document.getElementById('sort_order').value);
+        params.set('per_page', document.getElementById('per_page').value);
+
+        const url = '/organizations?' + params.toString();
+        console.log('Navigating to:', url);
+        window.location.href = url;
+    }
+
+    // Toggle between AND and OR logic for tags
+    function toggleTagLogic() {
+        const logicInput = document.getElementById('tag_logic');
+        const toggleBtn = document.getElementById('tag-logic-toggle');
+
+        if (logicInput.value === 'or') {
+            logicInput.value = 'and';
+            toggleBtn.textContent = 'AND';
+        } else {
+            logicInput.value = 'or';
+            toggleBtn.textContent = 'OR';
+        }
+
+        // Auto-apply filter if tags are selected
+        const tagSelect = document.getElementById('tag_ids');
+        let hasSelectedTags = false;
+        if (tagSelect && tagSelect.tomselect) {
+            hasSelectedTags = tagSelect.tomselect.getValue().length > 0;
+        } else if (tagSelect) {
+            hasSelectedTags = tagSelect.selectedOptions.length > 0;
+        }
+
+        if (hasSelectedTags) {
+            applyTagFilter();
+        }
+    }
+
+    // Handle per page change with proper URL building (excludes empty params)
+    function changePerPage(perPage) {
+        let params = new URLSearchParams();
+        params.set('per_page', perPage);
+
+        const q = document.getElementById('search').value;
+        if (q) params.set('q', q);
+
+        const categoryId = document.getElementById('category_id').value;
+        if (categoryId) params.set('category_id', categoryId);
+
+        const typeId = document.getElementById('type_id').value;
+        if (typeId) params.set('type_id', typeId);
+
+        addTagParams(params);
+
+        const letter = document.getElementById('letter').value;
+        if (letter) params.set('letter', letter);
+
+        params.set('sort_by', document.getElementById('sort_by').value);
+        params.set('sort_order', document.getElementById('sort_order').value);
+
+        window.location.href = '/organizations?' + params.toString();
+    }
+
+    // Handle sort column clicks
+    function sortBy(column) {
+        const sortByInput = document.getElementById('sort_by');
+        const sortOrderInput = document.getElementById('sort_order');
+        const pageInput = document.getElementById('page');
+
+        if (sortByInput.value === column) {
+            // Toggle sort order
+            sortOrderInput.value = sortOrderInput.value === 'asc' ? 'desc' : 'asc';
+        } else {
+            // New column, default to ascending
+            sortByInput.value = column;
+            sortOrderInput.value = 'asc';
+        }
+
+        // Reset to page 1 when sorting changes
+        pageInput.value = '1';
+
+        // Trigger HTMX request
+        htmx.trigger('#search', 'search');
+    }
+
+    // Navigate to save view form with current filters
+    function saveCurrentView() {
+        let params = new URLSearchParams();
+        params.set('entity_type', 'organization');
+
+        const q = document.getElementById('search').value;
+        if (q) params.set('q', q);
+
+        const categoryId = document.getElementById('category_id').value;
+        if (categoryId) params.set('category_id', categoryId);
+
+        const typeId = document.getElementById('type_id').value;
+        if (typeId) params.set('type_id', typeId);
+
+        addTagParams(params);
+
+        const letter = document.getElementById('letter').value;
+        if (letter) params.set('letter', letter);
+
+        const sortBy = document.getElementById('sort_by').value;
+        if (sortBy) params.set('sort_by', sortBy);
+
+        params.set('sort_order', document.getElementById('sort_order').value);
+
+        window.location.href = '/views/new?' + params.toString();
+    }
+
+    // Initialize resizable columns on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Tom Select for multi-tag filter
+        if (typeof TomSelect !== 'undefined' && document.querySelector('#tag_ids')) {
+            window.tagTomSelect = new TomSelect('#tag_ids', {
+                plugins: ['remove_button'],
+                maxItems: null,
+                placeholder: 'Select tags...',
+                allowEmptyOption: true,
+                hidePlaceholder: false
+            });
+        }
+
+        initResizableTable('org-table', 'org-table-widths');
+        restoreOrgSelectionUI();
+        // Initialize type dropdown based on current category
+        updateTypeFilter();
+        // Restore selected type if any
+        if (initialTypeId) {
+            document.getElementById('type_id').value = initialTypeId;
+        }
+    });
+
+    // ===== Organization Selection Functions =====
+    // Store selected organization IDs across pagination
+    let selectedOrgIds = new Set();
+
+    // Toggle select all checkbox
+    function toggleOrgSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.org-row-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = checkbox.checked;
+            if (checkbox.checked) {
+                selectedOrgIds.add(cb.value);
+            } else {
+                selectedOrgIds.delete(cb.value);
+            }
+        });
+        updateOrgSelectionUI();
+    }
+
+    // Toggle individual row selection
+    function toggleOrgRowSelection(checkbox) {
+        if (checkbox.checked) {
+            selectedOrgIds.add(checkbox.value);
+        } else {
+            selectedOrgIds.delete(checkbox.value);
+        }
+        updateOrgSelectionUI();
+    }
+
+    // Update the UI based on selection state
+    function updateOrgSelectionUI() {
+        const actionsBar = document.getElementById('org-selection-actions');
+        const countSpan = document.getElementById('org-selected-count');
+        const selectAllCheckbox = document.getElementById('org-select-all');
+
+        if (actionsBar && countSpan) {
+            countSpan.textContent = selectedOrgIds.size;
+            if (selectedOrgIds.size > 0) {
+                actionsBar.classList.remove('hidden');
+            } else {
+                actionsBar.classList.add('hidden');
+            }
+        }
+
+        // Update select-all checkbox state
+        if (selectAllCheckbox) {
+            const checkboxes = document.querySelectorAll('.org-row-checkbox');
+            const checkedCount = document.querySelectorAll('.org-row-checkbox:checked').length;
+            selectAllCheckbox.checked = checkboxes.length > 0 && checkedCount === checkboxes.length;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+        }
+    }
+
+    // Restore selection UI after HTMX table swaps
+    function restoreOrgSelectionUI() {
+        // Re-check boxes that are in our selection set
+        document.querySelectorAll('.org-row-checkbox').forEach(cb => {
+            cb.checked = selectedOrgIds.has(cb.value);
+        });
+        updateOrgSelectionUI();
+    }
+
+    // Clear all selections
+    function clearOrgSelection() {
+        selectedOrgIds.clear();
+        document.querySelectorAll('.org-row-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+        updateOrgSelectionUI();
+    }
+
+    // Get array of selected IDs
+    function getSelectedOrgIds() {
+        return Array.from(selectedOrgIds);
+    }
+
+    // Navigate to merge page with selected organizations
+    function mergeSelectedOrgs() {
+        const ids = getSelectedOrgIds();
+        if (ids.length < 2) {
+            showToast('Please select at least 2 organizations to merge', 'warning');
+            return;
+        }
+        if (ids.length > 10) {
+            showToast('Please select no more than 10 organizations to merge at once', 'warning');
+            return;
+        }
+        window.location.href = '/organizations/merge?ids=' + ids.join(',');
+    }
+
+    // Delete selected organizations
+    function deleteSelectedOrgs() {
+        const ids = getSelectedOrgIds();
+        if (ids.length === 0) {
+            showToast('Please select at least one organization to delete', 'warning');
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete ${ids.length} organization(s)? This action cannot be undone.`)) {
+            return;
+        }
+
+        fetch('/organizations/batch/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ids: ids })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`Successfully deleted ${data.deleted_count} organization(s)`, 'success');
+                clearOrgSelection();
+                // Refresh the table
+                htmx.trigger('#search', 'search');
+            } else {
+                showToast(data.message || 'Failed to delete organizations', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred while deleting organizations', 'error');
+        });
+    }
+
+    // Listen for HTMX after-swap events to restore selection UI
+    document.body.addEventListener('htmx:afterSwap', function(event) {
+        if (event.detail.target.id === 'org-table-container') {
+            restoreOrgSelectionUI();
+        }
+    });
+</script>
+{% endblock %}

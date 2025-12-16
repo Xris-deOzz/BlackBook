@@ -1,0 +1,43 @@
+<!-- Single message bubble -->
+{% if message.role.value == 'user' %}
+<div class="flex justify-end">
+    <div class="max-w-[80%] px-4 py-3 rounded-lg bg-blackbook-600 text-white">
+        <div class="whitespace-pre-wrap">{{ message.content }}</div>
+        <div class="text-xs text-blackbook-300 mt-2">
+            {{ message.created_at.strftime('%I:%M %p') }}
+        </div>
+    </div>
+</div>
+{% elif message.role.value == 'assistant' %}
+<div class="flex justify-start">
+    <div class="max-w-[80%] px-4 py-3 rounded-lg bg-blackbook-100 text-blackbook-900">
+        <div class="prose prose-sm max-w-none">{{ message.content | safe }}</div>
+        {% if message.sources_json %}
+        <div class="mt-3 pt-3 border-t border-blackbook-200">
+            <p class="text-xs font-medium text-blackbook-600 mb-2">Sources:</p>
+            <ul class="text-xs text-blackbook-500 space-y-1">
+                {% for source in message.get_sources() %}
+                <li>
+                    <a href="{{ source.url }}" target="_blank" class="text-blue-600 hover:underline">
+                        {{ source.title }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        <div class="flex items-center justify-between mt-2 text-xs text-blackbook-400">
+            <span>{{ message.created_at.strftime('%I:%M %p') }}</span>
+            {% if message.tokens_in or message.tokens_out %}
+            <span>{{ message.tokens_in or 0 }} + {{ message.tokens_out or 0 }} tokens</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% elif message.role.value == 'system' %}
+<div class="flex justify-center">
+    <div class="px-4 py-2 rounded-full bg-blackbook-50 text-blackbook-500 text-xs">
+        System: {{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}
+    </div>
+</div>
+{% endif %}

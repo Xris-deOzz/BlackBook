@@ -1,0 +1,70 @@
+<!-- Empty chat state - shown when no conversation is selected -->
+<div class="flex-1 flex flex-col items-center justify-center text-center p-8">
+    <div class="w-16 h-16 bg-blackbook-100 rounded-full flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-blackbook-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+        </svg>
+    </div>
+    <h3 class="text-lg font-medium text-blackbook-900 mb-2">Start a conversation</h3>
+    <p class="text-blackbook-500 mb-6 max-w-md">
+        Select a conversation from the sidebar or start a new one to begin researching with AI.
+    </p>
+
+    <!-- Quick start form -->
+    <form hx-post="/ai/quick-chat"
+          hx-target="#chat-panel"
+          hx-swap="innerHTML"
+          class="w-full max-w-lg">
+        {% if person_id %}
+        <input type="hidden" name="person_id" value="{{ person_id }}">
+        {% endif %}
+        {% if org_id %}
+        <input type="hidden" name="org_id" value="{{ org_id }}">
+        {% endif %}
+
+        <div class="flex gap-2">
+            <input type="text"
+                   name="content"
+                   placeholder="Ask a question to start..."
+                   class="flex-1 px-4 py-3 border border-blackbook-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+            <button type="submit"
+                    class="px-6 py-3 bg-blackbook-600 text-white font-medium rounded-lg hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                </svg>
+            </button>
+        </div>
+    </form>
+
+    <!-- Suggestion chips -->
+    <div class="mt-6 flex flex-wrap gap-2 justify-center">
+        {% if person %}
+        <button onclick="document.querySelector('input[name=content]').value = 'Tell me about {{ person.full_name }}\'s background'; document.querySelector('input[name=content]').form.requestSubmit();"
+                class="px-3 py-1.5 text-sm bg-blackbook-50 text-blackbook-700 rounded-full hover:bg-blackbook-100">
+            Research background
+        </button>
+        <button onclick="document.querySelector('input[name=content]').value = 'What recent news is there about {{ person.full_name }}?'; document.querySelector('input[name=content]').form.requestSubmit();"
+                class="px-3 py-1.5 text-sm bg-blackbook-50 text-blackbook-700 rounded-full hover:bg-blackbook-100">
+            Recent news
+        </button>
+        {% elif organization %}
+        <button onclick="document.querySelector('input[name=content]').value = 'Tell me about {{ organization.name }}'; document.querySelector('input[name=content]').form.requestSubmit();"
+                class="px-3 py-1.5 text-sm bg-blackbook-50 text-blackbook-700 rounded-full hover:bg-blackbook-100">
+            Company overview
+        </button>
+        <button onclick="document.querySelector('input[name=content]').value = 'What recent news is there about {{ organization.name }}?'; document.querySelector('input[name=content]').form.requestSubmit();"
+                class="px-3 py-1.5 text-sm bg-blackbook-50 text-blackbook-700 rounded-full hover:bg-blackbook-100">
+            Recent news
+        </button>
+        {% else %}
+        <button onclick="document.querySelector('input[name=content]').value = 'Help me research a contact'; document.querySelector('input[name=content]').form.requestSubmit();"
+                class="px-3 py-1.5 text-sm bg-blackbook-50 text-blackbook-700 rounded-full hover:bg-blackbook-100">
+            Research a contact
+        </button>
+        <button onclick="document.querySelector('input[name=content]').value = 'Suggest ways to reconnect with old contacts'; document.querySelector('input[name=content]').form.requestSubmit();"
+                class="px-3 py-1.5 text-sm bg-blackbook-50 text-blackbook-700 rounded-full hover:bg-blackbook-100">
+            Reconnect suggestions
+        </button>
+        {% endif %}
+    </div>
+</div>

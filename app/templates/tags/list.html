@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<nav class="bg-white border-b border-blackbook-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="/" class="text-blackbook-500 hover:text-blackbook-700">Home</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li class="text-blackbook-900 font-medium">Tags</li>
+        </ol>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-blackbook-900">Tag Management</h1>
+            <p class="text-sm text-blackbook-500">{{ people_count }} people tags, {{ org_count }} organization tags</p>
+        </div>
+        <a href="/tags/new"
+           class="inline-flex items-center px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            New Tag
+        </a>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="bg-white rounded-lg shadow-md p-4">
+        <form id="filter-form" class="flex flex-wrap gap-4 items-end">
+            <div class="flex-1 min-w-[200px]">
+                <label for="search" class="block text-sm font-medium text-blackbook-700 mb-1">
+                    Search
+                </label>
+                <input
+                    type="search"
+                    id="search"
+                    name="q"
+                    value="{{ q }}"
+                    placeholder="Search tag names..."
+                    class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                >
+            </div>
+            <div>
+                <button type="submit" class="px-4 py-2 bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700">
+                    Search
+                </button>
+            </div>
+            <div>
+                <a href="/tags" class="px-4 py-2 text-sm bg-blackbook-100 text-blackbook-700 rounded-md hover:bg-blackbook-200">
+                    Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- People Tags Section -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-blackbook-200 bg-blackbook-50 cursor-pointer hover:bg-blackbook-100 transition-colors"
+             onclick="toggleSection('people')">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blackbook-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">People Tags</h2>
+                    <span class="text-sm text-blackbook-500">({{ people_count }} tags)</span>
+                </div>
+                <svg id="people-chevron" class="w-5 h-5 text-blackbook-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
+        </div>
+        <div id="people-content">
+        <table class="min-w-full divide-y divide-blackbook-200">
+            <thead class="bg-blackbook-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                        <a href="/tags?sort=name&order={{ 'desc' if sort == 'name' and order == 'asc' else 'asc' }}{% if q %}&q={{ q }}{% endif %}"
+                           class="flex items-center gap-1 hover:text-blackbook-700">
+                            Tag Name
+                            {% if sort == 'name' %}
+                            <svg class="w-4 h-4 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                            </svg>
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                        <a href="/tags?sort=color&order={{ 'desc' if sort == 'color' and order == 'asc' else 'asc' }}{% if q %}&q={{ q }}{% endif %}"
+                           class="flex items-center gap-1 hover:text-blackbook-700">
+                            Color
+                            {% if sort == 'color' %}
+                            <svg class="w-4 h-4 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                            </svg>
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                        <a href="/tags?sort=count&order={{ 'desc' if sort == 'count' and order == 'asc' else 'asc' }}{% if q %}&q={{ q }}{% endif %}"
+                           class="flex items-center gap-1 hover:text-blackbook-700">
+                            People Count
+                            {% if sort == 'count' %}
+                            <svg class="w-4 h-4 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                            </svg>
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-blackbook-200">
+                {% for item in people_tags %}
+                <tr class="hover:bg-blackbook-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                              style="background-color: {{ item.tag.color }}20; color: {{ item.tag.color }}; border: 1px solid {{ item.tag.color }};">
+                            {{ item.tag.name }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded border border-blackbook-300" style="background-color: {{ item.tag.color }};"></span>
+                            <span class="text-sm text-blackbook-600">{{ item.tag.color }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-blackbook-500">
+                        <a href="/people?tag_id={{ item.tag.id }}" class="text-blackbook-600 hover:text-blackbook-900 hover:underline">
+                            {{ item.usage_count }} {% if item.usage_count == 1 %}person{% else %}people{% endif %}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex justify-end gap-2">
+                            <a href="/tags/{{ item.tag.id }}/edit"
+                               class="text-blackbook-600 hover:text-blackbook-900"
+                               title="Edit">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </a>
+                            <button type="button"
+                                    onclick="confirmDelete('{{ item.tag.id }}', '{{ item.tag.name }}', {{ item.usage_count }}, 'people')"
+                                    class="text-red-600 hover:text-red-900"
+                                    title="Delete">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="px-6 py-8 text-center text-blackbook-500">
+                        <p class="text-sm">No tags assigned to people yet</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- Organization Tags Section -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-blackbook-200 bg-blackbook-50 cursor-pointer hover:bg-blackbook-100 transition-colors"
+             onclick="toggleSection('org')">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blackbook-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Organization Tags</h2>
+                    <span class="text-sm text-blackbook-500">({{ org_count }} tags)</span>
+                </div>
+                <svg id="org-chevron" class="w-5 h-5 text-blackbook-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
+        </div>
+        <div id="org-content">
+        <table class="min-w-full divide-y divide-blackbook-200">
+            <thead class="bg-blackbook-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                        <a href="/tags?sort=name&order={{ 'desc' if sort == 'name' and order == 'asc' else 'asc' }}{% if q %}&q={{ q }}{% endif %}"
+                           class="flex items-center gap-1 hover:text-blackbook-700">
+                            Tag Name
+                            {% if sort == 'name' %}
+                            <svg class="w-4 h-4 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                            </svg>
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                        <a href="/tags?sort=color&order={{ 'desc' if sort == 'color' and order == 'asc' else 'asc' }}{% if q %}&q={{ q }}{% endif %}"
+                           class="flex items-center gap-1 hover:text-blackbook-700">
+                            Color
+                            {% if sort == 'color' %}
+                            <svg class="w-4 h-4 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                            </svg>
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                        <a href="/tags?sort=count&order={{ 'desc' if sort == 'count' and order == 'asc' else 'asc' }}{% if q %}&q={{ q }}{% endif %}"
+                           class="flex items-center gap-1 hover:text-blackbook-700">
+                            Organization Count
+                            {% if sort == 'count' %}
+                            <svg class="w-4 h-4 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                            </svg>
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-blackbook-200">
+                {% for item in org_tags %}
+                <tr class="hover:bg-blackbook-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                              style="background-color: {{ item.tag.color }}20; color: {{ item.tag.color }}; border: 1px solid {{ item.tag.color }};">
+                            {{ item.tag.name }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded border border-blackbook-300" style="background-color: {{ item.tag.color }};"></span>
+                            <span class="text-sm text-blackbook-600">{{ item.tag.color }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-blackbook-500">
+                        <a href="/organizations?tag_id={{ item.tag.id }}" class="text-blackbook-600 hover:text-blackbook-900 hover:underline">
+                            {{ item.usage_count }} {% if item.usage_count == 1 %}organization{% else %}organizations{% endif %}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex justify-end gap-2">
+                            <a href="/tags/{{ item.tag.id }}/edit"
+                               class="text-blackbook-600 hover:text-blackbook-900"
+                               title="Edit">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </a>
+                            <button type="button"
+                                    onclick="confirmDelete('{{ item.tag.id }}', '{{ item.tag.name }}', {{ item.usage_count }}, 'organizations')"
+                                    class="text-red-600 hover:text-red-900"
+                                    title="Delete">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="px-6 py-8 text-center text-blackbook-500">
+                        <p class="text-sm">No tags assigned to organizations yet</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md mx-4">
+        <h3 class="text-lg font-medium text-blackbook-900 mb-2">Delete Tag</h3>
+        <p class="text-blackbook-600 mb-4">
+            Are you sure you want to delete the tag "<span id="delete-tag-name" class="font-semibold"></span>"?
+        </p>
+        <p id="delete-warning" class="text-red-600 text-sm mb-4 hidden">
+            This tag is currently used by <span id="delete-usage-count"></span> <span id="delete-entity-type"></span>. Deleting it will remove the tag from all associated records.
+        </p>
+        <div class="flex justify-end gap-3">
+            <button type="button" onclick="closeDeleteModal()"
+                    class="px-4 py-2 bg-blackbook-100 text-blackbook-700 rounded-md hover:bg-blackbook-200">
+                Cancel
+            </button>
+            <button type="button"
+                    class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    hx-delete=""
+                    hx-target="body"
+                    id="delete-confirm-btn">
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Toggle section collapse/expand
+    function toggleSection(section) {
+        const content = document.getElementById(section + '-content');
+        const chevron = document.getElementById(section + '-chevron');
+
+        if (content.classList.contains('hidden')) {
+            content.classList.remove('hidden');
+            chevron.classList.remove('-rotate-90');
+        } else {
+            content.classList.add('hidden');
+            chevron.classList.add('-rotate-90');
+        }
+    }
+
+    function confirmDelete(tagId, tagName, usageCount, entityType) {
+        document.getElementById('delete-tag-name').textContent = tagName;
+        document.getElementById('delete-confirm-btn').setAttribute('hx-delete', '/tags/' + tagId);
+        htmx.process(document.getElementById('delete-confirm-btn'));
+
+        const warningEl = document.getElementById('delete-warning');
+        if (usageCount > 0) {
+            document.getElementById('delete-usage-count').textContent = usageCount;
+            document.getElementById('delete-entity-type').textContent = entityType;
+            warningEl.classList.remove('hidden');
+        } else {
+            warningEl.classList.add('hidden');
+        }
+
+        document.getElementById('delete-modal').classList.remove('hidden');
+        document.getElementById('delete-modal').classList.add('flex');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').classList.add('hidden');
+        document.getElementById('delete-modal').classList.remove('flex');
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDeleteModal();
+        }
+    });
+
+    // Close modal on backdrop click
+    document.getElementById('delete-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDeleteModal();
+        }
+    });
+</script>
+{% endblock %}

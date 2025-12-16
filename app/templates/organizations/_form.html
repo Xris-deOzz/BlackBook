@@ -1,0 +1,268 @@
+<!-- Organization Form - Used for Create and Edit -->
+<div class="bg-white rounded-lg border border-blackbook-200 p-6">
+    <form
+        {% if organization %}
+        hx-put="/organizations/{{ organization.id }}"
+        {% else %}
+        hx-post="/organizations"
+        {% endif %}
+        hx-target="#main-content"
+        hx-swap="innerHTML"
+        class="space-y-6"
+    >
+        <!-- Hidden field for backwards compatibility with org_type enum -->
+        <input type="hidden" name="org_type" id="org_type_hidden" value="{{ organization.org_type.value if organization and organization.org_type else 'other' }}">
+
+        <!-- Basic Info Section -->
+        <div>
+            <h3 class="text-lg font-semibold text-blackbook-900 mb-4">Basic Information</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label for="name" class="block text-sm font-medium text-blackbook-700 mb-1">Organization Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" id="name" required
+                           value="{{ organization.name or '' if organization else '' }}"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                </div>
+
+                <!-- Category Dropdown (Tier 1) -->
+                <div>
+                    <label for="category_id" class="block text-sm font-medium text-blackbook-700 mb-1">Category <span class="text-red-500">*</span></label>
+                    <select name="category_id" id="category_id" required
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent"
+                            onchange="updateTypeDropdown()">
+                        <option value="">Select Category...</option>
+                        {% if categories %}
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}"
+                                data-has-profile="{{ 'true' if cat.has_investment_profile else 'false' }}"
+                                {% if organization and organization.category_id == cat.id %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+
+                <!-- Type Dropdown (Tier 2 - cascading) -->
+                <div>
+                    <label for="type_id" class="block text-sm font-medium text-blackbook-700 mb-1">Type <span class="text-red-500">*</span></label>
+                    <select name="type_id" id="type_id" required
+                            class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                        <option value="">Select Category First...</option>
+                    </select>
+                </div>
+
+                <!-- Legacy category field (hidden, for backwards compatibility) -->
+                <input type="hidden" name="category" id="category" value="{{ organization.category or '' if organization else '' }}">
+            </div>
+        </div>
+
+        <!-- Store types data for JavaScript -->
+        <script id="types-data" type="application/json">
+            {{ types_by_category | tojson | safe if types_by_category else '{}' }}
+        </script>
+        <script>
+        (function() {
+            const typesByCategory = JSON.parse(document.getElementById('types-data').textContent);
+            const currentTypeId = {{ organization.type_id if organization and organization.type_id else 'null' }};
+
+            window.updateTypeDropdown = function() {
+                const categorySelect = document.getElementById('category_id');
+                const typeSelect = document.getElementById('type_id');
+                const categoryId = categorySelect.value;
+
+                // Clear current options
+                typeSelect.innerHTML = '';
+
+                if (!categoryId) {
+                    typeSelect.innerHTML = '<option value="">Select Category First...</option>';
+                    return;
+                }
+
+                const types = typesByCategory[categoryId] || [];
+                if (types.length === 0) {
+                    typeSelect.innerHTML = '<option value="">No types available</option>';
+                    return;
+                }
+
+                // Add default option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Select Type...';
+                typeSelect.appendChild(defaultOption);
+
+                // Add type options
+                types.forEach(function(type) {
+                    const option = document.createElement('option');
+                    option.value = type.id;
+                    option.textContent = type.name;
+                    option.dataset.profileStyle = type.profile_style || '';
+                    if (currentTypeId && type.id == currentTypeId) {
+                        option.selected = true;
+                    }
+                    typeSelect.appendChild(option);
+                });
+
+                // Also update the hidden org_type for backwards compatibility
+                updateOrgTypeFromCategory(categoryId);
+            };
+
+            function updateOrgTypeFromCategory(categoryId) {
+                const categorySelect = document.getElementById('category_id');
+                const orgTypeHidden = document.getElementById('org_type_hidden');
+                const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+
+                if (selectedOption && selectedOption.value) {
+                    // Map category to old org_type enum
+                    const categoryName = selectedOption.textContent.toLowerCase().trim();
+                    if (categoryName.includes('investment')) {
+                        orgTypeHidden.value = 'investment_firm';
+                    } else if (categoryName.includes('company')) {
+                        orgTypeHidden.value = 'company';
+                    } else if (categoryName.includes('service')) {
+                        orgTypeHidden.value = 'law_firm';  // Closest match
+                    } else {
+                        orgTypeHidden.value = 'other';
+                    }
+                }
+            }
+
+            // Initialize on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                const categorySelect = document.getElementById('category_id');
+                if (categorySelect.value) {
+                    updateTypeDropdown();
+                }
+            });
+
+            // Also run immediately if DOM is already loaded
+            if (document.readyState !== 'loading') {
+                const categorySelect = document.getElementById('category_id');
+                if (categorySelect && categorySelect.value) {
+                    updateTypeDropdown();
+                }
+            }
+        })();
+        </script>
+
+        <!-- Links Section -->
+        <div>
+            <h3 class="text-lg font-semibold text-blackbook-900 mb-4">Links</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="website" class="block text-sm font-medium text-blackbook-700 mb-1">Website</label>
+                    <input type="url" name="website" id="website"
+                           value="{{ organization.website or '' if organization else '' }}"
+                           placeholder="https://..."
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label for="crunchbase" class="block text-sm font-medium text-blackbook-700 mb-1">Crunchbase URL</label>
+                    <input type="url" name="crunchbase" id="crunchbase"
+                           value="{{ organization.crunchbase or '' if organization else '' }}"
+                           placeholder="https://crunchbase.com/organization/..."
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent">
+                </div>
+            </div>
+        </div>
+
+        <!-- Description Section -->
+        <div>
+            <h3 class="text-lg font-semibold text-blackbook-900 mb-4">Description</h3>
+            <input type="hidden" name="description" id="description-input" value="{{ organization.description or '' if organization else '' }}">
+            <div id="description-editor" class="quill-editor bg-white dark:bg-blackbook-700 border border-blackbook-300 dark:border-blackbook-600 rounded-md"></div>
+        </div>
+
+        <!-- Notes Section -->
+        <div>
+            <h3 class="text-lg font-semibold text-blackbook-900 mb-4">Notes</h3>
+            <input type="hidden" name="notes" id="notes-input" value="{{ organization.notes or '' if organization else '' }}">
+            <div id="notes-editor" class="quill-editor bg-white dark:bg-blackbook-700 border border-blackbook-300 dark:border-blackbook-600 rounded-md"></div>
+        </div>
+
+        <script>
+        (function() {
+            // Initialize Quill editors for Description and Notes
+            const toolbarOptions = [
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ['clean']
+            ];
+
+            // Description editor
+            const descriptionEditor = new Quill('#description-editor', {
+                theme: 'snow',
+                placeholder: 'Brief description of the organization...',
+                modules: {
+                    toolbar: toolbarOptions
+                }
+            });
+
+            // Notes editor
+            const notesEditor = new Quill('#notes-editor', {
+                theme: 'snow',
+                placeholder: 'Add any notes about this organization...',
+                modules: {
+                    toolbar: toolbarOptions
+                }
+            });
+
+            // Load existing content
+            const descriptionInput = document.getElementById('description-input');
+            const notesInput = document.getElementById('notes-input');
+
+            if (descriptionInput.value) {
+                descriptionEditor.root.innerHTML = descriptionInput.value;
+            }
+            if (notesInput.value) {
+                notesEditor.root.innerHTML = notesInput.value;
+            }
+
+            // Sync editor content to hidden inputs on text change
+            descriptionEditor.on('text-change', function() {
+                descriptionInput.value = descriptionEditor.root.innerHTML;
+            });
+            notesEditor.on('text-change', function() {
+                notesInput.value = notesEditor.root.innerHTML;
+            });
+
+            // Also sync on form submit (belt and suspenders)
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function() {
+                    descriptionInput.value = descriptionEditor.root.innerHTML;
+                    notesInput.value = notesEditor.root.innerHTML;
+                });
+            }
+        })();
+        </script>
+
+        <!-- Tags Section (only shown in edit mode) -->
+        {% if organization %}
+        <div>
+            <h3 class="text-lg font-semibold text-blackbook-900 mb-4">Tags</h3>
+            {% include "organizations/_tag_widget.html" %}
+        </div>
+        {% endif %}
+
+        <!-- Form Actions -->
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-blackbook-200">
+            {% if organization %}
+            <a href="/organizations/{{ organization.id }}"
+               class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                Cancel
+            </a>
+            {% else %}
+            <a href="/organizations"
+               class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
+                Cancel
+            </a>
+            {% endif %}
+            <button type="submit"
+                    class="px-6 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+                {% if organization %}Save Changes{% else %}Create Organization{% endif %}
+            </button>
+        </div>
+    </form>
+</div>

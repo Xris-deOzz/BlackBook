@@ -1,0 +1,99 @@
+# Perun's BlackBook - Production Docker Compose for Synology NAS
+# Optimized for DS220+ with 2GB RAM
+#
+# Usage: docker-compose -f docker-compose.prod.yml up -d --build
+#
+# Before running:
+# 1. Copy .env.production.example to .env and fill in your values
+# 2. Create directories: sudo mkdir -p /volume1/docker/blackbook/{postgres_data,backups,data}
+# 3. Set permissions: sudo chown -R 1000:1000 /volume1/docker/blackbook
+# 4. Run: docker-compose -f docker-compose.prod.yml up -d --build
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: blackbook-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-blackbook}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-perunsblackbook}
+      # Memory optimization for 2GB system
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=128MB"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "effective_cache_size=256MB"
+    volumes:
+      - /volume1/docker/blackbook/postgres_data:/var/lib/postgresql/data
+      - /volume1/docker/blackbook/backups:/backups
+    # Don't expose PostgreSQL to the network in production
+    # ports:
+    #   - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-blackbook} -d ${DB_NAME:-perunsblackbook}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    # Resource limits for DS220+ (2GB RAM total)
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 128M
+
+  # FastAPI Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blackbook-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-perunsblackbook}
+      - DB_USER=${DB_USER:-blackbook}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=false
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      # AI API Keys
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    volumes:
+      - /volume1/docker/blackbook/data:/app/data
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 60s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    # Resource limits for DS220+ (2GB RAM total)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+networks:
+  default:
+    name: blackbook-network

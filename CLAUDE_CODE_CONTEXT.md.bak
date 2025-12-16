@@ -1,0 +1,532 @@
+# Perun's BlackBook - Claude Code Context
+
+**Document Version:** 2025.12.07.2  
+**Last Updated:** 2025-12-07  
+**Current Phase:** Phase 2 - Web Application Development
+
+---
+
+## Project Overview
+
+Perun's BlackBook is a self-hosted personal CRM system replacing an Airtable-based contact management setup. It tracks people, organizations, interactions, and relationships for professional networking.
+
+**Phase 1 (Complete):** Database schema + Airtable data import  
+**Phase 2 (Current):** FastAPI web application with HTMX frontend  
+**Phase 3 (Future):** Gmail & Calendar integration  
+**Phase 4 (Future):** Polish & Synology deployment
+
+---
+
+## Quick Reference
+
+### Database Connection
+```
+Host: localhost
+Port: 5432
+Database: perunsblackbook
+User: blackbook
+Password: BlackBook2024!
+```
+
+### Current Data
+| Table | Records |
+|-------|---------|
+| persons | 1,012 |
+| organizations | 1,259 |
+| tags | 77 |
+| interactions | 130 |
+| person_tags | 992 |
+| organization_tags | 1,448 |
+| person_organizations | 1,086 |
+| organization_persons | 1,295 |
+
+### Project Location
+```
+C:\Users\ossow\OneDrive\PerunsBlackBook\
+```
+
+---
+
+## Technical Decisions (Finalized 2025-12-07)
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| **SQLAlchemy Mode** | Synchronous | Single-user app; simpler debugging; no performance bottleneck |
+| **Migrations** | Alembic | Version-controlled schema changes; integrates with SQLAlchemy |
+| **App Directory** | `app/` | Matches spec; remove empty `src/` folder |
+| **Development** | Local Python + Docker PostgreSQL | Fast hot-reload; connect to Docker DB on port 5432 |
+| **Deployment** | Dockerized app on Synology | Future phase; containerize when ready |
+| **Authentication** | Skip for Phase 2 | Single-user on local network; add Passkey auth later |
+| **CSS** | TailwindCSS via CDN | Quick dev setup; compile for production later |
+| **JS Framework** | HTMX only | Minimal JS; server-rendered with dynamic updates |
+
+---
+
+## Development Environment Setup
+
+### Prerequisites
+- Python 3.11+ installed on Windows
+- Docker Desktop running
+- PostgreSQL container with imported data (from Phase 1)
+
+### Initial Setup Commands
+```powershell
+# Navigate to project
+cd C:\Users\ossow\OneDrive\PerunsBlackBook
+
+# Ensure database is running
+docker-compose up -d
+
+# Create Python virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+
+# Install dependencies (after requirements.txt is created)
+pip install -r requirements.txt
+
+# Run development server
+uvicorn app.main:app --reload --port 8000
+```
+
+### Verify Database Connection
+```powershell
+docker exec -it blackbook-db psql -U blackbook -d perunsblackbook -c "SELECT COUNT(*) FROM persons;"
+```
+
+---
+
+## Target Directory Structure
+
+```
+PerunsBlackBook/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                    # FastAPI application entry point
+│   ├── config.py                  # Settings via pydantic-settings
+│   ├── database.py                # SQLAlchemy engine & session
+│   ├── models/
+│   │   ├── __init__.py            # Export all models
+│   │   ├── base.py                # Declarative base
+│   │   ├── person.py              # Person model
+│   │   ├── organization.py        # Organization model
+│   │   ├── tag.py                 # Tag + junction tables
+│   │   ├── interaction.py         # Interaction model
+│   │   └── saved_view.py          # SavedView model
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   ├── person.py              # Pydantic schemas for Person
+│   │   ├── organization.py
+│   │   ├── tag.py
+│   │   └── interaction.py
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   ├── pages.py               # HTML page routes
+│   │   ├── persons.py             # Person CRUD + partials
+│   │   ├── organizations.py       # Organization CRUD + partials
+│   │   ├── interactions.py        # Interaction CRUD
+│   │   ├── tags.py                # Tag management
+│   │   └── search.py              # Global search
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── person_service.py      # Business logic for persons
+│   │   └── search_service.py      # Search across entities
+│   ├── templates/
+│   │   ├── base.html              # Main layout with nav
+│   │   ├── components/
+│   │   │   ├── navbar.html
+│   │   │   ├── sidebar.html       # Saved views sidebar
+│   │   │   ├── search_bar.html
+│   │   │   ├── tag_badge.html
+│   │   │   ├── pagination.html
+│   │   │   └── flash_messages.html
+│   │   ├── persons/
+│   │   │   ├── list.html          # Full page: person list
+│   │   │   ├── _table.html        # HTMX partial: table body
+│   │   │   ├── _row.html          # HTMX partial: single row
+│   │   │   ├── detail.html        # Full page: person detail
+│   │   │   ├── _info_card.html    # Partial: editable info
+│   │   │   └── _form.html         # Modal/inline edit form
+│   │   ├── organizations/
+│   │   │   ├── list.html
+│   │   │   ├── _table.html
+│   │   │   ├── detail.html
+│   │   │   └── _form.html
+│   │   ├── interactions/
+│   │   │   ├── list.html
+│   │   │   ├── _timeline.html     # Timeline view for detail pages
+│   │   │   └── _form.html         # Quick-add interaction form
+│   │   └── tags/
+│   │       └── manage.html
+│   └── static/
+│       ├── css/
+│       │   └── custom.css         # Any custom styles beyond Tailwind
+│       └── js/
+│           └── app.js             # Minimal JS (keyboard shortcuts)
+├── alembic/
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/
+│       └── 001_initial_schema.py  # Baseline migration
+├── data/                          # Airtable CSV exports (read-only)
+├── scripts/
+│   ├── 001_initial_schema.sql     # Original SQL schema
+│   ├── import_airtable.py         # Import script (complete)
+│   └── requirements.txt           # Import script deps (separate)
+├── docs/
+│   ├── DATA_MAPPING.md
+│   └── Peruns_BlackBook_Specification_2025.12.07.1.md
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py                # Pytest fixtures
+│   └── test_persons.py
+├── .env                           # Environment variables
+├── .env.example
+├── .gitignore
+├── alembic.ini
+├── docker-compose.yml
+├── Dockerfile                     # App container (for deployment)
+├── requirements.txt               # App dependencies
+├── README.md
+└── CLAUDE_CODE_CONTEXT.md         # This file
+```
+
+---
+
+## Database Schema Reference
+
+### Enums
+```python
+class OrgType(str, Enum):
+    investment_firm = "investment_firm"
+    company = "company"
+    law_firm = "law_firm"
+    bank = "bank"
+    accelerator = "accelerator"
+    other = "other"
+
+class PersonStatus(str, Enum):
+    active = "active"
+    inactive = "inactive"
+    archived = "archived"
+
+class InteractionMedium(str, Enum):
+    email = "email"
+    meeting = "meeting"
+    call = "call"
+    linkedin = "linkedin"
+    lunch = "lunch"
+    coffee = "coffee"
+    event = "event"
+    video_call = "video_call"
+    text = "text"
+    other = "other"
+
+class RelationshipType(str, Enum):
+    affiliated_with = "affiliated_with"      # Person works at org
+    peer_history = "peer_history"            # Past connection
+    key_person = "key_person"                # Key person at company
+    connection = "connection"                # Can make intros
+    contact_at = "contact_at"                # Contact at company
+```
+
+### Key Tables
+
+**persons** - Contact records
+- UUID primary key
+- first_name, last_name, full_name
+- title, status, priority (0/1/2)
+- Contact: email, phone, linkedin, twitter, website
+- custom_fields (JSONB)
+- Full-text search index on name/title/notes/email
+
+**organizations** - Firms and companies
+- UUID primary key
+- name, org_type (enum), category
+- website, crunchbase, description
+- priority_rank, notes
+- custom_fields (JSONB)
+
+**tags** - Categories/labels
+- UUID primary key
+- name (unique), color (hex)
+
+**interactions** - Communication log
+- UUID primary key
+- person_id (FK), person_name (backup)
+- medium (enum), interaction_date, notes
+
+**Junction Tables:**
+- person_tags (person_id, tag_id)
+- organization_tags (organization_id, tag_id)
+- person_organizations (person→org with relationship type)
+- organization_persons (org→person with relationship type)
+
+**saved_views** - Airtable-style filters
+- name, entity_type (person/organization)
+- filters (JSONB), sort_by, sort_order
+- columns (JSONB), is_default
+
+See `scripts/001_initial_schema.sql` for complete DDL.
+
+---
+
+## Phase 2 Task List
+
+### 2.1 — Project Foundation
+- [ ] Remove empty `src/` folder
+- [ ] Create `requirements.txt` with dependencies:
+  ```
+  fastapi==0.109.0
+  uvicorn[standard]==0.27.0
+  sqlalchemy==2.0.25
+  psycopg2-binary==2.9.9
+  pydantic==2.5.3
+  pydantic-settings==2.1.0
+  python-dotenv==1.0.0
+  jinja2==3.1.3
+  python-multipart==0.0.6
+  alembic==1.13.1
+  ```
+- [ ] Create `app/__init__.py`
+- [ ] Create `app/config.py` (load settings from .env)
+- [ ] Create `app/database.py` (sync SQLAlchemy engine + session)
+- [ ] Create `app/models/` with all SQLAlchemy models
+- [ ] Create `app/main.py` (FastAPI app with Jinja2 templates)
+- [ ] Set up Alembic with baseline migration
+- [ ] Create `app/templates/base.html` with TailwindCSS CDN
+- [ ] Verify database connection works with existing data
+- [ ] Update `.env.example` and `.gitignore`
+
+### 2.2 — Person List View
+- [ ] Create `app/routers/persons.py`
+- [ ] GET `/people` - Full page list view
+- [ ] GET `/people/table` - HTMX partial for table body
+- [ ] Implement pagination (20 per page)
+- [ ] Implement sorting (click column headers)
+- [ ] Implement text search (name, title, notes)
+- [ ] Implement tag filter (multi-select dropdown)
+- [ ] Implement status filter (Active/Inactive/Archived)
+- [ ] Create templates: `list.html`, `_table.html`, `_row.html`
+- [ ] Default columns: Name, Title, Organization, Tags, Status
+
+### 2.3 — Organization List View
+- [ ] Create `app/routers/organizations.py`
+- [ ] GET `/organizations` - Full page list
+- [ ] GET `/organizations/table` - HTMX partial
+- [ ] Pagination and sorting
+- [ ] Filter by org_type
+- [ ] Filter by tags/category
+- [ ] Default columns: Name, Type, Category, Website, Priority
+
+### 2.4 — Person Detail Page
+- [ ] GET `/people/{id}` - Detail page
+- [ ] Display all person fields in sections
+- [ ] Show affiliated organizations (with relationship type)
+- [ ] Show tags with colored badges
+- [ ] Show interaction timeline (most recent first)
+- [ ] Edit button → modal or inline edit form
+- [ ] "Log Interaction" quick button
+- [ ] PUT `/people/{id}` - Update person (HTMX)
+
+### 2.5 — Organization Detail Page
+- [ ] GET `/organizations/{id}` - Detail page
+- [ ] Display all organization fields
+- [ ] Show related people (key_person, connection, contact_at, affiliated)
+- [ ] Show tags
+- [ ] Edit functionality
+- [ ] Display custom_fields
+
+### 2.6 — Interaction Logging
+- [ ] GET `/interactions` - List view (optional, lower priority)
+- [ ] GET `/interactions/new` - New interaction form
+- [ ] POST `/interactions` - Create interaction
+- [ ] Person selector with search (HTMX autocomplete)
+- [ ] Medium dropdown, date picker, notes textarea
+- [ ] Quick-add from person detail page
+- [ ] Timeline partial for embedding in detail pages
+
+### 2.7 — Saved Views
+- [ ] Create `app/routers/views.py`
+- [ ] GET `/views` - List saved views
+- [ ] POST `/views` - Save current filter state
+- [ ] Sidebar component showing saved views
+- [ ] Apply saved view on click
+- [ ] Create default views:
+  - All People
+  - All Organizations  
+  - VIPs (priority >= 1)
+  - Recently Contacted
+
+### 2.8 — Navigation & Polish
+- [ ] Top navigation: People | Organizations | Interactions | Tags
+- [ ] Sidebar with saved views (collapsible)
+- [ ] Global search bar in navbar
+- [ ] Keyboard shortcut: `/` focuses search
+- [ ] Empty states for lists
+- [ ] Loading indicators for HTMX requests
+- [ ] Flash messages for success/error
+
+### 2.9 — Tag Management
+- [ ] GET `/tags` - Tag list/management page
+- [ ] Create new tags with color picker
+- [ ] Edit tag name/color
+- [ ] Delete tag (with confirmation)
+- [ ] Show usage count per tag
+
+### 2.10 — Documentation & Cleanup
+- [ ] Update spec document version
+- [ ] Write README.md with setup instructions
+- [ ] Update docker-compose.yml with app service
+- [ ] Create Dockerfile for app
+- [ ] Test full Docker deployment locally
+
+### 2.11 — Future: Social Graph (Phase 2.5)
+- [ ] Add vis.js or D3.js for network visualization
+- [ ] Show person-organization relationships as graph
+- [ ] Interactive: click node to view detail
+- [ ] Filter graph by relationship type
+
+---
+
+## HTMX Patterns to Follow
+
+### Page Load vs Partial Update
+```html
+<!-- Full page link -->
+<a href="/people/123">View Person</a>
+
+<!-- HTMX partial update -->
+<button hx-get="/people/table?page=2" 
+        hx-target="#person-table-body"
+        hx-swap="innerHTML">
+  Next Page
+</button>
+```
+
+### Search with Debounce
+```html
+<input type="search" 
+       name="q"
+       hx-get="/people/table"
+       hx-trigger="input changed delay:300ms"
+       hx-target="#person-table-body"
+       hx-include="[name='status'],[name='tags']">
+```
+
+### Inline Edit Pattern
+```html
+<!-- Display mode -->
+<div id="person-title" hx-get="/people/123/edit-title" hx-trigger="click">
+  {{ person.title }}
+</div>
+
+<!-- Edit mode (returned by /edit-title) -->
+<form hx-put="/people/123/title" hx-target="#person-title" hx-swap="outerHTML">
+  <input name="title" value="{{ person.title }}">
+  <button type="submit">Save</button>
+</form>
+```
+
+### Modal Pattern
+```html
+<button hx-get="/interactions/new?person_id=123"
+        hx-target="#modal-container"
+        hx-swap="innerHTML">
+  Log Interaction
+</button>
+
+<div id="modal-container"></div>
+```
+
+---
+
+## Coding Standards
+
+### Python
+- Use type hints everywhere
+- Pydantic models for request/response validation
+- SQLAlchemy models inherit from declarative base
+- Services contain business logic; routers are thin
+- Use dependency injection for database sessions
+
+### Templates
+- Jinja2 with `{% extends "base.html" %}`
+- Partials prefixed with underscore: `_table.html`
+- Components in `templates/components/`
+- Use Tailwind utility classes; minimize custom CSS
+
+### File Naming
+- Snake_case for Python files
+- Kebab-case for URL paths: `/people`, `/organizations`
+- Templates match route structure
+
+---
+
+## Common Commands
+
+```powershell
+# Start database
+docker-compose up -d
+
+# Activate virtual environment
+.\venv\Scripts\Activate.ps1
+
+# Run development server
+uvicorn app.main:app --reload --port 8000
+
+# Create new Alembic migration
+alembic revision --autogenerate -m "description"
+
+# Run migrations
+alembic upgrade head
+
+# Database shell
+docker exec -it blackbook-db psql -U blackbook -d perunsblackbook
+
+# Useful SQL queries
+SELECT COUNT(*) FROM persons;
+SELECT name, org_type FROM organizations LIMIT 10;
+SELECT t.name, COUNT(*) FROM tags t JOIN person_tags pt ON t.id = pt.tag_id GROUP BY t.name ORDER BY COUNT(*) DESC;
+```
+
+---
+
+## Christopher's Preferences
+
+1. **Ask detailed questions** before writing code
+2. **Draft a task list** before implementation
+3. **Documentation versioning:** YYYY.MM.DD.V format
+4. **Primary language:** Python (3.11+ on Windows)
+5. **Terminal:** PowerShell
+6. **Start simple:** Build basic functionality first, enhance iteratively
+7. **Column flexibility:** UI should support adding columns later
+
+---
+
+## Key Files to Reference
+
+| File | Purpose |
+|------|---------|
+| `scripts/001_initial_schema.sql` | Database schema DDL |
+| `docs/Peruns_BlackBook_Specification_2025.12.07.1.md` | Full project spec |
+| `docs/DATA_MAPPING.md` | Airtable field mapping |
+| `scripts/import_airtable.py` | Reference for field names |
+| `docker-compose.yml` | Current Docker setup |
+
+---
+
+## Next Steps for Claude Code
+
+1. **Read this file** to understand project context
+2. **Start with Task 2.1** - Project Foundation
+3. **Create files incrementally** - verify each step works
+4. **Test database connection** before building features
+5. **Build Person list first** - it's the primary workflow
+
+When starting, run:
+```powershell
+cd C:\Users\ossow\OneDrive\PerunsBlackBook
+docker-compose up -d
+```
+
+Then begin creating the FastAPI application structure.

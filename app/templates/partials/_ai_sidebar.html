@@ -1,0 +1,1104 @@
+<!-- AI Research Sidebar Panel -->
+<div id="ai-sidebar-backdrop"
+     class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"
+     onclick="closeAiSidebar()">
+</div>
+
+<!-- Resize Handle -->
+<div id="ai-sidebar-resize"
+     class="fixed top-0 h-full w-2 bg-transparent hover:bg-purple-400 active:bg-purple-500 cursor-ew-resize z-50 hidden transition-colors group"
+     style="right: 384px;">
+    <!-- Visual grip indicator -->
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 rounded bg-blackbook-300 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+
+<div id="ai-sidebar"
+     class="fixed right-0 top-0 h-full bg-white shadow-xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col"
+     style="width: 384px; min-width: 320px; max-width: 800px;">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between p-4 border-b border-blackbook-200 bg-blackbook-50">
+        <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+            <h2 class="text-lg font-semibold text-blackbook-900">AI Research</h2>
+        </div>
+        <div class="flex items-center gap-2">
+            <!-- Provider Selector (dynamically populated) -->
+            <select id="ai-provider-select"
+                    class="text-xs px-2 py-1 border border-blackbook-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    onchange="onProviderChange()">
+                <!-- Options loaded dynamically via loadAvailableProviders() -->
+            </select>
+            <!-- Model Selector (populated based on provider) -->
+            <select id="ai-model-select"
+                    class="text-xs px-2 py-1 border border-blackbook-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-purple-500 max-w-[120px]"
+                    onchange="onModelChange()">
+                <!-- Options loaded dynamically when provider changes -->
+            </select>
+            <button onclick="closeAiSidebar()" class="text-blackbook-400 hover:text-blackbook-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Entity Context Banner -->
+    <div id="ai-context-banner" class="px-4 py-2 bg-purple-50 border-b border-purple-100">
+        <p class="text-xs text-purple-600 font-medium">
+            <span id="ai-context-label">Researching:</span>
+            <span id="ai-context-name" class="font-semibold">{{ entity_name }}</span>
+        </p>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="ai-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+        <!-- Welcome message -->
+        <div class="flex gap-3">
+            <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+            </div>
+            <div class="bg-blackbook-50 rounded-lg p-3 max-w-[80%]">
+                <p class="text-sm text-blackbook-700">
+                    Hi! I can help you research <strong id="ai-welcome-name">{{ entity_name }}</strong>.
+                    Try asking me to:
+                </p>
+                <ul class="mt-2 text-sm text-blackbook-600 space-y-1">
+                    <li class="flex items-center gap-2">
+                        <span class="text-purple-500">&#8226;</span>
+                        Find recent news or articles
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-purple-500">&#8226;</span>
+                        Look up their LinkedIn profile
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-purple-500">&#8226;</span>
+                        Search for podcast interviews
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-purple-500">&#8226;</span>
+                        Suggest updates to their profile
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Suggestions Panel -->
+    <div id="ai-suggestions-panel" class="hidden border-t border-purple-200 bg-purple-50">
+        <div class="px-4 py-2 flex items-center justify-between border-b border-purple-100">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                </svg>
+                <span class="text-sm font-medium text-purple-700">Profile Updates</span>
+                <span id="suggestion-count" class="px-1.5 py-0.5 text-xs bg-purple-600 text-white rounded-full">0</span>
+            </div>
+            <div class="flex gap-1">
+                <button onclick="acceptAllSuggestions()" title="Accept All" class="p-1 text-green-600 hover:bg-green-100 rounded">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </button>
+                <button onclick="rejectAllSuggestions()" title="Reject All" class="p-1 text-red-600 hover:bg-red-100 rounded">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="ai-suggestions-list" class="max-h-48 overflow-y-auto p-2 space-y-2">
+            <!-- Suggestions will be rendered here -->
+        </div>
+    </div>
+
+    <!-- Quick Actions (loaded dynamically from database) -->
+    <div id="ai-quick-actions" class="px-4 py-2 border-t border-blackbook-100 bg-blackbook-50">
+        <div id="quick-action-buttons" class="flex flex-wrap gap-2">
+            <!-- Buttons loaded dynamically via loadQuickPrompts() -->
+            <div class="w-full text-center py-1">
+                <span class="text-xs text-blackbook-400">Loading prompts...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="p-4 border-t border-blackbook-200 bg-white">
+        <form id="ai-chat-form" onsubmit="sendAiMessage(event)">
+            <div class="flex flex-col gap-2">
+                <textarea
+                       id="ai-message-input"
+                       placeholder="Ask about this {{ entity_type }}... (Enter to send, Shift+Enter for new line)"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-y"
+                       rows="3"
+                       style="min-height: 72px; max-height: 200px;"
+                       autocomplete="off"
+                       onkeydown="handleInputKeydown(event)"></textarea>
+                <button type="submit"
+                        id="ai-send-button"
+                        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-end">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                    </svg>
+                </button>
+            </div>
+        </form>
+        <p class="mt-2 text-xs text-blackbook-400 text-center">
+            <span id="ai-provider-label">Claude</span> <span id="ai-model-display" class="text-blackbook-300" title=""></span> | <kbd class="px-1 bg-blackbook-100 rounded text-xs">Enter</kbd> to send
+        </p>
+    </div>
+</div>
+
+<!-- Hidden data for JavaScript -->
+<input type="hidden" id="ai-entity-type" value="{{ entity_type }}">
+<input type="hidden" id="ai-entity-id" value="{{ entity_id }}">
+<input type="hidden" id="ai-conversation-id" value="">
+
+<script>
+    // AI Sidebar State
+    let aiConversationId = null;
+    let aiIsLoading = false;
+    let lastSentMessage = null;  // Track last message for retry functionality
+    let isResizing = false;
+
+    // Sidebar resize functionality
+    const SIDEBAR_MIN_WIDTH = 320;
+    const SIDEBAR_MAX_WIDTH = 800;
+    const SIDEBAR_DEFAULT_WIDTH = 384;
+    const SIDEBAR_STORAGE_KEY = 'ai-sidebar-width';
+
+    // Load saved width from localStorage
+    function getSavedSidebarWidth() {
+        const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+        if (saved) {
+            const width = parseInt(saved, 10);
+            if (width >= SIDEBAR_MIN_WIDTH && width <= SIDEBAR_MAX_WIDTH) {
+                return width;
+            }
+        }
+        return SIDEBAR_DEFAULT_WIDTH;
+    }
+
+    // Save width to localStorage
+    function saveSidebarWidth(width) {
+        localStorage.setItem(SIDEBAR_STORAGE_KEY, width.toString());
+    }
+
+    // Update sidebar width
+    function setSidebarWidth(width) {
+        const sidebar = document.getElementById('ai-sidebar');
+        const resizeHandle = document.getElementById('ai-sidebar-resize');
+
+        width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, width));
+        sidebar.style.width = width + 'px';
+        resizeHandle.style.right = width + 'px';
+        saveSidebarWidth(width);
+    }
+
+    // Initialize resize handle events
+    function initResizeHandle() {
+        const resizeHandle = document.getElementById('ai-sidebar-resize');
+
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+
+            // Disable transition during resize for smooth dragging
+            const sidebar = document.getElementById('ai-sidebar');
+            sidebar.style.transition = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            const newWidth = window.innerWidth - e.clientX;
+            setSidebarWidth(newWidth);
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+
+                // Re-enable transition after resize
+                const sidebar = document.getElementById('ai-sidebar');
+                sidebar.style.transition = 'transform 0.3s ease-in-out';
+            }
+        });
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        initResizeHandle();
+        // Apply saved width
+        const savedWidth = getSavedSidebarWidth();
+        const sidebar = document.getElementById('ai-sidebar');
+        const resizeHandle = document.getElementById('ai-sidebar-resize');
+        sidebar.style.width = savedWidth + 'px';
+        resizeHandle.style.right = savedWidth + 'px';
+    });
+
+    // Provider selection handler
+    function onProviderChange() {
+        const providerSelect = document.getElementById('ai-provider-select');
+        const modelSelect = document.getElementById('ai-model-select');
+        const label = document.getElementById('ai-provider-label');
+        const selectedOption = providerSelect.options[providerSelect.selectedIndex];
+        const apiType = providerSelect.value;
+
+        label.textContent = selectedOption.text;
+
+        // Find the provider's models from loadedProviders
+        const provider = loadedProviders.find(p =>
+            (typeof p === 'object' ? p.api_type : p) === apiType
+        );
+
+        // Clear and populate model dropdown
+        modelSelect.innerHTML = '';
+
+        if (provider && typeof provider === 'object' && provider.models && provider.models.length > 0) {
+            provider.models.forEach((model, index) => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = modelDisplayNames[model] || model;
+                if (index === 0) option.selected = true;
+                modelSelect.appendChild(option);
+            });
+            modelSelect.disabled = false;
+        } else {
+            modelSelect.innerHTML = '<option value="">Default</option>';
+            modelSelect.disabled = true;
+        }
+
+        // Update model display in footer
+        onModelChange();
+    }
+
+    // Model selection handler
+    function onModelChange() {
+        const modelSelect = document.getElementById('ai-model-select');
+        const model = modelSelect.value || '';
+        updateModelDisplay(model);
+    }
+
+    // Get selected provider name
+    function getSelectedProvider() {
+        const select = document.getElementById('ai-provider-select');
+        return select.value;
+    }
+
+    // Get selected model name
+    function getSelectedModel() {
+        const select = document.getElementById('ai-model-select');
+        return select.value;
+    }
+
+    // Lock provider and model selectors after conversation starts
+    function lockProviderSelector() {
+        const providerSelect = document.getElementById('ai-provider-select');
+        const modelSelect = document.getElementById('ai-model-select');
+
+        providerSelect.disabled = true;
+        providerSelect.title = 'Provider is locked for this conversation';
+        providerSelect.classList.add('bg-blackbook-100', 'cursor-not-allowed');
+
+        modelSelect.disabled = true;
+        modelSelect.title = 'Model is locked for this conversation';
+        modelSelect.classList.add('bg-blackbook-100', 'cursor-not-allowed');
+    }
+
+    // Unlock provider and model selectors (for new conversations)
+    function unlockProviderSelector() {
+        const providerSelect = document.getElementById('ai-provider-select');
+        const modelSelect = document.getElementById('ai-model-select');
+
+        providerSelect.disabled = false;
+        providerSelect.title = '';
+        providerSelect.classList.remove('bg-blackbook-100', 'cursor-not-allowed');
+
+        modelSelect.disabled = false;
+        modelSelect.title = '';
+        modelSelect.classList.remove('bg-blackbook-100', 'cursor-not-allowed');
+    }
+
+    // Reset sidebar for a new conversation
+    function resetAiSidebar() {
+        aiConversationId = null;
+        document.getElementById('ai-conversation-id').value = '';
+        unlockProviderSelector();
+        // Reset provider label to match current selection
+        onProviderChange();
+    }
+
+    // Map provider API names to display names
+    const providerDisplayNames = {
+        'anthropic': 'Claude',
+        'google': 'Gemini',
+        'openai': 'OpenAI',
+        'ollama': 'Ollama'
+    };
+
+    // Friendly model name display
+    const modelDisplayNames = {
+        // Claude models
+        'claude-sonnet-4-20250514': 'Sonnet 4',
+        'claude-3-5-sonnet-latest': '3.5 Sonnet',
+        'claude-3-5-haiku-latest': '3.5 Haiku',
+        'claude-3-opus-latest': '3 Opus',
+        'claude-3-sonnet-20240229': '3 Sonnet',
+        'claude-3-haiku-20240307': '3 Haiku',
+        // OpenAI models
+        'gpt-4o': '4o',
+        'gpt-4o-mini': '4o Mini',
+        'gpt-4-turbo': '4 Turbo',
+        'gpt-4': '4',
+        'gpt-3.5-turbo': '3.5 Turbo',
+        // Gemini models (new SDK)
+        'gemini-3-pro-preview': '3 Pro',
+        'gemini-2.5-pro': '2.5 Pro',
+        'gemini-2.5-flash': '2.5 Flash',
+        'gemini-2.0-flash': '2.0 Flash',
+        // Gemini models (legacy)
+        'gemini-1.5-pro': '1.5 Pro',
+        'gemini-1.5-flash': '1.5 Flash',
+        'gemini-1.5-flash-8b': '1.5 Flash 8B',
+        'gemini-pro': 'Pro',
+    };
+
+    // Store loaded providers with their models
+    let loadedProviders = [];
+
+    // Load available AI providers from backend
+    async function loadAvailableProviders() {
+        const select = document.getElementById('ai-provider-select');
+        const label = document.getElementById('ai-provider-label');
+
+        try {
+            const response = await fetch('/ai-chat/status');
+            if (!response.ok) throw new Error('Failed to load providers');
+
+            const data = await response.json();
+            loadedProviders = data.providers || [];
+
+            // Clear existing options
+            select.innerHTML = '';
+
+            if (!data.available || data.providers.length === 0) {
+                // No providers configured
+                select.innerHTML = '<option value="">No AI configured</option>';
+                select.disabled = true;
+                label.textContent = 'No AI';
+                updateModelDisplay('');
+                return;
+            }
+
+            // Add options for each available provider
+            // Providers are returned as objects: {name, api_type, models, is_local}
+            data.providers.forEach((provider, index) => {
+                const option = document.createElement('option');
+                // Handle both object format and string format
+                const apiType = typeof provider === 'object' ? provider.api_type : provider;
+                const displayName = typeof provider === 'object' ? provider.name : providerDisplayNames[provider];
+                const models = typeof provider === 'object' && provider.models ? provider.models : [];
+                const defaultModel = models.length > 0 ? models[0] : '';
+
+                option.value = apiType;
+                option.textContent = displayName || providerDisplayNames[apiType] || apiType;
+                option.dataset.model = defaultModel;
+                if (index === 0) option.selected = true;
+                select.appendChild(option);
+            });
+
+            // Enable selector since we have providers
+            select.disabled = false;
+
+            // Update label and model display to match first provider
+            onProviderChange();
+
+        } catch (error) {
+            console.error('Failed to load AI providers:', error);
+            select.innerHTML = '<option value="">Error loading</option>';
+            updateModelDisplay('');
+        }
+    }
+
+    // Update the model display in the footer
+    function updateModelDisplay(model) {
+        const modelDisplay = document.getElementById('ai-model-display');
+        if (modelDisplay) {
+            if (model) {
+                const friendlyName = modelDisplayNames[model] || model;
+                modelDisplay.textContent = `(${friendlyName})`;
+                modelDisplay.title = model;  // Show full model name on hover
+            } else {
+                modelDisplay.textContent = '';
+                modelDisplay.title = '';
+            }
+        }
+    }
+
+    // Load quick prompts from the database
+    async function loadQuickPrompts() {
+        const entityType = document.getElementById('ai-entity-type').value || 'both';
+        const container = document.getElementById('quick-action-buttons');
+
+        try {
+            const response = await fetch(`/ai-chat/prompts?entity_type=${entityType}`);
+            if (!response.ok) throw new Error('Failed to load prompts');
+
+            const prompts = await response.json();
+
+            if (prompts.length === 0) {
+                container.innerHTML = `
+                    <div class="w-full text-center py-1">
+                        <span class="text-xs text-blackbook-400">No quick prompts configured.</span>
+                        <a href="/settings?tab=ai" class="text-xs text-purple-600 hover:underline ml-1">Add some</a>
+                    </div>
+                `;
+                return;
+            }
+
+            // Render prompt buttons
+            container.innerHTML = prompts.map(p => `
+                <button onclick="sendQuickAction('${escapeHtml(p.prompt_text).replace(/'/g, "\\'")}')"
+                        class="px-2 py-1 text-xs bg-white border border-blackbook-200 rounded-full hover:bg-blackbook-100 text-blackbook-600"
+                        title="${escapeHtml(p.prompt_text)}">
+                    ${escapeHtml(p.label)}
+                </button>
+            `).join('');
+
+        } catch (error) {
+            console.error('Failed to load quick prompts:', error);
+            container.innerHTML = `
+                <div class="w-full text-center py-1">
+                    <span class="text-xs text-red-500">Failed to load prompts</span>
+                </div>
+            `;
+        }
+    }
+
+    function openAiSidebar() {
+        const sidebar = document.getElementById('ai-sidebar');
+        const backdrop = document.getElementById('ai-sidebar-backdrop');
+        const resizeHandle = document.getElementById('ai-sidebar-resize');
+
+        // Apply saved width before showing
+        const savedWidth = getSavedSidebarWidth();
+        sidebar.style.width = savedWidth + 'px';
+        resizeHandle.style.right = savedWidth + 'px';
+
+        sidebar.classList.remove('translate-x-full');
+        backdrop.classList.remove('hidden');
+        resizeHandle.classList.remove('hidden');
+
+        // Load providers if not already locked (new conversation)
+        if (!aiConversationId) {
+            loadAvailableProviders();
+        }
+
+        // Load quick prompts
+        loadQuickPrompts();
+
+        // Focus input
+        setTimeout(() => {
+            document.getElementById('ai-message-input').focus();
+        }, 300);
+    }
+
+    function closeAiSidebar() {
+        const sidebar = document.getElementById('ai-sidebar');
+        const backdrop = document.getElementById('ai-sidebar-backdrop');
+        const resizeHandle = document.getElementById('ai-sidebar-resize');
+
+        sidebar.classList.add('translate-x-full');
+        backdrop.classList.add('hidden');
+        resizeHandle.classList.add('hidden');
+    }
+
+    function toggleAiSidebar() {
+        const sidebar = document.getElementById('ai-sidebar');
+        if (sidebar.classList.contains('translate-x-full')) {
+            openAiSidebar();
+        } else {
+            closeAiSidebar();
+        }
+    }
+
+    // Send quick action
+    function sendQuickAction(message) {
+        document.getElementById('ai-message-input').value = message;
+        sendAiMessage(new Event('submit'));
+    }
+
+    // Send message to AI
+    async function sendAiMessage(event) {
+        event.preventDefault();
+
+        const input = document.getElementById('ai-message-input');
+        const message = input.value.trim();
+
+        if (!message || aiIsLoading) return;
+
+        // Get entity info
+        const entityType = document.getElementById('ai-entity-type').value;
+        const entityId = document.getElementById('ai-entity-id').value;
+
+        // Clear input and disable
+        input.value = '';
+        setAiLoading(true);
+
+        // Add user message to UI
+        addMessageToChat('user', message);
+
+        // Hide quick actions after first message
+        document.getElementById('ai-quick-actions').classList.add('hidden');
+
+        try {
+            const response = await fetch('/ai-chat/message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message,
+                    entity_type: entityType,
+                    entity_id: entityId,
+                    conversation_id: aiConversationId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to send message');
+            }
+
+            const data = await response.json();
+
+            // Store conversation ID for follow-up messages
+            aiConversationId = data.conversation_id;
+            document.getElementById('ai-conversation-id').value = aiConversationId;
+
+            // Add AI response to chat
+            addMessageToChat('assistant', data.response);
+
+        } catch (error) {
+            console.error('AI chat error:', error);
+            addMessageToChat('error', 'Sorry, I encountered an error. Please try again.');
+        } finally {
+            setAiLoading(false);
+        }
+    }
+
+    function setAiLoading(loading) {
+        aiIsLoading = loading;
+        const button = document.getElementById('ai-send-button');
+        const input = document.getElementById('ai-message-input');
+
+        button.disabled = loading;
+        input.disabled = loading;
+
+        if (loading) {
+            // Add loading indicator with typing animation
+            const messagesContainer = document.getElementById('ai-messages');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'ai-loading-indicator';
+            loadingDiv.className = 'flex gap-3';
+            loadingDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                </div>
+                <div class="bg-blackbook-50 rounded-lg p-3">
+                    <div class="flex items-center gap-1">
+                        <span class="typing-dot w-2 h-2 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+                        <span class="typing-dot w-2 h-2 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+                        <span class="typing-dot w-2 h-2 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+                    </div>
+                    <p class="text-xs text-blackbook-400 mt-1" id="ai-loading-status">Thinking...</p>
+                </div>
+            `;
+            messagesContainer.appendChild(loadingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // Update loading status after a delay
+            setTimeout(() => {
+                const status = document.getElementById('ai-loading-status');
+                if (status) status.textContent = 'Researching...';
+            }, 2000);
+            setTimeout(() => {
+                const status = document.getElementById('ai-loading-status');
+                if (status) status.textContent = 'Generating response...';
+            }, 5000);
+        } else {
+            // Remove loading indicator
+            const loadingIndicator = document.getElementById('ai-loading-indicator');
+            if (loadingIndicator) {
+                loadingIndicator.remove();
+            }
+        }
+    }
+
+    function addMessageToChat(role, content) {
+        const messagesContainer = document.getElementById('ai-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'flex gap-3';
+
+        if (role === 'user') {
+            messageDiv.innerHTML = `
+                <div class="ml-auto flex gap-3 flex-row-reverse">
+                    <div class="w-8 h-8 rounded-full bg-blackbook-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                    </div>
+                    <div class="bg-purple-600 text-white rounded-lg p-3 max-w-[80%]">
+                        <p class="text-sm">${escapeHtml(content)}</p>
+                    </div>
+                </div>
+            `;
+        } else if (role === 'assistant') {
+            messageDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                </div>
+                <div class="bg-blackbook-50 rounded-lg p-3 max-w-[80%]">
+                    <div class="text-sm text-blackbook-700 prose prose-sm">${formatAiResponse(content)}</div>
+                </div>
+            `;
+        } else if (role === 'error') {
+            const errorId = 'error-' + Date.now();
+            messageDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="bg-red-50 rounded-lg p-3 max-w-[80%]">
+                    <p class="text-sm text-red-700">${escapeHtml(content)}</p>
+                    <button onclick="retryLastMessage('${errorId}')"
+                            class="mt-2 text-xs text-red-600 hover:text-red-800 underline flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Retry
+                    </button>
+                </div>
+            `;
+            messageDiv.id = errorId;
+            messageDiv.dataset.lastMessage = lastSentMessage || '';
+        }
+
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Retry last message after an error
+    function retryLastMessage(errorId) {
+        const errorDiv = document.getElementById(errorId);
+        if (!errorDiv) return;
+
+        const message = errorDiv.dataset.lastMessage;
+        if (!message) {
+            showToast('No message to retry', 'error');
+            return;
+        }
+
+        // Remove the error message
+        errorDiv.remove();
+
+        // Also remove the user's message that preceded it (go back one)
+        const messages = document.getElementById('ai-messages');
+        const lastUserMsg = messages.querySelector('.flex.gap-3:last-child');
+        if (lastUserMsg && lastUserMsg.querySelector('.bg-purple-600')) {
+            lastUserMsg.remove();
+        }
+
+        // Resend the message
+        document.getElementById('ai-message-input').value = message;
+        sendAiMessage(new Event('submit'));
+    }
+
+    // Get user-friendly error message
+    function getFriendlyErrorMessage(error, response) {
+        if (response) {
+            if (response.status === 503) {
+                return 'AI service is temporarily unavailable. Please try again in a moment.';
+            }
+            if (response.status === 429) {
+                return 'Too many requests. Please wait a moment before trying again.';
+            }
+            if (response.status === 401 || response.status === 403) {
+                return 'Authentication error. Please check your API key in Settings.';
+            }
+            if (response.status >= 500) {
+                return 'Server error. Please try again later.';
+            }
+        }
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            return 'Network error. Please check your connection and try again.';
+        }
+        return 'Something went wrong. Please try again.';
+    }
+
+    function formatAiResponse(content) {
+        // Simple markdown-like formatting
+        let formatted = escapeHtml(content);
+
+        // Bold: **text**
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // Italic: *text*
+        formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+        // Line breaks
+        formatted = formatted.replace(/\n/g, '<br>');
+
+        // URLs
+        formatted = formatted.replace(
+            /(https?:\/\/[^\s<]+)/g,
+            '<a href="$1" target="_blank" class="text-purple-600 hover:underline">$1</a>'
+        );
+
+        return formatted;
+    }
+
+    // Handle keyboard shortcuts for input
+    function handleInputKeydown(event) {
+        // Enter without Shift sends the message
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendAiMessage(event);
+        }
+        // Shift+Enter adds a new line (default behavior for textarea)
+    }
+
+    // Auto-resize textarea as user types
+    function autoResizeInput(textarea) {
+        // Reset height to auto to get the correct scrollHeight
+        textarea.style.height = 'auto';
+        // Set the height to scrollHeight (content height)
+        const maxHeight = 120; // Max height in pixels (roughly 5 lines)
+        const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+        textarea.style.height = newHeight + 'px';
+    }
+
+    // Close sidebar on escape key (only if input not focused or empty)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const input = document.getElementById('ai-message-input');
+            // Close if input is empty or not focused
+            if (!input || input.value.trim() === '' || document.activeElement !== input) {
+                closeAiSidebar();
+            } else {
+                // Clear input first, then close on next Escape
+                input.value = '';
+                autoResizeInput(input);
+            }
+        }
+    });
+
+    // ======================
+    // Suggestion Functions
+    // ======================
+
+    // Load pending suggestions for the entity
+    async function loadPendingSuggestions() {
+        const entityType = document.getElementById('ai-entity-type').value;
+        const entityId = document.getElementById('ai-entity-id').value;
+
+        if (!entityType || !entityId) return;
+
+        try {
+            const response = await fetch(`/ai-chat/suggestions/${entityType}/${entityId}`);
+            if (!response.ok) return;
+
+            const suggestions = await response.json();
+            renderSuggestions(suggestions);
+        } catch (error) {
+            console.error('Failed to load suggestions:', error);
+        }
+    }
+
+    // Render suggestions in the panel
+    function renderSuggestions(suggestions) {
+        const panel = document.getElementById('ai-suggestions-panel');
+        const list = document.getElementById('ai-suggestions-list');
+        const count = document.getElementById('suggestion-count');
+
+        if (!suggestions || suggestions.length === 0) {
+            panel.classList.add('hidden');
+            return;
+        }
+
+        panel.classList.remove('hidden');
+        count.textContent = suggestions.length;
+
+        list.innerHTML = suggestions.map(s => `
+            <div class="bg-white rounded-lg p-2 border border-purple-100 shadow-sm" data-suggestion-id="${s.id}">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-purple-600 font-medium capitalize">${formatFieldName(s.field_name)}</div>
+                        <div class="text-sm text-blackbook-700 truncate" title="${escapeHtml(s.suggested_value)}">${escapeHtml(s.suggested_value)}</div>
+                        ${s.current_value ? `<div class="text-xs text-blackbook-400 line-through truncate">${escapeHtml(s.current_value)}</div>` : ''}
+                        ${s.confidence_percent ? `<div class="text-xs text-blackbook-400">${s.confidence_percent}% confidence</div>` : ''}
+                    </div>
+                    <div class="flex gap-1 flex-shrink-0">
+                        <button onclick="acceptSuggestion('${s.id}')"
+                                class="p-1 text-green-600 hover:bg-green-100 rounded" title="Accept">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </button>
+                        <button onclick="rejectSuggestion('${s.id}')"
+                                class="p-1 text-red-600 hover:bg-red-100 rounded" title="Reject">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Format field name for display
+    function formatFieldName(fieldName) {
+        return fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    // Accept a single suggestion
+    async function acceptSuggestion(suggestionId) {
+        try {
+            const response = await fetch(`/ai-chat/suggestions/${suggestionId}/accept`, {
+                method: 'POST',
+            });
+
+            if (!response.ok) throw new Error('Failed to accept suggestion');
+
+            // Remove the suggestion card with animation
+            const card = document.querySelector(`[data-suggestion-id="${suggestionId}"]`);
+            if (card) {
+                card.style.transition = 'opacity 0.3s, transform 0.3s';
+                card.style.opacity = '0';
+                card.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    card.remove();
+                    updateSuggestionCount();
+                }, 300);
+            }
+
+            // Show success notification
+            showToast('Suggestion applied!', 'success');
+
+        } catch (error) {
+            console.error('Error accepting suggestion:', error);
+            showToast('Failed to apply suggestion', 'error');
+        }
+    }
+
+    // Reject a single suggestion
+    async function rejectSuggestion(suggestionId) {
+        try {
+            const response = await fetch(`/ai-chat/suggestions/${suggestionId}/reject`, {
+                method: 'POST',
+            });
+
+            if (!response.ok) throw new Error('Failed to reject suggestion');
+
+            // Remove the suggestion card with animation
+            const card = document.querySelector(`[data-suggestion-id="${suggestionId}"]`);
+            if (card) {
+                card.style.transition = 'opacity 0.3s, transform 0.3s';
+                card.style.opacity = '0';
+                card.style.transform = 'translateX(-100%)';
+                setTimeout(() => {
+                    card.remove();
+                    updateSuggestionCount();
+                }, 300);
+            }
+
+        } catch (error) {
+            console.error('Error rejecting suggestion:', error);
+            showToast('Failed to reject suggestion', 'error');
+        }
+    }
+
+    // Accept all pending suggestions
+    async function acceptAllSuggestions() {
+        const entityType = document.getElementById('ai-entity-type').value;
+        const entityId = document.getElementById('ai-entity-id').value;
+
+        try {
+            const response = await fetch(`/ai-chat/suggestions/${entityType}/${entityId}/accept-all`, {
+                method: 'POST',
+            });
+
+            if (!response.ok) throw new Error('Failed to accept all suggestions');
+
+            const data = await response.json();
+            showToast(`Applied ${data.accepted_count} suggestions!`, 'success');
+
+            // Hide the panel
+            document.getElementById('ai-suggestions-panel').classList.add('hidden');
+
+        } catch (error) {
+            console.error('Error accepting all suggestions:', error);
+            showToast('Failed to apply suggestions', 'error');
+        }
+    }
+
+    // Reject all pending suggestions
+    async function rejectAllSuggestions() {
+        const entityType = document.getElementById('ai-entity-type').value;
+        const entityId = document.getElementById('ai-entity-id').value;
+
+        try {
+            const response = await fetch(`/ai-chat/suggestions/${entityType}/${entityId}/reject-all`, {
+                method: 'POST',
+            });
+
+            if (!response.ok) throw new Error('Failed to reject all suggestions');
+
+            // Hide the panel
+            document.getElementById('ai-suggestions-panel').classList.add('hidden');
+
+        } catch (error) {
+            console.error('Error rejecting all suggestions:', error);
+            showToast('Failed to reject suggestions', 'error');
+        }
+    }
+
+    // Update suggestion count badge
+    function updateSuggestionCount() {
+        const list = document.getElementById('ai-suggestions-list');
+        const count = document.getElementById('suggestion-count');
+        const panel = document.getElementById('ai-suggestions-panel');
+
+        const remaining = list.querySelectorAll('[data-suggestion-id]').length;
+        count.textContent = remaining;
+
+        if (remaining === 0) {
+            panel.classList.add('hidden');
+        }
+    }
+
+    // Simple toast notification
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white z-50 ${
+            type === 'success' ? 'bg-green-600' :
+            type === 'error' ? 'bg-red-600' : 'bg-blackbook-600'
+        }`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.transition = 'opacity 0.3s';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 2000);
+    }
+
+    // Load suggestions when sidebar opens
+    const originalOpenAiSidebar = openAiSidebar;
+    openAiSidebar = function() {
+        originalOpenAiSidebar();
+        loadPendingSuggestions();
+    };
+
+    // Refresh suggestions after sending a message (after response is received)
+    const originalSendAiMessage = sendAiMessage;
+    sendAiMessage = async function(event) {
+        event.preventDefault();
+
+        const input = document.getElementById('ai-message-input');
+        const message = input.value.trim();
+
+        if (!message || aiIsLoading) return;
+
+        // Store message for retry functionality
+        lastSentMessage = message;
+
+        // Get entity info
+        const entityType = document.getElementById('ai-entity-type').value;
+        const entityId = document.getElementById('ai-entity-id').value;
+
+        // Get selected provider and model (only used for new conversations)
+        const providerName = getSelectedProvider();
+        const modelName = getSelectedModel();
+
+        // Clear input, reset height, and disable
+        input.value = '';
+        autoResizeInput(input);
+        setAiLoading(true);
+
+        // Add user message to UI
+        addMessageToChat('user', message);
+
+        // Hide quick actions after first message
+        document.getElementById('ai-quick-actions').classList.add('hidden');
+
+        let response;
+        try {
+            response = await fetch('/ai-chat/message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message,
+                    entity_type: entityType,
+                    entity_id: entityId,
+                    conversation_id: aiConversationId,
+                    provider_name: aiConversationId ? null : providerName,  // Only send on first message
+                    model_name: aiConversationId ? null : modelName  // Only send on first message
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const error = new Error(errorData.detail || 'Failed to send message');
+                error.response = response;
+                throw error;
+            }
+
+            const data = await response.json();
+
+            // Store conversation ID for follow-up messages
+            if (!aiConversationId) {
+                aiConversationId = data.conversation_id;
+                document.getElementById('ai-conversation-id').value = aiConversationId;
+                // Lock the provider selector once conversation starts
+                lockProviderSelector();
+            }
+
+            // Add AI response to chat
+            addMessageToChat('assistant', data.response);
+
+            // Reload suggestions after response (AI may have created new ones)
+            setTimeout(loadPendingSuggestions, 500);
+
+        } catch (error) {
+            console.error('AI chat error:', error);
+            const friendlyMessage = getFriendlyErrorMessage(error, error.response || response);
+            addMessageToChat('error', friendlyMessage);
+        } finally {
+            setAiLoading(false);
+        }
+    };
+</script>

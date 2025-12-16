@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organizations</title>
+
+    <!-- TailwindCSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'blackbook': {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    
+<style>
+    /* Custom styles for sort indicators */
+    .sort-indicator::after {
+        content: '';
+        margin-left: 0.25rem;
+    }
+    .sort-asc::after {
+        content: ' \2191';
+    }
+    .sort-desc::after {
+        content: ' \2193';
+    }
+</style>
+
+</head>
+<body class="bg-blackbook-50 text-blackbook-900 min-h-screen flex flex-col">
+    <!-- Navigation -->
+    <nav class="bg-blackbook-800 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold">
+                        Perun's BlackBook
+                    </a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="/" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            Dashboard
+                        </a>
+                        <a href="/people" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            People
+                        </a>
+                        <a href="/organizations" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            Organizations
+                        </a>
+                        <a href="/interactions" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            Interactions
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
+        
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-blackbook-900">Organizations</h1>
+            <p class="text-sm text-blackbook-500">1259 total records</p>
+        </div>
+        <a href="/organizations/new"
+           class="inline-flex items-center px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            New Organization
+        </a>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="bg-white rounded-lg shadow-md p-4">
+        <form id="filter-form" class="flex flex-wrap gap-4 items-end">
+            <!-- Search Input -->
+            <div class="flex-1 min-w-[200px]">
+                <label for="search" class="block text-sm font-medium text-blackbook-700 mb-1">
+                    Search
+                </label>
+                <input
+                    type="search"
+                    id="search"
+                    name="q"
+                    value=""
+                    placeholder="Search name, category, description, notes..."
+                    class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                    hx-get="/organizations/table"
+                    hx-trigger="input changed delay:300ms, search"
+                    hx-target="#org-table-container"
+                    hx-include="#filter-form"
+                >
+            </div>
+
+            <!-- Type Filter -->
+            <div class="w-44">
+                <label for="org_type" class="block text-sm font-medium text-blackbook-700 mb-1">
+                    Type
+                </label>
+                <select
+                    id="org_type"
+                    name="org_type"
+                    class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                    hx-get="/organizations/table"
+                    hx-trigger="change"
+                    hx-target="#org-table-container"
+                    hx-include="#filter-form"
+                >
+                    <option value="">All Types</option>
+                    
+                    <option value="investment_firm" >
+                        Investment Firm
+                    </option>
+                    
+                    <option value="company" >
+                        Company
+                    </option>
+                    
+                    <option value="law_firm" >
+                        Law Firm
+                    </option>
+                    
+                    <option value="bank" >
+                        Bank
+                    </option>
+                    
+                    <option value="accelerator" >
+                        Accelerator
+                    </option>
+                    
+                    <option value="other" >
+                        Other
+                    </option>
+                    
+                </select>
+            </div>
+
+            <!-- Tag Filter -->
+            <div class="w-48">
+                <label for="tag_id" class="block text-sm font-medium text-blackbook-700 mb-1">
+                    Tag
+                </label>
+                <select
+                    id="tag_id"
+                    name="tag_id"
+                    class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                    hx-get="/organizations/table"
+                    hx-trigger="change"
+                    hx-target="#org-table-container"
+                    hx-include="#filter-form"
+                >
+                    <option value="">All Tags</option>
+                    
+                    <option value="28668c1a-2de0-4a52-be8d-5dedc3e2493a" >
+                        AM
+                    </option>
+                    
+                    <option value="2519dcfc-5333-43a0-a3f7-46d62c091b69" >
+                        API tools
+                    </option>
+                    
+                    <option value="8f3d837f-7f19-40dc-83dc-b65f8e2fb5c0" >
+                        Accelerator / Incubator / Studio
+                    </option>
+                    
+                    <option value="de034203-c6e2-4d6c-b20c-803ccd99c82d" >
+                        Accounting Data
+                    </option>
+                    
+                    <option value="40edf4d0-8789-41c3-b33f-40baa7079afe" >
+                        Actuarial Firms
+                    </option>
+                    
+                    <option value="a498edeb-479f-4b2e-a26d-134ca836299a" >
+                        Advice
+                    </option>
+                    
+                    <option value="7134839d-fdec-468e-aaa6-392d69777cbd" >
+                        Alternative Investing
+                    </option>
+                    
+                    <option value="16f4c562-2534-43ea-b433-35ae384a8826" >
+                        Angel(s)
+                    </option>
+                    
+                    <option value="22b3bc28-1488-4fcc-a8f8-b20ce356d571" >
+                        Annuities
+                    </option>
+                    
+                    <option value="d521fe94-d3ff-4bb2-890e-8decf8a95f87" >
+                        Banking
+                    </option>
+                    
+                    <option value="b9495d76-61d8-49f6-9d75-2e772c60fac2" >
+                        Banking Data
+                    </option>
+                    
+                    <option value="11f1f7ae-33d7-442b-a8ac-cb3b1da97226" >
+                        Banking as a Service
+                    </option>
+                    
+                    <option value="e35055d2-0386-4b1c-9972-47e5199103fa" >
+                        Blockchain
+                    </option>
+                    
+                    <option value="8ad2167b-ad13-47ee-867b-263de25bbe89" >
+                        Card Issuing
+                    </option>
+                    
+                    <option value="649b0760-190d-4a67-8b89-89c31f77874f" >
+                        Commercial Insur
+                    </option>
+                    
+                    <option value="6b5098ec-de27-498c-a6fe-9d551438499a" >
+                        Compliance
+                    </option>
+                    
+                    <option value="634c695b-7c97-4632-8374-1ec0ccb556c5" >
+                        Corp
+                    </option>
+                    
+                    <option value="587f6186-84d0-4b95-887e-09fb5f74e72a" >
+                        Corporate VC
+                    </option>
+                    
+                    <option value="6e48616e-2344-495e-973b-8912fbb18391" >
+                        Credit Data
+                    </option>
+                    
+                    <option value="bc342190-49b4-438a-8392-b573af2a5603" >
+                        Crypto Trading
+                    </option>
+                    
+                    <option value="94200074-ac67-4b35-9a8a-1922b1a28271" >
+                        Cyber Insurance
+                    </option>
+                    
+                    <option value="60263fc7-729e-4f8f-b71d-12b2cec98c80" >
+                        Embedded Insurance
+                    </option>
+                    
+                    <option value="6d6ce51d-d5e8-470c-b8b8-5894c3e23ef5" >
+                        Embedded Payroll
+                    </option>
+                    
+                    <option value="46ffc9fe-3137-4f5a-8a1f-c38665802479" >
+                        Emedded Lending
+                    </option>
+                    
+                    <option value="7cb437a8-7394-4bf8-8be6-a4f9a9b23228" >
+                        Family Office
+                    </option>
+                    
+                    <option value="e901aaec-da61-4cbd-b70f-d2cffb06b4c5" >
+                        FinSer Tools
+                    </option>
+                    
+                    <option value="ae390db2-9683-42f6-8bf7-292159ecbe11" >
+                        Fraud / Identity
+                    </option>
+                    
+                    <option value="a6c57f71-d1a6-429c-a949-3404fe8e27fd" >
+                        Freelancers
+                    </option>
+                    
+                    <option value="67fcdaf1-0c7d-47c9-b381-3099e7bfd00f" >
+                        Fund of Funds
+                    </option>
+                    
+                    <option value="b5500ce6-fb7c-4753-974f-a7245c7e91b3" >
+                        HR &amp; Benefits
+                    </option>
+                    
+                    <option value="5361eced-740a-4d93-a561-d15605f7c41e" >
+                        Headhunting Firm
+                    </option>
+                    
+                    <option value="52505af4-cecb-4985-abfa-94e4e491e1ce" >
+                        Health
+                    </option>
+                    
+                    <option value="8bafb616-c145-4391-ab06-364581003991" >
+                        Hedge Fund - Activist
+                    </option>
+                    
+                    <option value="d1f32120-2e07-4170-9ba2-765597b07ee0" >
+                        Hedge Fund / Alternative AM
+                    </option>
+                    
+                    <option value="50592f67-e545-4b58-b78b-d073c44164c3" >
+                        HoldCo
+                    </option>
+                    
+                    <option value="7c5dc090-1441-44af-8755-0079173d146e" >
+                        IMO
+                    </option>
+                    
+                    <option value="5d4e296b-3e6a-4e9f-a254-83218fadb8cf" >
+                        InsurCo
+                    </option>
+                    
+                    <option value="e8364946-82e7-4577-9a17-3e004aab667a" >
+                        Internt&#39;l Payments
+                    </option>
+                    
+                    <option value="cebdc269-b997-4c3d-9101-92b8156deada" >
+                        LGBTQ
+                    </option>
+                    
+                    <option value="dd236da3-2fd6-4fb2-ada1-d9cca8706990" >
+                        Lending
+                    </option>
+                    
+                    <option value="dcd38ff4-1462-4663-8620-2f1de12e45f1" >
+                        Life Insurance
+                    </option>
+                    
+                    <option value="47514e75-651d-45fb-9988-b19d59204e90" >
+                        Mental Health
+                    </option>
+                    
+                    <option value="c57a48e6-0b6c-42d9-bb6b-55d5c402f851" >
+                        Money Movement / Payment Ops
+                    </option>
+                    
+                    <option value="54918488-cfb7-4507-ae45-2934f6a8be8d" >
+                        Non-Profit Think Tank
+                    </option>
+                    
+                    <option value="84e59f57-e949-4867-aef8-0d64061de57a" >
+                        P&amp;C
+                    </option>
+                    
+                    <option value="476cbbee-f25a-4b18-ae59-891d9be960db" >
+                        PC
+                    </option>
+                    
+                    <option value="b33eed94-c55e-4a4d-b37d-177b3230f21a" >
+                        PE
+                    </option>
+                    
+                    <option value="f83a9d50-e26f-45f8-ad3f-86d3684c8496" >
+                        Payfac as a Service
+                    </option>
+                    
+                    <option value="64bfb303-f032-4c2f-b8d7-4aa6aecf2738" >
+                        Payments
+                    </option>
+                    
+                    <option value="7f834af9-7397-45cf-80da-377737f95d98" >
+                        Payroll Data
+                    </option>
+                    
+                    <option value="eaa710c6-c99b-4eb9-af7d-f5855c2266ac" >
+                        PropTech
+                    </option>
+                    
+                    <option value="442d2245-6c71-49c5-aada-b1412e9899db" >
+                        RIA
+                    </option>
+                    
+                    <option value="6dc153a0-6459-4c4a-b83e-1931ec16581d" >
+                        RIA Network
+                    </option>
+                    
+                    <option value="62480f48-251c-4390-b2d0-d923243e7f77" >
+                        RIA tools
+                    </option>
+                    
+                    <option value="046b6fe1-2414-49b7-9dda-eb022302c312" >
+                        Retirement
+                    </option>
+                    
+                    <option value="f34c507b-15b3-4618-8763-b170e31cbcb0" >
+                        Robo &amp; Investing
+                    </option>
+                    
+                    <option value="e4ee0219-a99c-4d3c-8b2f-eb3fdcfc7fd2" >
+                        SME Insurance
+                    </option>
+                    
+                    <option value="bf82be4d-df3c-4e4d-8947-2f344cda9b98" >
+                        SWF
+                    </option>
+                    
+                    <option value="650d64af-1131-413e-af80-49052c996c75" >
+                        Shortseller
+                    </option>
+                    
+                    <option value="6d822ee9-53cf-4d79-ae20-1db5c507afe1" >
+                        Stock Brokerage
+                    </option>
+                    
+                    <option value="fe1e3265-5ad0-40e9-a657-8f6d70c2d0a0" >
+                        VC
+                    </option>
+                    
+                    <option value="9e125c5e-5418-4f4f-9177-f0fd7c8af87e" >
+                        iBank | Consulting
+                    </option>
+                    
+                </select>
+            </div>
+
+            <!-- Hidden inputs for sort state -->
+            <input type="hidden" name="sort_by" id="sort_by" value="name">
+            <input type="hidden" name="sort_order" id="sort_order" value="asc">
+            <input type="hidden" name="page" id="page" value="1">
+
+            <!-- Per Page Selector -->
+            <div class="w-32">
+                <label for="per_page" class="block text-sm font-medium text-blackbook-700 mb-1">
+                    Per Page
+                </label>
+                <select
+                    id="per_page"
+                    name="per_page"
+                    class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500"
+                    onchange="changePerPage(this.value)"
+                >
+                    <option value="20" selected>20</option>
+                    <option value="50" >50</option>
+                    <option value="100" >100</option>
+                    <option value="250" >250</option>
+                </select>
+            </div>
+
+            <!-- Clear Filters Button -->
+            <div>
+                <a
+                    href="/organizations"
+                    class="px-4 py-2 text-sm bg-blackbook-100 text-blackbook-700 rounded-md hover:bg-blackbook-200"
+                >
+                    Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table Container -->
+    <div id="org-table-container">
+        <!-- Organizations Table -->
+<!-- Store current page for JavaScript to read after swap -->
+<div id="current-page-data" data-page="1" style="display:none;"></div>
+
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <table class="min-w-full divide-y divide-blackbook-200">
+        <thead class="bg-blackbook-50">
+            <tr>
+                <th
+                    class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider cursor-pointer hover:bg-blackbook-100 sort-indicator sort-asc"
+                    onclick="sortBy('name')"
+                >
+                    Name
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                    Description
+                </th>
+                <th
+                    class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider cursor-pointer hover:bg-blackbook-100 sort-indicator "
+                    onclick="sortBy('org_type')"
+                >
+                    Type
+                </th>
+                <th
+                    class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider cursor-pointer hover:bg-blackbook-100 sort-indicator "
+                    onclick="sortBy('category')"
+                >
+                    Category
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                    People
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
+                    Website
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-blackbook-200">
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/8ba9fe90-1a8f-47f3-970a-7ec109c114dc" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            1/0 Capital
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="nexus of consumer credit and technology.
+We’ve grown a portfolio of companies addressing major problems in consumer credit: enabling lending in novel educational markets, streamlining the mortgage application process, and providing advanced analytics on asset-backed securities and whole loans.">
+            nexus of consumer credit and technology.
+We’ve grown a...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    VC
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Ross Lukatsevich
+            </span>
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Andrew Unger
+            </span>
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Zach Frankel
+            </span>
+            
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blackbook-100 text-blackbook-600">
+                +4
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://onezerocapital.com/team/" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            onezerocapital.com/team/
+        </a>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/29cf5045-3be9-4fe1-8f85-a1c35a7810fb" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            1843 Capital
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="was created in 2016 as an early stage venture capital firm with a difference. We are managed differently; our executive team are women. We invest differently; we value diverse founders and board members. We engage differently; with capital, counsel and connectivity.
+
+&gt;&gt; Dessy Levinson mentioned them; focus on SilverTech">
+            was created in 2016 as an early stage venture capital...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    VC
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            
+            
+            <span class="text-sm text-blackbook-400">-</span>
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://1843capital.com/portfolio/" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            1843capital.com/portfolio/
+        </a>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/096dfe4b-42f7-4a18-9422-931bd09ac4c9" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            1984 Ventures
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="1. We focus on seed rounds. It’s what we know and love and where we provide the most value
+2. We are drawn to founders with industry insights and a strong engineering culture
+3. We are flexible on the mechanics. We can use a SAFE plus pro-rata or a priced round, and can lead or participate.
+4. We don&#39;t take board seats.">
+            1. We focus on seed rounds. It’s what we know and love...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    VC
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Remy Adeeb
+            </span>
+            
+            
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="text-sm text-blackbook-400">-</span>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/8681b4a5-ee70-4290-9676-a16e19368cc3" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            401kplans.com
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="Digital Retirement Plan Marketplace For Financial Advisors">
+            Digital Retirement Plan Marketplace For Financial Advisors
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+            Company
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    Retirement
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            
+            
+            <span class="text-sm text-blackbook-400">-</span>
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://www.401kplans.com/" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            www.401kplans.com/
+        </a>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/a636989a-1a4d-4b47-a7b5-2f107fd40401" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            500 Startups
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="500 Startups is a global venture capital firm with a network of startup programs headquartered in Silicon Valley with over $454M in committed capital across 4 main funds and 15 thematic funds. We have invested in 2,200+ technology startups globally since our inception in 2010 including: Twilio (NYSE: TWLO), Credit Karma, SendGrid, Grab, GitLab, Bukalapak, Canva, Udemy, TalkDesk, Intercom, Ipsy, MakerBot (acq’d by SSYS), Wildfire (acq’d by GOOG), and Viki (acq’d by Rakuten). Our team of 150 people based in 20 countries manage venture investments across 74 countries and speak over 25 languages. In addition to investments, we are passionate about helping build viable startup ecosystems around the world and run educational programs, events and conferences, and partnerships globally. Our investment team and mentor network has operational experience at companies such as PayPal, Google, Facebook, Instagram, YouTube, Yahoo, LinkedIn, Twitter and Apple.">
+            500 Startups is a global venture capital firm with a...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-pink-100 text-pink-800">
+            Accelerator
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    VC
+                </span>
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    Accelerator / Incubator / Studio
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Sheel Mohnot
+            </span>
+            
+            
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="text-sm text-blackbook-400">-</span>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/a99c4364-12df-456d-9d20-0093c7c9910e" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            8VC
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="8VC seeks to enable industry transformation. In a wave of creative destruction, they believe emerging platforms will replace the decades old technology infrastructure behind many industries, promoting greater innovation and global prosperity.">
+            8VC seeks to enable industry transformation. In a wave...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    VC
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Jake Medwell
+            </span>
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Zach Rivkin
+            </span>
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Joe Lonsdale
+            </span>
+            
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blackbook-100 text-blackbook-600">
+                +2
+            </span>
+            
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://www.8vc.com/" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            www.8vc.com/
+        </a>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/8bee9d26-6dfa-4c6e-9bfe-9a27b0d3548b" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            ACME (formely Sherpa Capital)
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="Sherpa Capital is a San Francisco-based venture capital firm that supports the most promising emerging technology-enabled companies, helping them become global brands beloved by their customers.
+
+Diversity and inclusion are core values at Sherpa, both in the team members they hire and in the entrepreneurs they choose to fund. They are proud of their track record of supporting founders and recruiting and hiring candidates from historically underrepresented backgrounds, including women, people of color, members of the LGBTQ community and immigrants. We believe that no race, gender, nationality or sexual orientation has a monopoly on talented entrepreneurs, and they continually put their values into action through the companies and ideas they support.
+Founders Scott Stanford, Shervin Pishevar">
+            Sherpa Capital is a San Francisco-based venture capital...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    VC
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Brian Yee (Hoya)
+            </span>
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Alex Fayette
+            </span>
+            
+            
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://www.acme.vc/" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            www.acme.vc/
+        </a>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/ef88e999-f40a-45db-8a15-bbd99aa05f79" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            AIG
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+            Company
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    InsurCo
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            
+            
+            <span class="text-sm text-blackbook-400">-</span>
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="text-sm text-blackbook-400">-</span>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/cce947ac-4ea9-44fc-b3ca-24f6547cb8cf" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            AIP Marketing
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="High potential in a small, stable network.  Life and annuity shop.">
+            High potential in a small, stable network.  Life and...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+            Company
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    IMO
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Mike Kalen
+            </span>
+            
+            
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="text-sm text-blackbook-400">-</span>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/eada2dfc-8fd3-451b-b0d1-9bc8d1358f5f" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            AQR
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    Hedge Fund / Alternative AM
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            
+            
+            <span class="text-sm text-blackbook-400">-</span>
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://www.aqr.com/About-Us/OurFirm#leadership" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            www.aqr.com/About-Us/OurFir...
+        </a>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/ff5c6816-b7b2-4bce-a330-cf11b23e9edc" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            ATX Venture Partners
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="is an early-stage venture capital firm with funds investing in B2B software, marketplaces, and applications.">
+            is an early-stage venture capital firm with funds...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    VC
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            
+            
+            <span class="text-sm text-blackbook-400">-</span>
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="text-sm text-blackbook-400">-</span>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/96a54861-9b75-4de6-9930-13597bd9a1ec" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            AXA
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="">
+            -
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+            Company
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    InsurCo
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Aaron Sarfatti
+            </span>
+            
+            
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="text-sm text-blackbook-400">-</span>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/2caf0f40-119e-47b0-9268-65f064fbd5b8" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            AXA Venture Partners
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="Maybe later">
+            Maybe later
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    Corporate VC
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Manish Agarwal
+            </span>
+            
+            
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://www.axavp.com/" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            www.axavp.com/
+        </a>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/a37ec9b0-f3fa-4ccb-9b9d-dd9ab14fc173" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            Aave
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="an open source and non-custodial protocol enabling the creation of money markets. Users can earn interest on deposits and borrow assets.">
+            an open source and non-custodial protocol enabling the...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+            Company
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    Blockchain
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            
+            
+            <span class="text-sm text-blackbook-400">-</span>
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://aave.com/" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            aave.com/
+        </a>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/e71d9351-e304-4c85-ac94-d14333110723" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            Abstract Ventures
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="Abstract Ventures is an early-stage venture capital firm. We operate at the speed of our founders and embody the creative hustle required to achieve unimaginable goals. Abstract is built on a rapidly growing community of the most successful venture investors in the world. Our network empowers great founders to efficiently secure funding from their ideal partners.">
+            Abstract Ventures is an early-stage venture capital...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    VC
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Ramtin Naimi
+            </span>
+            
+            
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://www.abstractvc.com/" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            www.abstractvc.com/
+        </a>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/77d3d9f7-c4cc-4207-8465-d12ca9af745a" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            Abu Dhabi Investment Authority (ADIA)
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="- Focus: Passive and active investments across public and private markets globally.
+- Website: www.adia.ae">
+            - Focus: Passive and active investments across public...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    SWF
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            
+            
+            <span class="text-sm text-blackbook-400">-</span>
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="text-sm text-blackbook-400">-</span>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/32bfc293-ffda-49c8-92c0-a23876bd42de" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            Abu Dhabi Investment Council (ADIC)
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="The Abu Dhabi Investment Council is an investing arm / sovereign wealth fund of the Government of Abu Dhabi. It is responsible for investing the Government’s surplus financial resources through a globally diversified investment strategy.
+- Focus: Diversified global investments including financial services, infrastructure, and private equity.
+- Website: www.adic.ae">
+            The Abu Dhabi Investment Council is an investing arm /...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    SWF
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Brad Hedrick
+            </span>
+            
+            
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="text-sm text-blackbook-400">-</span>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/adbc978f-f339-4a79-be87-b71e1b454bf6" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            Accel Partners
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="Early, Growth and Venture Development Utilizing a focused, “prepared mind” approach to investing, we partner with businesses that show potential for significant long-term success in specific sectors. Emphasizing synergy in our portfolio enables us to offer the advantages of a cohesive, cooperative Accel community, including access to an  extensive network of past and present entrepreneurs.
+Stage/Size of Investments: Accel invests in companies from their genesis to growth. Its funding rounds include seed, early stage venture and later stage venture.">
+            Early, Growth and Venture Development Utilizing a...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    VC
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Daniel Levine
+            </span>
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Dixon Doll
+            </span>
+            
+            <span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
+                Steve Loughlin
+            </span>
+            
+            
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://www.accel.com" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            www.accel.com
+        </a>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/abc5ee4f-69fd-4cfc-b09f-9d227c3561d8" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            Access Ventures
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="fund business that have a social mission; 
+ a Louisville, KY based private operating foundation, is working to initiate systemic change in communities that results in a more inclusive and creative economy: an economy that functions for all people, and in which everyone is valued.">
+            fund business that have a social mission; 
+ a...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    VC
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            
+            
+            <span class="text-sm text-blackbook-400">-</span>
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://accessventures.org/" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            accessventures.org/
+        </a>
+        
+    </td>
+</tr>
+            
+            <tr class="hover:bg-blackbook-50">
+    <!-- Name -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/organizations/9c732538-f156-4429-97d0-b2547afa0cc5" class="text-sm font-medium text-blackbook-900 hover:text-blackbook-600">
+            Accion Venture Lab
+        </a>
+    </td>
+
+    <!-- Description -->
+    <td class="px-6 py-4">
+        <div class="text-sm text-blackbook-500 max-w-xs truncate" title="Typically invest U.S. $500,000 in seed-stage startups; an active and engaged investor, creating value in our portfolio by providing investees with strategic and operational support across a broad range of functional areas.
+We look for startups that are leveraging new technologies, data, and analytical tools to acquire, engage, and serve previously underserved individuals and small businesses.">
+            Typically invest U.S. $500,000 in seed-stage startups;...
+        </div>
+    </td>
+
+    <!-- Type -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Investment Firm
+        </span>
+    </td>
+
+    <!-- Category -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+                
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                    VC
+                </span>
+                
+            
+        </div>
+    </td>
+
+    <!-- People/Contacts -->
+    <td class="px-6 py-4">
+        <div class="flex flex-wrap gap-1">
+            
+            
+            
+            <span class="text-sm text-blackbook-400">-</span>
+            
+        </div>
+    </td>
+
+    <!-- Website -->
+    <td class="px-6 py-4 whitespace-nowrap">
+        
+        <a href="https://www.accion.org/how-we-work/invest/accion-venture-lab#portfolio" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+            www.accion.org/how-we-work/...
+        </a>
+        
+    </td>
+</tr>
+            
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+
+<div class="flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow-md mt-4">
+    <div class="flex-1 flex justify-between sm:hidden">
+        
+        
+        <button
+            type="button"
+            onclick="goToPage(2)"
+            class="ml-3 relative inline-flex items-center px-4 py-2 border border-blackbook-300 text-sm font-medium rounded-md text-blackbook-700 bg-white hover:bg-blackbook-50"
+        >
+            Next
+        </button>
+        
+    </div>
+    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+            <p class="text-sm text-blackbook-700">
+                Showing
+                <span class="font-medium">1</span>
+                to
+                <span class="font-medium">20</span>
+                of
+                <span class="font-medium">1259</span>
+                results
+            </p>
+        </div>
+        <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <!-- Previous -->
+                <button
+                    type="button"
+                    onclick="goToPage(0)"
+                    disabled
+                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-blackbook-300 bg-white text-sm font-medium text-blackbook-500 hover:bg-blackbook-50 opacity-50 cursor-not-allowed"
+                >
+                    <span class="sr-only">Previous</span>
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+
+                <!-- Page numbers -->
+                
+                
+
+                
+
+                
+                <button
+                    type="button"
+                    onclick="goToPage(1)"
+                    class="relative inline-flex items-center px-4 py-2 border border-blackbook-300 text-sm font-medium bg-blackbook-600 text-white"
+                >
+                    1
+                </button>
+                
+                <button
+                    type="button"
+                    onclick="goToPage(2)"
+                    class="relative inline-flex items-center px-4 py-2 border border-blackbook-300 text-sm font-medium bg-white text-blackbook-700 hover:bg-blackbook-50"
+                >
+                    2
+                </button>
+                
+                <button
+                    type="button"
+                    onclick="goToPage(3)"
+                    class="relative inline-flex items-center px-4 py-2 border border-blackbook-300 text-sm font-medium bg-white text-blackbook-700 hover:bg-blackbook-50"
+                >
+                    3
+                </button>
+                
+
+                
+                
+                <span class="relative inline-flex items-center px-4 py-2 border border-blackbook-300 bg-white text-sm font-medium text-blackbook-700">...</span>
+                
+                <button
+                    type="button"
+                    onclick="goToPage(63)"
+                    class="relative inline-flex items-center px-4 py-2 border border-blackbook-300 bg-white text-sm font-medium text-blackbook-700 hover:bg-blackbook-50"
+                >
+                    63
+                </button>
+                
+
+                <!-- Next -->
+                <button
+                    type="button"
+                    onclick="goToPage(2)"
+                    
+                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-blackbook-300 bg-white text-sm font-medium text-blackbook-500 hover:bg-blackbook-50 "
+                >
+                    <span class="sr-only">Next</span>
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </nav>
+        </div>
+    </div>
+</div>
+
+    </div>
+</div>
+
+<script>
+    // Handle per page change with proper URL building (excludes empty params)
+    function changePerPage(perPage) {
+        let params = new URLSearchParams();
+        params.set('per_page', perPage);
+
+        const q = document.getElementById('search').value;
+        if (q) params.set('q', q);
+
+        const orgType = document.getElementById('org_type').value;
+        if (orgType) params.set('org_type', orgType);
+
+        const tagId = document.getElementById('tag_id').value;
+        if (tagId) params.set('tag_id', tagId);
+
+        params.set('sort_by', document.getElementById('sort_by').value);
+        params.set('sort_order', document.getElementById('sort_order').value);
+
+        window.location.href = '/organizations?' + params.toString();
+    }
+
+    // Handle sort column clicks
+    function sortBy(column) {
+        const sortByInput = document.getElementById('sort_by');
+        const sortOrderInput = document.getElementById('sort_order');
+        const pageInput = document.getElementById('page');
+
+        if (sortByInput.value === column) {
+            // Toggle sort order
+            sortOrderInput.value = sortOrderInput.value === 'asc' ? 'desc' : 'asc';
+        } else {
+            // New column, default to ascending
+            sortByInput.value = column;
+            sortOrderInput.value = 'asc';
+        }
+
+        // Reset to page 1 when sorting changes
+        pageInput.value = '1';
+
+        // Trigger HTMX request
+        htmx.trigger('#search', 'search');
+    }
+
+    // Handle pagination
+    function goToPage(pageNum) {
+        document.getElementById('page').value = pageNum;
+        htmx.trigger('#search', 'search');
+    }
+
+    // After HTMX swap, sync the page value from the response data
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'org-table-container') {
+            const pageData = document.getElementById('current-page-data');
+            if (pageData) {
+                const newPage = pageData.dataset.page;
+                document.getElementById('page').value = newPage;
+            }
+        }
+    });
+</script>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-blackbook-800 text-white mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <p class="text-center text-sm text-blackbook-400">
+                Perun's BlackBook &copy; 2025 | Personal CRM
+            </p>
+        </div>
+    </footer>
+
+    <!-- Load stats on page load -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+
+                document.getElementById('stat-persons').textContent = stats.persons || 0;
+                document.getElementById('stat-organizations').textContent = stats.organizations || 0;
+                document.getElementById('stat-tags').textContent = stats.tags || 0;
+                document.getElementById('stat-interactions').textContent = stats.interactions || 0;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        });
+    </script>
+
+    
+</body>
+</html>

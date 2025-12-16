@@ -1,0 +1,65 @@
+{% if ignore_patterns %}
+<div class="space-y-2">
+    <!-- Group by type -->
+    {% set domains = ignore_patterns|selectattr('pattern_type.value', 'eq', 'domain')|list %}
+    {% set emails = ignore_patterns|selectattr('pattern_type.value', 'eq', 'email')|list %}
+
+    {% if domains %}
+    <div class="mb-4">
+        <h4 class="text-sm font-medium text-blackbook-700 mb-2">Domains ({{ domains|length }})</h4>
+        <div class="flex flex-wrap gap-2">
+            {% for pattern in domains %}
+            <div class="group inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-700 rounded-full text-sm">
+                <span>{{ pattern.pattern }}</span>
+                <button hx-delete="/settings/patterns/{{ pattern.id }}"
+                        hx-target="#patterns-list"
+                        hx-swap="innerHTML"
+                        hx-confirm="Remove this pattern?"
+                        class="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if emails %}
+    <div>
+        <h4 class="text-sm font-medium text-blackbook-700 mb-2">Email Patterns ({{ emails|length }})</h4>
+        <div class="flex flex-wrap gap-2">
+            {% for pattern in emails %}
+            <div class="group inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm">
+                <span>{{ pattern.pattern }}</span>
+                <button hx-delete="/settings/patterns/{{ pattern.id }}"
+                        hx-target="#patterns-list"
+                        hx-swap="innerHTML"
+                        hx-confirm="Remove this pattern?"
+                        class="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500 hover:text-blue-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<p class="text-xs text-blackbook-400 mt-4">
+    {{ ignore_patterns|length }} pattern{% if ignore_patterns|length != 1 %}s{% endif %} total
+</p>
+{% else %}
+<div class="text-center py-8">
+    <svg class="mx-auto h-12 w-12 text-blackbook-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+    </svg>
+    <h3 class="mt-2 text-sm font-medium text-blackbook-900">No ignore patterns</h3>
+    <p class="mt-1 text-sm text-blackbook-500">
+        Add patterns to filter out unwanted emails from search results.
+    </p>
+</div>
+{% endif %}

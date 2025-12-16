@@ -1,0 +1,120 @@
+<!-- Email Management Modal -->
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" id="email-manage-overlay" onclick="if(event.target === this) closeEmailModal()">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-blackbook-900">Manage Email Addresses</h3>
+                <button onclick="closeEmailModal()" class="text-blackbook-400 hover:text-blackbook-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Existing Emails List -->
+            <div class="space-y-3 mb-6" id="email-list-container">
+                {% if emails %}
+                {% for email in emails %}
+                <div class="flex items-center justify-between p-3 bg-blackbook-50 rounded-lg group" id="email-row-{{ email.id }}">
+                    <div class="flex items-center space-x-3 flex-1 min-w-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-sm text-blackbook-800 truncate">{{ email.email }}</span>
+                                {% set label_colors = {
+                                    'work': 'bg-blue-100 text-blue-700',
+                                    'personal': 'bg-green-100 text-green-700',
+                                    'other': 'bg-gray-100 text-gray-700'
+                                } %}
+                                <span class="px-2 py-0.5 text-xs rounded-full {{ label_colors.get(email.label.value, 'bg-gray-100 text-gray-700') }}">
+                                    {{ email.label.value|title }}
+                                </span>
+                                {% if email.is_primary %}
+                                <span class="px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-700">Primary</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {% if not email.is_primary %}
+                        <button hx-post="/people/{{ person_id }}/emails/{{ email.id }}/primary"
+                                hx-target="#email-manage-modal"
+                                hx-swap="innerHTML"
+                                class="text-xs text-purple-600 hover:text-purple-800 font-medium"
+                                title="Set as primary">
+                            Primary
+                        </button>
+                        {% endif %}
+                        <button hx-delete="/people/{{ person_id }}/emails/{{ email.id }}"
+                                hx-target="#email-manage-modal"
+                                hx-swap="innerHTML"
+                                hx-confirm="Are you sure you want to remove this email?"
+                                class="text-xs text-red-600 hover:text-red-800 font-medium"
+                                title="Remove email">
+                            Remove
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-sm text-blackbook-500 text-center py-4">No email addresses added yet</p>
+                {% endif %}
+            </div>
+
+            <!-- Add New Email Form -->
+            <div class="border-t border-blackbook-200 pt-4">
+                <h4 class="text-sm font-medium text-blackbook-700 mb-3">Add New Email</h4>
+                <form hx-post="/people/{{ person_id }}/emails"
+                      hx-target="#email-manage-modal"
+                      hx-swap="innerHTML"
+                      class="space-y-3">
+                    <div>
+                        <input type="email" name="email" required
+                               placeholder="email@example.com"
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent text-sm">
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <select name="label"
+                                class="flex-1 px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent text-sm">
+                            <option value="work">Work</option>
+                            <option value="personal">Personal</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <label class="flex items-center text-sm text-blackbook-600">
+                            <input type="checkbox" name="is_primary" value="true"
+                                   class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded mr-2">
+                            Primary
+                        </label>
+                    </div>
+                    <button type="submit"
+                            class="w-full px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2 text-sm">
+                        Add Email
+                    </button>
+                </form>
+            </div>
+
+            <!-- Close Button -->
+            <div class="flex justify-end mt-6 pt-4 border-t border-blackbook-200">
+                <button onclick="closeEmailModal(); location.reload();"
+                        class="px-4 py-2 bg-blackbook-100 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-200 text-sm">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function closeEmailModal() {
+    const modal = document.getElementById('email-manage-modal');
+    if (modal) {
+        modal.innerHTML = '';
+    }
+}
+
+// Close on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeEmailModal();
+    }
+});
+</script>

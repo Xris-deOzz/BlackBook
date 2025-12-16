@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen bg-blackbook-50">
+    <!-- Header -->
+    <div class="bg-white border-b border-blackbook-200 px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="/emails" class="text-blackbook-500 hover:text-blackbook-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                </a>
+                <h1 class="text-xl font-bold text-blackbook-900">{{ email.subject or '(No subject)' }}</h1>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center space-x-2">
+                <a href="{{ email.gmail_web_url }}"
+                   target="_blank"
+                   class="inline-flex items-center px-3 py-1.5 bg-blackbook-100 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-200 transition-colors">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    View in Gmail
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto p-6">
+        <div class="bg-white rounded-lg shadow">
+            <!-- Email Header -->
+            <div class="p-6 border-b border-blackbook-200">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start space-x-4">
+                        <!-- Avatar -->
+                        <div class="w-12 h-12 bg-blackbook-200 rounded-full flex items-center justify-center">
+                            <span class="text-lg font-medium text-blackbook-600">
+                                {{ (email.from_name or email.from_email or '?')[0]|upper }}
+                            </span>
+                        </div>
+
+                        <div>
+                            <p class="font-medium text-blackbook-900">
+                                {% if email.from_name %}
+                                    {{ email.from_name }}
+                                    <span class="font-normal text-blackbook-500">&lt;{{ email.from_email }}&gt;</span>
+                                {% else %}
+                                    {{ email.from_email }}
+                                {% endif %}
+                            </p>
+                            <p class="text-sm text-blackbook-500">
+                                To:
+                                {% for recipient in email.to_emails or [] %}
+                                    {{ recipient.name or recipient.email }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                            {% if email.cc_emails %}
+                            <p class="text-sm text-blackbook-500">
+                                Cc:
+                                {% for recipient in email.cc_emails %}
+                                    {{ recipient.name or recipient.email }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="text-sm text-blackbook-500">
+                        {% if email.internal_date %}
+                            {{ email.internal_date.strftime('%B %d, %Y at %H:%M') }}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Labels -->
+                {% if email.labels %}
+                <div class="mt-4 flex flex-wrap gap-2">
+                    {% for label in email.labels %}
+                        {% if label not in ['UNREAD', 'CATEGORY_PERSONAL', 'CATEGORY_UPDATES', 'CATEGORY_SOCIAL', 'CATEGORY_PROMOTIONS', 'CATEGORY_FORUMS'] %}
+                        <span class="px-2 py-0.5 text-xs font-medium bg-blackbook-100 text-blackbook-700 rounded">
+                            {{ label }}
+                        </span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Email Preview/Snippet -->
+            <div class="p-6">
+                <div class="prose prose-sm max-w-none text-blackbook-700">
+                    <p class="text-blackbook-500 italic">
+                        Email content is not stored locally. Click "View in Gmail" to read the full message.
+                    </p>
+                    <div class="mt-4 p-4 bg-blackbook-50 rounded-lg">
+                        <p class="text-blackbook-600">{{ email.snippet }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attachments -->
+            {% if email.has_attachments %}
+            <div class="px-6 pb-6">
+                <div class="p-4 bg-blackbook-50 rounded-lg">
+                    <div class="flex items-center text-sm text-blackbook-600">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                        </svg>
+                        {{ email.attachment_count }} attachment{% if email.attachment_count != 1 %}s{% endif %}
+                        <span class="ml-2 text-blackbook-400">(view in Gmail to download)</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Linked CRM Contacts -->
+            <div id="linked-contacts" class="p-6 border-t border-blackbook-200">
+                {% include "emails/_linked_contacts.html" %}
+            </div>
+        </div>
+
+        <!-- Thread (other emails in conversation) -->
+        {% if thread_emails %}
+        <div class="mt-6 bg-white rounded-lg shadow">
+            <div class="p-4 border-b border-blackbook-200">
+                <h3 class="font-medium text-blackbook-900">
+                    Thread ({{ thread_emails|length + 1 }} messages)
+                </h3>
+            </div>
+            <div class="divide-y divide-blackbook-200">
+                {% for thread_email in thread_emails %}
+                <a href="/emails/{{ thread_email.id }}"
+                   class="block p-4 hover:bg-blackbook-50">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-blackbook-900">{{ thread_email.display_from }}</p>
+                            <p class="text-sm text-blackbook-500 truncate">{{ thread_email.snippet }}</p>
+                        </div>
+                        <p class="text-xs text-blackbook-400">
+                            {% if thread_email.internal_date %}
+                                {{ thread_email.internal_date.strftime('%b %d, %H:%M') }}
+                            {% endif %}
+                        </p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

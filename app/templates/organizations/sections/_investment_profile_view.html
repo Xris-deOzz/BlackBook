@@ -1,0 +1,134 @@
+{# Organization Investment Profile Section - View Mode #}
+{# Only shown for investment-related org types: investment_firm, accelerator #}
+
+{% set has_investment_data = organization.investment_stages or organization.check_size_min or organization.check_size_max or organization.investment_sectors or organization.geographic_focus or organization.fund_size or organization.current_fund_name %}
+
+{% if has_investment_data %}
+<div class="space-y-4">
+    {# Investment Stages #}
+    {% if organization.investment_stages %}
+    <div>
+        <h4 class="text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-2">Investment Stages</h4>
+        <div class="flex flex-wrap gap-2">
+            {% for stage in organization.investment_stages.split(',') %}
+            {% set stage_name = stage.strip() %}
+            {% set stage_display = {
+                'pre_seed': 'Pre-Seed',
+                'seed': 'Seed',
+                'series_a': 'Series A',
+                'series_b': 'Series B',
+                'series_c': 'Series C',
+                'series_d': 'Series D+',
+                'growth': 'Growth',
+                'late_stage': 'Late Stage',
+                'buyout': 'Buyout',
+                'secondary': 'Secondary'
+            } %}
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                {{ stage_display.get(stage_name, stage_name | replace('_', ' ') | title) }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Check Size #}
+    {% if organization.check_size_min or organization.check_size_max %}
+    <div>
+        <h4 class="text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-1">Check Size</h4>
+        <p class="text-blackbook-700">
+            {% if organization.check_size_min and organization.check_size_max %}
+                {% if organization.check_size_min >= 1000 %}
+                    ${{ (organization.check_size_min / 1000) | round(1) }}M
+                {% else %}
+                    ${{ organization.check_size_min }}K
+                {% endif %}
+                -
+                {% if organization.check_size_max >= 1000 %}
+                    ${{ (organization.check_size_max / 1000) | round(1) }}M
+                {% else %}
+                    ${{ organization.check_size_max }}K
+                {% endif %}
+            {% elif organization.check_size_min %}
+                Min: {% if organization.check_size_min >= 1000 %}${{ (organization.check_size_min / 1000) | round(1) }}M{% else %}${{ organization.check_size_min }}K{% endif %}
+            {% elif organization.check_size_max %}
+                Max: {% if organization.check_size_max >= 1000 %}${{ (organization.check_size_max / 1000) | round(1) }}M{% else %}${{ organization.check_size_max }}K{% endif %}
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+
+    {# Investment Sectors #}
+    {% if organization.investment_sectors %}
+    <div>
+        <h4 class="text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-2">Sectors</h4>
+        <div class="flex flex-wrap gap-2">
+            {% set sector_display = {
+                'saas': 'SaaS',
+                'fintech': 'Fintech',
+                'healthcare': 'Healthcare',
+                'consumer': 'Consumer',
+                'enterprise': 'Enterprise',
+                'ai_ml': 'AI/ML',
+                'cybersecurity': 'Cybersecurity',
+                'biotech': 'Biotech',
+                'cleantech': 'Cleantech',
+                'edtech': 'EdTech',
+                'proptech': 'PropTech',
+                'marketplace': 'Marketplace',
+                'hardware': 'Hardware',
+                'crypto_web3': 'Crypto/Web3',
+                'deeptech': 'DeepTech',
+                'other': 'Other'
+            } %}
+            {% for sector in organization.investment_sectors.split(',') %}
+            {% set sector_name = sector.strip() %}
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {{ sector_display.get(sector_name, sector_name | replace('_', ' ') | title) }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Geographic Focus #}
+    {% if organization.geographic_focus %}
+    <div>
+        <h4 class="text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-1">Geographic Focus</h4>
+        <p class="text-blackbook-700">{{ organization.geographic_focus | replace(',', ', ') }}</p>
+    </div>
+    {% endif %}
+
+    {# Fund Information #}
+    {% if organization.fund_size or organization.current_fund_name %}
+    <div class="pt-3 border-t border-blackbook-100">
+        <h4 class="text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-2">Fund Information</h4>
+        <div class="grid grid-cols-2 gap-4">
+            {% if organization.fund_size %}
+            <div>
+                <span class="text-xs text-blackbook-400">Total AUM</span>
+                <p class="text-blackbook-700 font-medium">
+                    {% if organization.fund_size >= 1000 %}
+                        ${{ (organization.fund_size / 1000) | round(1) }}B
+                    {% else %}
+                        ${{ organization.fund_size }}M
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+            {% if organization.current_fund_name %}
+            <div>
+                <span class="text-xs text-blackbook-400">Current Fund</span>
+                <p class="text-blackbook-700 font-medium">
+                    {{ organization.current_fund_name }}
+                    {% if organization.current_fund_year %}({{ organization.current_fund_year }}){% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<p class="text-blackbook-400 italic">No investment profile information</p>
+{% endif %}

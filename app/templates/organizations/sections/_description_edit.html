@@ -1,0 +1,66 @@
+{# Organization Description Section - Edit Mode with Rich Text #}
+<form id="org-description-form"
+      hx-put="/api/organizations/{{ organization.id }}/sections/description"
+      hx-target="#section-description-content"
+      hx-swap="innerHTML"
+      class="space-y-3">
+
+    {# Hidden input to store the HTML content #}
+    <input type="hidden" name="description" id="org-description-hidden">
+
+    {# Quill editor container #}
+    <div class="quill-editor border border-blackbook-300 rounded-md overflow-hidden">
+        <div id="org-description-editor" style="min-height: 150px;">{{ organization.description or '' | safe }}</div>
+    </div>
+
+    <div class="flex justify-end gap-2">
+        <button type="button"
+                hx-get="/api/organizations/{{ organization.id }}/sections/description/view"
+                hx-target="#section-description-content"
+                hx-swap="innerHTML"
+                class="px-3 py-1.5 text-sm text-blackbook-600 hover:text-blackbook-800">
+            Cancel
+        </button>
+        <button type="submit"
+                class="px-3 py-1.5 text-sm bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700">
+            Save
+        </button>
+    </div>
+</form>
+
+<script>
+setTimeout(function() {
+    const editorEl = document.getElementById('org-description-editor');
+    if (!editorEl || editorEl.querySelector('.ql-editor')) return;
+
+    const quill = new Quill('#org-description-editor', {
+        theme: 'snow',
+        placeholder: 'Add a description of this organization...',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ['clean']
+            ]
+        }
+    });
+
+    const form = document.getElementById('org-description-form');
+    const hiddenInput = document.getElementById('org-description-hidden');
+
+    if (form && hiddenInput) {
+        form.addEventListener('htmx:configRequest', function(evt) {
+            let content = quill.root.innerHTML;
+            if (content === '<p><br></p>' || content === '<p></p>') content = '';
+            hiddenInput.value = content;
+        });
+
+        quill.on('text-change', function() {
+            let content = quill.root.innerHTML;
+            if (content === '<p><br></p>' || content === '<p></p>') content = '';
+            hiddenInput.value = content;
+        });
+    }
+}, 0);
+</script>

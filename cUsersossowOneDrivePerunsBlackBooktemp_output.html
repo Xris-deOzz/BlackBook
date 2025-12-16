@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Perun&#39;s BlackBook</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/icon-16.png">
+
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Personal CRM for managing professional relationships">
+    <meta name="theme-color" content="#f97316">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BlackBook">
+    <link rel="manifest" href="/static/icons/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
+
+    <!-- TailwindCSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Tom Select - searchable dropdowns -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+    <!-- Quill Rich Text Editor -->
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'blackbook': {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Apply theme before page renders to prevent flash -->
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'system';
+            if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+
+    <!-- Dark Mode Global Overrides -->
+    <style>
+        /* Apply dark mode to common Tailwind classes when html has .dark */
+        .dark .bg-white { background-color: #1e293b !important; } /* blackbook-800 */
+        .dark .bg-blackbook-50 { background-color: #0f172a !important; } /* blackbook-900 */
+        .dark .bg-blackbook-100 { background-color: #334155 !important; } /* blackbook-700 */
+        .dark .text-blackbook-900 { color: #f1f5f9 !important; } /* blackbook-100 */
+        .dark .text-blackbook-800 { color: #e2e8f0 !important; } /* blackbook-200 */
+        .dark .text-blackbook-700 { color: #cbd5e1 !important; } /* blackbook-300 */
+        .dark .text-blackbook-600 { color: #94a3b8 !important; } /* blackbook-400 */
+        .dark .text-blackbook-500 { color: #94a3b8 !important; } /* blackbook-400 */
+        .dark .border-blackbook-200 { border-color: #475569 !important; } /* blackbook-600 */
+        .dark .border-blackbook-300 { border-color: #475569 !important; } /* blackbook-600 */
+        .dark .divide-blackbook-200 > :not([hidden]) ~ :not([hidden]) { border-color: #475569 !important; }
+        .dark .hover\:bg-blackbook-50:hover { background-color: #334155 !important; } /* blackbook-700 */
+        .dark input, .dark select, .dark textarea {
+            background-color: #334155 !important;
+            border-color: #475569 !important;
+            color: #f1f5f9 !important;
+        }
+        .dark input::placeholder, .dark textarea::placeholder {
+            color: #94a3b8 !important;
+        }
+        .dark .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2) !important; }
+        .dark .shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.2) !important; }
+        .dark a:not(.bg-blue-600):not(.bg-blackbook-900) { color: #60a5fa; }
+        .dark th { background-color: #1e293b !important; }
+        .dark tbody tr:hover { background-color: #334155 !important; }
+        /* Tom Select dark mode */
+        .dark .ts-wrapper .ts-control { background-color: #334155 !important; border-color: #475569 !important; color: #f1f5f9 !important; }
+        .dark .ts-wrapper .ts-control input { color: #f1f5f9 !important; }
+        .dark .ts-dropdown { background-color: #334155 !important; border-color: #475569 !important; }
+        .dark .ts-dropdown .option { color: #f1f5f9 !important; }
+        .dark .ts-dropdown .option:hover, .dark .ts-dropdown .option.active { background-color: #475569 !important; }
+        .dark .ts-wrapper.focus .ts-control { border-color: #60a5fa !important; box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3) !important; }
+        /* Quill editor dark mode */
+        .dark .quill-editor { background-color: #334155 !important; }
+        .dark .quill-editor .ql-toolbar { background-color: #1e293b !important; border-color: #475569 !important; }
+        .dark .quill-editor .ql-container { border-color: #475569 !important; }
+        .dark .quill-editor .ql-editor { color: #f1f5f9 !important; min-height: 100px; }
+        .dark .quill-editor .ql-editor.ql-blank::before { color: #94a3b8 !important; }
+        .dark .ql-toolbar.ql-snow { border-color: #475569 !important; background-color: #1e293b !important; }
+        .dark .ql-container.ql-snow { border-color: #475569 !important; }
+        .dark .ql-snow .ql-stroke { stroke: #94a3b8 !important; }
+        .dark .ql-snow .ql-fill { fill: #94a3b8 !important; }
+        .dark .ql-snow .ql-picker { color: #f1f5f9 !important; }
+        .dark .ql-snow .ql-picker-options { background-color: #334155 !important; border-color: #475569 !important; }
+        .dark .ql-snow .ql-picker-item:hover { color: #60a5fa !important; }
+        .dark .ql-toolbar.ql-snow .ql-picker-label:hover,
+        .dark .ql-toolbar.ql-snow .ql-picker-label.ql-active,
+        .dark .ql-toolbar.ql-snow button:hover,
+        .dark .ql-toolbar.ql-snow button.ql-active { color: #60a5fa !important; }
+        .dark .ql-toolbar.ql-snow button:hover .ql-stroke,
+        .dark .ql-toolbar.ql-snow button.ql-active .ql-stroke { stroke: #60a5fa !important; }
+        .dark .ql-toolbar.ql-snow button:hover .ql-fill,
+        .dark .ql-toolbar.ql-snow button.ql-active .ql-fill { fill: #60a5fa !important; }
+        /* Quill editor light mode base styles */
+        .quill-editor .ql-editor { min-height: 100px; }
+        /* Rich text content display styles */
+        .rich-text-content p { margin-bottom: 0.5em; }
+        .rich-text-content p:last-child { margin-bottom: 0; }
+        .rich-text-content ul, .rich-text-content ol { margin-left: 1.5em; margin-bottom: 0.5em; }
+        .rich-text-content ul { list-style-type: disc; }
+        .rich-text-content ol { list-style-type: decimal; }
+        .rich-text-content li { margin-bottom: 0.25em; }
+        .rich-text-content strong { font-weight: 600; }
+        .rich-text-content em { font-style: italic; }
+        .rich-text-content u { text-decoration: underline; }
+        .rich-text-content s { text-decoration: line-through; }
+        .rich-text-content a { color: #3b82f6; text-decoration: underline; }
+        .dark .rich-text-content a { color: #60a5fa; }
+    </style>
+
+    <!-- Collapsible Sections Styles -->
+    <style>
+        /* Hide default marker in all browsers */
+        summary::-webkit-details-marker { display: none; }
+        summary::marker { display: none; }
+        summary { list-style: none; }
+    </style>
+
+    <!-- Column Resizing Styles -->
+    <style>
+        /* Resizable table columns */
+        .resizable-table {
+            table-layout: fixed;
+            width: 100%;
+        }
+        .resizable-table th {
+            position: relative;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .resizable-table td {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .resize-handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            cursor: col-resize;
+            background: linear-gradient(90deg, transparent 0%, transparent 40%, rgba(156, 163, 175, 0.3) 50%, transparent 60%, transparent 100%);
+            z-index: 10;
+            transition: background 0.15s ease;
+        }
+        .resize-handle:hover,
+        .resize-handle.resizing {
+            background: rgba(59, 130, 246, 0.6);
+        }
+        /* Prevent text selection while resizing */
+        .resizing-active {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+    </style>
+
+    
+</head>
+<body class="bg-blackbook-50 dark:bg-blackbook-900 text-blackbook-900 dark:text-blackbook-100 min-h-screen flex flex-col transition-colors duration-200">
+    <!-- Navigation -->
+    <nav class="bg-blackbook-800 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold">
+                        Perun's BlackBook
+                    </a>
+                </div>
+                <!-- Desktop Navigation -->
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        
+                        <a href="/" class="px-3 py-2 rounded-md text-sm font-medium bg-blackbook-900 text-white">
+                            Dashboard
+                        </a>
+                        <a href="/people" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            People
+                        </a>
+                        <a href="/organizations" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            Organizations
+                        </a>
+                        <a href="/interactions" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            Interactions
+                        </a>
+                        <a href="/views" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            Views
+                        </a>
+                        <a href="/graph" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            Graph
+                        </a>
+                        <a href="/settings" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blackbook-700">
+                            Settings
+                        </a>
+                    </div>
+                </div>
+                <!-- Mobile menu button -->
+                <div class="md:hidden">
+                    <button type="button" onclick="toggleMobileMenu()" class="inline-flex items-center justify-center p-2 rounded-md text-blackbook-400 hover:text-white hover:bg-blackbook-700 focus:outline-none">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="h-6 w-6" id="menu-icon-closed" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <svg class="h-6 w-6 hidden" id="menu-icon-open" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Navigation Menu -->
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                
+                <a href="/" class="block px-3 py-2 rounded-md text-base font-medium bg-blackbook-900 text-white">
+                    Dashboard
+                </a>
+                <a href="/people" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blackbook-700">
+                    People
+                </a>
+                <a href="/organizations" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blackbook-700">
+                    Organizations
+                </a>
+                <a href="/interactions" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blackbook-700">
+                    Interactions
+                </a>
+                <a href="/views" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blackbook-700">
+                    Views
+                </a>
+                <a href="/graph" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blackbook-700">
+                    Graph
+                </a>
+                <a href="/settings" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blackbook-700">
+                    Settings
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
+        
+<div class="space-y-6">
+    <!-- Welcome Header -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center gap-4">
+            <!-- Logo -->
+            <div class="flex-shrink-0">
+                <svg class="w-16 h-16" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="500" height="500" rx="50" fill="#000000"/>
+                    <path d="M320 80L140 260H230L180 420L360 240H270L320 80Z" fill="#FF6B00"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold mb-1">Welcome to Perun's BlackBook</h1>
+                <p class="text-blackbook-600">Your Personal CRM for managing professional relationships</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions (moved to top) -->
+    <div class="bg-white rounded-lg shadow-md" data-section="quick-actions">
+        <div class="px-6 py-4 border-b border-blackbook-200 flex items-center gap-2 cursor-pointer select-none"
+             onclick="toggleSection('quick-actions')">
+            <svg class="w-4 h-4 text-blackbook-400 transition-transform duration-200 section-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+            <h2 class="text-lg font-semibold text-blackbook-900">Quick Actions</h2>
+        </div>
+        <div class="section-content p-6" id="quick-actions-content">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <a href="/people/new" class="flex items-center justify-center p-4 border border-blackbook-200 rounded-lg hover:bg-blackbook-50 transition-colors">
+                <div class="text-center">
+                    <svg class="mx-auto h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                    <span class="mt-2 block text-sm font-medium text-blackbook-900">Add Person</span>
+                </div>
+            </a>
+            <a href="/organizations/new" class="flex items-center justify-center p-4 border border-blackbook-200 rounded-lg hover:bg-blackbook-50 transition-colors">
+                <div class="text-center">
+                    <svg class="mx-auto h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span class="mt-2 block text-sm font-medium text-blackbook-900">Add Organization</span>
+                </div>
+            </a>
+            <a href="/interactions/new" class="flex items-center justify-center p-4 border border-blackbook-200 rounded-lg hover:bg-blackbook-50 transition-colors">
+                <div class="text-center">
+                    <svg class="mx-auto h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <span class="mt-2 block text-sm font-medium text-blackbook-900">Log Interaction</span>
+                </div>
+            </a>
+            <button onclick="openResearchModal('person')" class="flex items-center justify-center p-4 border border-blackbook-200 rounded-lg hover:bg-blackbook-50 transition-colors">
+                <div class="text-center">
+                    <svg class="mx-auto h-8 w-8 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span class="mt-2 block text-sm font-medium text-blackbook-900">Research Person</span>
+                </div>
+            </button>
+            <button onclick="openResearchModal('company')" class="flex items-center justify-center p-4 border border-blackbook-200 rounded-lg hover:bg-blackbook-50 transition-colors">
+                <div class="text-center">
+                    <svg class="mx-auto h-8 w-8 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611l-2.025.338a7.022 7.022 0 01-2.722-.014l-.014-.003a7.022 7.022 0 00-2.722.014l-2.025.338c-1.717.293-2.299-2.379-1.067-3.61L5 14.5" />
+                    </svg>
+                    <span class="mt-2 block text-sm font-medium text-blackbook-900">Research Company</span>
+                </div>
+            </button>
+            <a href="/settings" class="flex items-center justify-center p-4 border border-blackbook-200 rounded-lg hover:bg-blackbook-50 transition-colors">
+                <div class="text-center">
+                    <svg class="mx-auto h-8 w-8 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span class="mt-2 block text-sm font-medium text-blackbook-900">Settings</span>
+                </div>
+            </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Today's Meetings -->
+        <div class="bg-white rounded-lg shadow-md" data-section="todays-meetings">
+            <div class="px-6 py-4 border-b border-blackbook-200 flex justify-between items-center cursor-pointer select-none"
+                 onclick="toggleSection('todays-meetings')">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blackbook-400 transition-transform duration-200 section-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Today's Meetings</h2>
+                </div>
+                <a href="/calendar" class="text-sm text-blue-600 hover:text-blue-800" onclick="event.stopPropagation()">View All</a>
+            </div>
+            <div class="section-content" id="todays-meetings-content">
+                <div class="p-6" id="todays-meetings"
+                     hx-get="/calendar/today"
+                     hx-trigger="load"
+                     hx-swap="innerHTML">
+                    <div class="flex justify-center py-8">
+                        <svg class="animate-spin h-6 w-6 text-blackbook-400" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Meetings -->
+        <div class="bg-white rounded-lg shadow-md" data-section="upcoming-meetings">
+            <div class="px-6 py-4 border-b border-blackbook-200 flex justify-between items-center cursor-pointer select-none"
+                 onclick="toggleSection('upcoming-meetings')">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blackbook-400 transition-transform duration-200 section-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900">Upcoming Meetings (7 days)</h2>
+                </div>
+                <div class="flex items-center gap-4" onclick="event.stopPropagation()">
+                    <button hx-post="/calendar/sync?days=30"
+                            hx-target="#sync-status"
+                            hx-swap="innerHTML"
+                            class="text-sm text-blue-600 hover:text-blue-800">
+                        Sync Calendar
+                    </button>
+                    <span id="sync-status" class="text-xs text-blackbook-500"></span>
+                </div>
+            </div>
+            <div class="section-content" id="upcoming-meetings-content">
+                <div class="p-6" id="upcoming-meetings"
+                     hx-get="/calendar/upcoming?days=7"
+                     hx-trigger="load"
+                     hx-swap="innerHTML">
+                    <div class="flex justify-center py-8">
+                        <svg class="animate-spin h-6 w-6 text-blackbook-400" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent AI Conversations -->
+        <div class="bg-white rounded-lg shadow-md" data-section="ai-conversations">
+            <div class="px-6 py-4 border-b border-blackbook-200 flex justify-between items-center cursor-pointer select-none"
+                 onclick="toggleSection('ai-conversations')">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blackbook-400 transition-transform duration-200 section-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611l-2.025.338a7.022 7.022 0 01-2.722-.014l-.014-.003a7.022 7.022 0 00-2.722.014l-2.025.338c-1.717.293-2.299-2.379-1.067-3.61L5 14.5" />
+                        </svg>
+                        Recent AI Conversations
+                    </h2>
+                </div>
+                <a href="/ai-chat" class="text-sm text-blue-600 hover:text-blue-800" onclick="event.stopPropagation()">View All</a>
+            </div>
+            <div class="section-content" id="ai-conversations-content">
+                <div class="p-6" id="recent-ai-conversations"
+                     hx-get="/ai-chat/widget"
+                     hx-trigger="load"
+                     hx-swap="innerHTML">
+                    <div class="flex justify-center py-8">
+                        <svg class="animate-spin h-6 w-6 text-blackbook-400" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending AI Suggestions -->
+        <div class="bg-white rounded-lg shadow-md" data-section="ai-suggestions">
+            <div class="px-6 py-4 border-b border-blackbook-200 flex justify-between items-center cursor-pointer select-none"
+                 onclick="toggleSection('ai-suggestions')">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blackbook-400 transition-transform duration-200 section-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                    <h2 class="text-lg font-semibold text-blackbook-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        AI Suggestions
+                    </h2>
+                </div>
+                <a href="/settings?tab=ai" class="text-sm text-blue-600 hover:text-blue-800" onclick="event.stopPropagation()">Settings</a>
+            </div>
+            <div class="section-content" id="ai-suggestions-content">
+                <div class="p-6" id="pending-suggestions-widget"
+                     hx-get="/ai-chat/suggestions-widget"
+                     hx-trigger="load"
+                     hx-swap="innerHTML">
+                    <div class="flex justify-center py-8">
+                        <svg class="animate-spin h-6 w-6 text-blackbook-400" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Row (moved to bottom) -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <p class="text-sm text-blackbook-500">People</p>
+            <p class="text-2xl font-bold" id="stat-persons">-</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <p class="text-sm text-blackbook-500">Organizations</p>
+            <p class="text-2xl font-bold" id="stat-organizations">-</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <p class="text-sm text-blackbook-500">Tags</p>
+            <p class="text-2xl font-bold" id="stat-tags">-</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <p class="text-sm text-blackbook-500">Interactions</p>
+            <p class="text-2xl font-bold" id="stat-interactions">-</p>
+        </div>
+    </div>
+</div>
+
+<!-- Research Modal -->
+<div id="research-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col">
+        <div class="px-6 py-4 border-b border-blackbook-200 flex-shrink-0">
+            <h3 id="research-modal-title" class="text-lg font-semibold text-blackbook-900">Research</h3>
+        </div>
+        <div class="p-6 flex-1 overflow-hidden flex flex-col">
+            <!-- Search Input -->
+            <div class="mb-4">
+                <input type="text"
+                       id="research-search-input"
+                       placeholder="Type a name to search..."
+                       class="w-full border border-blackbook-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                       autocomplete="off"
+                       oninput="onResearchSearch(this.value)">
+                <p id="research-modal-desc" class="text-xs text-blackbook-500 mt-2">
+                    Search your contacts or enter a new name to research
+                </p>
+            </div>
+
+            <!-- Search Results -->
+            <div id="research-results" class="flex-1 overflow-y-auto min-h-0 border border-blackbook-200 rounded-lg">
+                <div class="p-4 text-center text-sm text-blackbook-500">
+                    Start typing to search...
+                </div>
+            </div>
+
+            <!-- Or Research New -->
+            <div id="research-new-section" class="mt-4 pt-4 border-t border-blackbook-200 hidden">
+                <p class="text-sm text-blackbook-600 mb-2">Or research someone new:</p>
+                <div class="flex gap-2">
+                    <input type="text"
+                           id="research-new-name"
+                           placeholder="Enter name..."
+                           class="flex-1 border border-blackbook-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <button onclick="researchNewEntity()"
+                            class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors">
+                        Research
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="px-6 py-4 bg-blackbook-50 rounded-b-lg flex justify-end gap-2 flex-shrink-0">
+            <button onclick="closeResearchModal()" class="px-4 py-2 text-sm text-blackbook-600 hover:text-blackbook-800">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ========================================
+    // Collapsible Sections
+    // ========================================
+    const STORAGE_KEY = 'dashboard_collapsed_sections';
+
+    function getCollapsedSections() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    function saveCollapsedSections(sections) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(sections));
+        } catch {
+            // Ignore storage errors
+        }
+    }
+
+    function toggleSection(sectionId) {
+        const section = document.querySelector(`[data-section="${sectionId}"]`);
+        if (!section) return;
+
+        const content = document.getElementById(`${sectionId}-content`);
+        const chevron = section.querySelector('.section-chevron');
+        if (!content) return;
+
+        const isCollapsed = content.classList.contains('hidden');
+        const collapsed = getCollapsedSections();
+
+        if (isCollapsed) {
+            // Expand
+            content.classList.remove('hidden');
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+            // Remove from collapsed list
+            const idx = collapsed.indexOf(sectionId);
+            if (idx > -1) {
+                collapsed.splice(idx, 1);
+                saveCollapsedSections(collapsed);
+            }
+        } else {
+            // Collapse
+            content.classList.add('hidden');
+            if (chevron) chevron.style.transform = 'rotate(-90deg)';
+            // Add to collapsed list
+            if (!collapsed.includes(sectionId)) {
+                collapsed.push(sectionId);
+                saveCollapsedSections(collapsed);
+            }
+        }
+    }
+
+    function initCollapsibleSections() {
+        const collapsed = getCollapsedSections();
+        collapsed.forEach(sectionId => {
+            const content = document.getElementById(`${sectionId}-content`);
+            const section = document.querySelector(`[data-section="${sectionId}"]`);
+            if (content && section) {
+                content.classList.add('hidden');
+                const chevron = section.querySelector('.section-chevron');
+                if (chevron) chevron.style.transform = 'rotate(-90deg)';
+            }
+        });
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initCollapsibleSections);
+
+    // ========================================
+    // Research Modal
+    // ========================================
+    let currentResearchType = null;
+    let searchTimeout = null;
+
+    function openResearchModal(type) {
+        currentResearchType = type;
+        const modal = document.getElementById('research-modal');
+        const title = document.getElementById('research-modal-title');
+        const desc = document.getElementById('research-modal-desc');
+        const searchInput = document.getElementById('research-search-input');
+        const results = document.getElementById('research-results');
+        const newSection = document.getElementById('research-new-section');
+        const newNameInput = document.getElementById('research-new-name');
+
+        if (type === 'person') {
+            title.textContent = 'Research a Person';
+            searchInput.placeholder = 'Type a name to search your contacts...';
+            desc.textContent = 'Search your contacts or enter a new name to research';
+            newNameInput.placeholder = 'Enter person name...';
+        } else {
+            title.textContent = 'Research a Company';
+            searchInput.placeholder = 'Type a company name to search...';
+            desc.textContent = 'Search your organizations or enter a new name to research';
+            newNameInput.placeholder = 'Enter company name...';
+        }
+
+        // Reset state
+        searchInput.value = '';
+        newNameInput.value = '';
+        results.innerHTML = '<div class="p-4 text-center text-sm text-blackbook-500">Start typing to search...</div>';
+        newSection.classList.add('hidden');
+
+        modal.classList.remove('hidden');
+
+        // Focus the search input
+        setTimeout(() => searchInput.focus(), 100);
+    }
+
+    function closeResearchModal() {
+        document.getElementById('research-modal').classList.add('hidden');
+        currentResearchType = null;
+        if (searchTimeout) clearTimeout(searchTimeout);
+    }
+
+    function onResearchSearch(query) {
+        const results = document.getElementById('research-results');
+        const newSection = document.getElementById('research-new-section');
+
+        // Clear previous timeout
+        if (searchTimeout) clearTimeout(searchTimeout);
+
+        // Show "Or research new" section when user starts typing
+        if (query.trim().length > 0) {
+            newSection.classList.remove('hidden');
+            document.getElementById('research-new-name').value = query;
+        } else {
+            newSection.classList.add('hidden');
+            results.innerHTML = '<div class="p-4 text-center text-sm text-blackbook-500">Start typing to search...</div>';
+            return;
+        }
+
+        // Debounce search
+        searchTimeout = setTimeout(() => {
+            performResearchSearch(query);
+        }, 300);
+    }
+
+    async function performResearchSearch(query) {
+        const results = document.getElementById('research-results');
+
+        if (query.trim().length < 2) {
+            results.innerHTML = '<div class="p-4 text-center text-sm text-blackbook-500">Type at least 2 characters...</div>';
+            return;
+        }
+
+        results.innerHTML = '<div class="p-4 text-center text-sm text-blackbook-500">Searching...</div>';
+
+        const endpoint = currentResearchType === 'person'
+            ? `/ai-chat/search/people?q=${encodeURIComponent(query)}&limit=20`
+            : `/ai-chat/search/organizations?q=${encodeURIComponent(query)}&limit=20`;
+
+        try {
+            const response = await fetch(endpoint);
+            const data = await response.json();
+
+            if (data.length === 0) {
+                results.innerHTML = `
+                    <div class="p-4 text-center text-sm text-blackbook-500">
+                        No ${currentResearchType === 'person' ? 'people' : 'organizations'} found matching "${query}"
+                        <br><span class="text-xs">Use the field below to research this name</span>
+                    </div>
+                `;
+                return;
+            }
+
+            if (currentResearchType === 'person') {
+                results.innerHTML = data.map(p => `
+                    <button onclick="selectResearchEntity('${p.id}')"
+                            class="w-full px-4 py-3 text-left hover:bg-blackbook-50 border-b border-blackbook-100 last:border-b-0 transition-colors">
+                        <div class="font-medium text-sm text-blackbook-900">${escapeHtml(p.full_name)}</div>
+                        ${p.title ? `<div class="text-xs text-blackbook-500">${escapeHtml(p.title)}</div>` : ''}
+                    </button>
+                `).join('');
+            } else {
+                results.innerHTML = data.map(o => `
+                    <button onclick="selectResearchEntity('${o.id}')"
+                            class="w-full px-4 py-3 text-left hover:bg-blackbook-50 border-b border-blackbook-100 last:border-b-0 transition-colors">
+                        <div class="font-medium text-sm text-blackbook-900">${escapeHtml(o.name)}</div>
+                        ${o.category ? `<div class="text-xs text-blackbook-500">${escapeHtml(o.category)}</div>` : ''}
+                    </button>
+                `).join('');
+            }
+        } catch (error) {
+            results.innerHTML = '<div class="p-4 text-center text-sm text-red-500">Error searching. Please try again.</div>';
+        }
+    }
+
+    function selectResearchEntity(entityId) {
+        // Navigate to entity detail page (which has the AI sidebar)
+        if (currentResearchType === 'person') {
+            window.location.href = `/people/${entityId}?open_ai=true`;
+        } else {
+            window.location.href = `/organizations/${entityId}?open_ai=true`;
+        }
+    }
+
+    function researchNewEntity() {
+        const name = document.getElementById('research-new-name').value.trim();
+        if (!name) return;
+
+        // Navigate to AI research page with the name as a parameter
+        // This will create a new research session for an unknown entity
+        const encodedName = encodeURIComponent(name);
+        window.location.href = `/ai-chat/research-new?type=${currentResearchType}&name=${encodedName}`;
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeResearchModal();
+        }
+    });
+
+    // Close modal on backdrop click
+    document.getElementById('research-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeResearchModal();
+        }
+    });
+</script>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-blackbook-800 text-white mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <p class="text-center text-sm text-blackbook-400">
+                Perun's BlackBook &copy; 2025 | Personal CRM
+            </p>
+        </div>
+    </footer>
+
+    <!-- Load stats on page load -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load main stats
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+
+                const personsEl = document.getElementById('stat-persons');
+                const orgsEl = document.getElementById('stat-organizations');
+                const tagsEl = document.getElementById('stat-tags');
+                const interactionsEl = document.getElementById('stat-interactions');
+
+                if (personsEl) personsEl.textContent = stats.persons || 0;
+                if (orgsEl) orgsEl.textContent = stats.organizations || 0;
+                if (tagsEl) tagsEl.textContent = stats.tags || 0;
+                if (interactionsEl) interactionsEl.textContent = stats.interactions || 0;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+
+            // Load pending suggestions count for nav badge
+            try {
+                const response = await fetch('/ai-chat/suggestions/pending-count');
+                const data = await response.json();
+                updatePendingBadge(data.pending);
+            } catch (error) {
+                console.error('Failed to load pending suggestions count:', error);
+            }
+        });
+
+        // Update pending suggestions badge in navigation
+        function updatePendingBadge(count) {
+            const badge = document.getElementById('nav-pending-badge');
+            const badgeMobile = document.getElementById('nav-pending-badge-mobile');
+
+            [badge, badgeMobile].forEach(el => {
+                if (el) {
+                    if (count > 0) {
+                        el.textContent = count > 99 ? '99+' : count;
+                        el.classList.remove('hidden');
+                    } else {
+                        el.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const iconClosed = document.getElementById('menu-icon-closed');
+            const iconOpen = document.getElementById('menu-icon-open');
+
+            menu.classList.toggle('hidden');
+            iconClosed.classList.toggle('hidden');
+            iconOpen.classList.toggle('hidden');
+        }
+
+        // Column resizing functionality
+        function initResizableTable(tableId, storageKey) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const headers = table.querySelectorAll('thead th');
+
+            // Load saved widths
+            const savedWidths = localStorage.getItem(storageKey);
+            if (savedWidths) {
+                try {
+                    const widths = JSON.parse(savedWidths);
+                    headers.forEach((th, index) => {
+                        if (widths[index]) {
+                            th.style.width = widths[index] + 'px';
+                        }
+                    });
+                } catch (e) {
+                    console.error('Failed to load column widths:', e);
+                }
+            }
+
+            // Add resize handles to each header
+            headers.forEach((th, index) => {
+                // Skip last column (no need to resize from the right edge)
+                if (index === headers.length - 1) return;
+
+                const handle = document.createElement('div');
+                handle.className = 'resize-handle';
+                th.appendChild(handle);
+
+                let startX, startWidth, nextStartWidth;
+                const nextTh = headers[index + 1];
+
+                handle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    startX = e.pageX;
+                    startWidth = th.offsetWidth;
+                    nextStartWidth = nextTh ? nextTh.offsetWidth : 0;
+
+                    handle.classList.add('resizing');
+                    document.body.classList.add('resizing-active');
+
+                    function onMouseMove(e) {
+                        const diff = e.pageX - startX;
+                        const newWidth = Math.max(50, startWidth + diff);
+                        th.style.width = newWidth + 'px';
+
+                        // Adjust next column if needed
+                        if (nextTh && nextStartWidth - diff > 50) {
+                            nextTh.style.width = (nextStartWidth - diff) + 'px';
+                        }
+                    }
+
+                    function onMouseUp() {
+                        handle.classList.remove('resizing');
+                        document.body.classList.remove('resizing-active');
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+
+                        // Save widths to localStorage
+                        const widths = [];
+                        headers.forEach(h => widths.push(h.offsetWidth));
+                        localStorage.setItem(storageKey, JSON.stringify(widths));
+                    }
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+        }
+
+        // Re-initialize resizable tables after HTMX swaps
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            // Check if the swapped content contains a resizable table
+            const personTable = document.getElementById('person-table');
+            const orgTable = document.getElementById('org-table');
+
+            if (personTable) initResizableTable('person-table', 'person-table-widths');
+            if (orgTable) initResizableTable('org-table', 'org-table-widths');
+        });
+    </script>
+
+    
+</body>
+</html>

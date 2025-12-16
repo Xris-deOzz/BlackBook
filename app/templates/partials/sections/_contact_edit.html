@@ -1,0 +1,300 @@
+{# Contact Information Section - Edit Mode #}
+<div class="space-y-6">
+    <!-- Emails Section -->
+    <div class="border-b border-blackbook-200 pb-4">
+        <div class="flex items-center justify-between mb-3">
+            <label class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Email Addresses</label>
+        </div>
+
+        {% if person.emails %}
+        <div class="space-y-2 mb-3">
+            {% for email in person.emails %}
+            <div class="flex items-center justify-between p-2 bg-blackbook-50 rounded">
+                <div class="flex items-center gap-2">
+                    <span class="text-blackbook-700">{{ email.email }}</span>
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-blackbook-100 text-blackbook-600">{{ email.label.value|title }}</span>
+                    {% if email.is_primary %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-700">Primary</span>
+                    {% endif %}
+                </div>
+                <button type="button"
+                        hx-delete="/api/people/{{ person.id }}/emails/{{ email.id }}"
+                        hx-target="#section-contact-info-content"
+                        hx-swap="innerHTML"
+                        hx-confirm="Remove this email?"
+                        class="text-red-500 hover:text-red-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Add Email Form -->
+        <form hx-post="/api/people/{{ person.id }}/emails"
+              hx-target="#section-contact-info-content"
+              hx-swap="innerHTML"
+              class="flex gap-2 items-end">
+            <div class="flex-1">
+                <input type="email" name="email" placeholder="email@example.com" required
+                       class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div class="w-32">
+                <select name="label" class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                    <option value="work">Work</option>
+                    <option value="personal">Personal</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <button type="submit" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                Add
+            </button>
+        </form>
+    </div>
+
+    <!-- Phones Section -->
+    <div class="border-b border-blackbook-200 pb-4">
+        <div class="flex items-center justify-between mb-3">
+            <label class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Phone Numbers</label>
+        </div>
+
+        {% if person.phones %}
+        <div class="space-y-2 mb-3">
+            {% for phone in person.phones %}
+            <div class="flex items-center justify-between p-2 bg-blackbook-50 rounded">
+                <div class="flex items-center gap-2">
+                    <span class="text-blackbook-700">{{ phone.phone }}</span>
+                    {% if phone.label %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-blackbook-100 text-blackbook-600">{{ phone.label.value|title }}</span>
+                    {% endif %}
+                </div>
+                <button type="button"
+                        hx-delete="/api/people/{{ person.id }}/phones/{{ phone.id }}"
+                        hx-target="#section-contact-info-content"
+                        hx-swap="innerHTML"
+                        hx-confirm="Remove this phone?"
+                        class="text-red-500 hover:text-red-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Add Phone Form -->
+        <form hx-post="/api/people/{{ person.id }}/phones"
+              hx-target="#section-contact-info-content"
+              hx-swap="innerHTML"
+              class="flex gap-2 items-end">
+            <div class="flex-1">
+                <input type="tel" name="phone" placeholder="+1 (555) 123-4567" required
+                       class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div class="w-32">
+                <select name="label" class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+                    <option value="mobile">Mobile</option>
+                    <option value="work">Work</option>
+                    <option value="home">Home</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <button type="submit" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                Add
+            </button>
+        </form>
+    </div>
+
+    <!-- Websites Section -->
+    <div class="border-b border-blackbook-200 pb-4">
+        <div class="flex items-center justify-between mb-3">
+            <label class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Websites</label>
+        </div>
+
+        {% if person.websites %}
+        <div class="space-y-2 mb-3">
+            {% for website in person.websites %}
+            <div class="flex items-center justify-between p-2 bg-blackbook-50 rounded">
+                <div class="flex items-center gap-2">
+                    <a href="{{ website.url }}" target="_blank" class="text-blue-600 hover:underline">
+                        {{ website.url|replace('https://', '')|replace('http://', '')|truncate(40) }}
+                    </a>
+                    {% if website.label %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-blackbook-100 text-blackbook-600">{{ website.label }}</span>
+                    {% endif %}
+                </div>
+                <button type="button"
+                        hx-delete="/api/people/{{ person.id }}/websites/{{ website.id }}/inline"
+                        hx-target="#section-contact-info-content"
+                        hx-swap="innerHTML"
+                        hx-confirm="Remove this website?"
+                        class="text-red-500 hover:text-red-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Add Website Form -->
+        <form hx-post="/api/people/{{ person.id }}/websites/form"
+              hx-target="#section-contact-info-content"
+              hx-swap="innerHTML"
+              class="flex gap-2 items-end">
+            <div class="flex-1">
+                <input type="text" name="url" placeholder="example.com" required
+                       class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div class="w-32">
+                <input type="text" name="label" placeholder="Label"
+                       class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <button type="submit" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                Add
+            </button>
+        </form>
+    </div>
+
+    <!-- Addresses Section -->
+    <div class="border-b border-blackbook-200 pb-4">
+        <div class="flex items-center justify-between mb-3">
+            <label class="text-xs font-medium text-blackbook-500 uppercase tracking-wide">Addresses</label>
+        </div>
+
+        {% if person.addresses %}
+        <div class="space-y-2 mb-3">
+            {% for addr in person.addresses %}
+            <div class="flex items-start justify-between p-2 bg-blackbook-50 rounded">
+                <div>
+                    <span class="text-xs font-medium text-blackbook-500 uppercase">{{ addr.address_type }}</span>
+                    <div class="text-blackbook-700">
+                        {% if addr.street %}{{ addr.street }}<br>{% endif %}
+                        {{ addr.city or '' }}{% if addr.city and addr.state %}, {% endif %}{{ addr.state or '' }} {{ addr.zip or '' }}
+                        {% if addr.country %}<br>{{ addr.country }}{% endif %}
+                    </div>
+                </div>
+                <button type="button"
+                        hx-delete="/api/people/{{ person.id }}/addresses/{{ addr.id }}/inline"
+                        hx-target="#section-contact-info-content"
+                        hx-swap="innerHTML"
+                        hx-confirm="Remove this address?"
+                        class="text-red-500 hover:text-red-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Add Address Form (expandable) -->
+        <div id="add-address-form">
+            <button type="button" onclick="toggleAddressForm()" id="add-address-btn"
+                    class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add Address
+            </button>
+
+            <form id="new-address-form"
+                  hx-post="/api/people/{{ person.id }}/addresses/form"
+                  hx-target="#section-contact-info-content"
+                  hx-swap="innerHTML"
+                  class="hidden mt-3 space-y-3 p-3 bg-blackbook-50 rounded">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-blackbook-600 mb-1">Type</label>
+                        <select name="address_type" required
+                                class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md">
+                            <option value="home">Home</option>
+                            <option value="work">Work</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-blackbook-600 mb-1">Street</label>
+                        <input type="text" name="street" placeholder="123 Main St"
+                               class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-blackbook-600 mb-1">City</label>
+                        <input type="text" name="city" placeholder="City"
+                               class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-blackbook-600 mb-1">State</label>
+                        <input type="text" name="state" placeholder="State"
+                               class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-blackbook-600 mb-1">ZIP</label>
+                        <input type="text" name="zip" placeholder="ZIP"
+                               class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-blackbook-600 mb-1">Country</label>
+                        <input type="text" name="country" placeholder="Country"
+                               class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-md">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="toggleAddressForm()"
+                            class="px-3 py-1.5 text-sm text-blackbook-600">Cancel</button>
+                    <button type="submit"
+                            class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Birthday and Location -->
+    <form hx-put="/api/people/{{ person.id }}/sections/contact"
+          hx-target="#section-contact-info-content"
+          hx-swap="innerHTML"
+          class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-1">Birthday</label>
+                <input type="date" name="birthday"
+                       value="{{ person.birthday.strftime('%Y-%m-%d') if person.birthday else '' }}"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-blackbook-500 uppercase tracking-wide mb-1">Location</label>
+                <input type="text" name="location"
+                       value="{{ person.location or '' }}"
+                       placeholder="e.g., San Francisco, CA"
+                       class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500">
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+            <button type="button"
+                    hx-get="/api/people/{{ person.id }}/sections/contact/view"
+                    hx-target="#section-contact-info-content"
+                    hx-swap="innerHTML"
+                    class="px-3 py-1.5 text-sm text-blackbook-600 hover:text-blackbook-800">
+                Done
+            </button>
+            <button type="submit"
+                    class="px-3 py-1.5 text-sm bg-blackbook-600 text-white rounded-md hover:bg-blackbook-700">
+                Save Birthday/Location
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function toggleAddressForm() {
+    const form = document.getElementById('new-address-form');
+    const btn = document.getElementById('add-address-btn');
+    form.classList.toggle('hidden');
+    btn.classList.toggle('hidden');
+}
+</script>

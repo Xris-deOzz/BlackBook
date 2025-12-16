@@ -1,0 +1,478 @@
+<!-- AI Providers Tab Content -->
+<div class="space-y-6">
+    <!-- AI Usage Statistics Section -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-blackbook-900 flex items-center gap-2">
+                <svg class="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Usage Statistics
+            </h2>
+            <p class="text-sm text-blackbook-500 mt-1">
+                Track your AI research usage and token consumption
+            </p>
+        </div>
+        <div id="ai-usage-widget"
+             hx-get="/ai-chat/usage-widget"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="flex justify-center py-8">
+                <svg class="animate-spin h-6 w-6 text-blackbook-400" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Providers Section -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-blackbook-900">AI Providers</h2>
+            <p class="text-sm text-blackbook-500 mt-1">
+                Configure API keys for AI-powered research features
+            </p>
+        </div>
+
+        <div class="space-y-4">
+            {% for provider in ai_providers %}
+            <div class="p-4 border border-blackbook-200 rounded-lg" id="provider-{{ provider.id }}">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <!-- Provider Icon -->
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center
+                                    {% if provider.api_type.value == 'openai' %}bg-emerald-100 text-emerald-600
+                                    {% elif provider.api_type.value == 'anthropic' %}bg-orange-100 text-orange-600
+                                    {% elif provider.api_type.value == 'google' %}bg-blue-100 text-blue-600
+                                    {% else %}bg-blackbook-100 text-blackbook-600{% endif %}">
+                            {% if provider.api_type.value == 'openai' %}
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.8956zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/>
+                            </svg>
+                            {% elif provider.api_type.value == 'anthropic' %}
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M17.304 3.541h-3.672l6.696 16.918h3.672zm-10.608 0L0 20.459h3.744l1.32-3.468h6.24l1.32 3.468h3.744L9.672 3.541zm-.372 10.62l2.028-5.256 2.028 5.256z"/>
+                            </svg>
+                            {% elif provider.api_type.value == 'google' %}
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-blackbook-900">{{ provider.name }}</h3>
+                            <p class="text-xs text-blackbook-500">
+                                {% if provider.is_local %}Local model{% else %}Cloud API{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <!-- Status indicator -->
+                        {% if provider.api_keys and provider.api_keys|length > 0 %}
+                            {% set key = provider.api_keys[0] %}
+                            {% if key.is_valid == true %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Valid
+                            </span>
+                            {% elif key.is_valid == false %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                                Invalid
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                Not tested
+                            </span>
+                            {% endif %}
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blackbook-100 text-blackbook-600">
+                            No key
+                        </span>
+                        {% endif %}
+
+                        <!-- Enable toggle with On/Off label -->
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox"
+                                   {% if provider.is_active %}checked{% endif %}
+                                   hx-post="/settings/ai/provider/{{ provider.id }}/toggle"
+                                   hx-target="#provider-{{ provider.id }}"
+                                   hx-swap="outerHTML"
+                                   class="sr-only peer">
+                            <div class="w-9 h-5 bg-blackbook-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blackbook-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-blackbook-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blackbook-600"></div>
+                            <span class="ml-2 text-xs font-medium {% if provider.is_active %}text-green-600{% else %}text-blackbook-400{% endif %}">
+                                {% if provider.is_active %}On{% else %}Off{% endif %}
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- API Key Form -->
+                <div class="mt-4 pt-4 border-t border-blackbook-100">
+                    <form hx-post="/settings/ai/keys"
+                          hx-target="#provider-{{ provider.id }}"
+                          hx-swap="outerHTML"
+                          class="flex items-end gap-3">
+                        <input type="hidden" name="provider_id" value="{{ provider.id }}">
+                        <div class="flex-1">
+                            <label class="block text-xs text-blackbook-500 mb-1">API Key</label>
+                            <input type="password"
+                                   name="api_key"
+                                   placeholder="{% if provider.api_keys and provider.api_keys|length > 0 %}{{ provider.api_keys[0].get_masked_key() }}{% else %}Enter API key{% endif %}"
+                                   class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent text-sm">
+                        </div>
+                        <button type="submit"
+                                class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2 text-sm">
+                            {% if provider.api_keys and provider.api_keys|length > 0 %}Update{% else %}Save{% endif %}
+                        </button>
+                        {% if provider.api_keys and provider.api_keys|length > 0 %}
+                        <button type="button"
+                                hx-post="/settings/ai/test/{{ provider.api_type.value }}"
+                                hx-target="#test-result-{{ provider.id }}"
+                                hx-swap="innerHTML"
+                                hx-indicator="#test-spinner-{{ provider.id }}"
+                                class="px-4 py-2 border border-blackbook-300 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-50 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2 text-sm inline-flex items-center">
+                            <svg id="test-spinner-{{ provider.id }}" class="htmx-indicator animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Test
+                        </button>
+                        {% endif %}
+                    </form>
+                    <div id="test-result-{{ provider.id }}" class="mt-2"></div>
+                    {% if provider.api_keys and provider.api_keys|length > 0 and provider.api_keys[0].last_tested %}
+                    <p class="text-xs text-blackbook-400 mt-2">
+                        Last tested: {{ provider.api_keys[0].last_tested.strftime('%b %d, %Y at %I:%M %p') }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- API Key Instructions -->
+        <div class="mt-6 p-4 bg-blackbook-50 rounded-lg">
+            <h3 class="font-medium text-blackbook-900 mb-2">Get API Keys</h3>
+            <ul class="text-sm text-blackbook-600 space-y-1">
+                <li><strong>OpenAI:</strong> <a href="https://platform.openai.com/api-keys" target="_blank" class="text-blackbook-700 underline hover:text-blackbook-900">platform.openai.com/api-keys</a> - GPT-4o and other models</li>
+                <li><strong>Claude (Anthropic):</strong> <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-blackbook-700 underline hover:text-blackbook-900">console.anthropic.com/settings/keys</a> - Claude Sonnet, Opus, Haiku</li>
+                <li><strong>Gemini (Google):</strong> <a href="https://aistudio.google.com/apikey" target="_blank" class="text-blackbook-700 underline hover:text-blackbook-900">aistudio.google.com/apikey</a> - Gemini Pro and Flash models</li>
+                <li><strong>Ollama:</strong> <a href="https://ollama.ai" target="_blank" class="text-blackbook-700 underline hover:text-blackbook-900">ollama.ai</a> - Local models (no API key needed, just the URL)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Search APIs Section -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-blackbook-900">Search APIs</h2>
+            <p class="text-sm text-blackbook-500 mt-1">
+                Configure API keys for web search, video, and podcast research
+            </p>
+        </div>
+
+        <div class="space-y-4">
+            {% for provider in search_providers %}
+            <div class="p-4 border border-blackbook-200 rounded-lg" id="search-provider-{{ provider.id }}">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <!-- Provider Icon -->
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center
+                                    {% if provider.api_type.value == 'brave_search' %}bg-orange-100 text-orange-600
+                                    {% elif provider.api_type.value == 'youtube' %}bg-red-100 text-red-600
+                                    {% elif provider.api_type.value == 'listen_notes' %}bg-purple-100 text-purple-600
+                                    {% else %}bg-blackbook-100 text-blackbook-600{% endif %}">
+                            {% if provider.api_type.value == 'brave_search' %}
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.8l6.9 3.45L12 11.7 5.1 8.25 12 4.8zm-8 5.4l7 3.5v6.5l-7-3.5v-6.5zm16 0v6.5l-7 3.5v-6.5l7-3.5z"/>
+                            </svg>
+                            {% elif provider.api_type.value == 'youtube' %}
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                            </svg>
+                            {% elif provider.api_type.value == 'listen_notes' %}
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-blackbook-900">{{ provider.name }}</h3>
+                            <p class="text-xs text-blackbook-500">
+                                {% if provider.api_type.value == 'brave_search' %}
+                                Web &amp; news search (2,000 free/month)
+                                {% elif provider.api_type.value == 'youtube' %}
+                                Video search (10,000 quota units/day)
+                                {% elif provider.api_type.value == 'listen_notes' %}
+                                Podcast search (300 free/month)
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <!-- Status indicator -->
+                        {% if provider.api_keys and provider.api_keys|length > 0 %}
+                            {% set key = provider.api_keys[0] %}
+                            {% if key.is_valid == true %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Valid
+                            </span>
+                            {% elif key.is_valid == false %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                                Invalid
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                Not tested
+                            </span>
+                            {% endif %}
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blackbook-100 text-blackbook-600">
+                            No key
+                        </span>
+                        {% endif %}
+
+                        <!-- Enable toggle with On/Off label -->
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox"
+                                   {% if provider.is_active %}checked{% endif %}
+                                   hx-post="/settings/ai/provider/{{ provider.id }}/toggle"
+                                   hx-target="#search-provider-{{ provider.id }}"
+                                   hx-swap="outerHTML"
+                                   class="sr-only peer">
+                            <div class="w-9 h-5 bg-blackbook-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blackbook-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-blackbook-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blackbook-600"></div>
+                            <span class="ml-2 text-xs font-medium {% if provider.is_active %}text-green-600{% else %}text-blackbook-400{% endif %}">
+                                {% if provider.is_active %}On{% else %}Off{% endif %}
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- API Key Form -->
+                <div class="mt-4 pt-4 border-t border-blackbook-100">
+                    <form hx-post="/settings/ai/keys"
+                          hx-target="#search-provider-{{ provider.id }}"
+                          hx-swap="outerHTML"
+                          class="flex items-end gap-3">
+                        <input type="hidden" name="provider_id" value="{{ provider.id }}">
+                        <div class="flex-1">
+                            <label class="block text-xs text-blackbook-500 mb-1">API Key</label>
+                            <input type="password"
+                                   name="api_key"
+                                   placeholder="{% if provider.api_keys and provider.api_keys|length > 0 %}{{ provider.api_keys[0].get_masked_key() }}{% else %}Enter API key{% endif %}"
+                                   class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent text-sm">
+                        </div>
+                        <button type="submit"
+                                class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2 text-sm">
+                            {% if provider.api_keys and provider.api_keys|length > 0 %}Update{% else %}Save{% endif %}
+                        </button>
+                        {% if provider.api_keys and provider.api_keys|length > 0 %}
+                        <button type="button"
+                                hx-post="/settings/ai/test/{{ provider.api_type.value }}"
+                                hx-target="#search-test-result-{{ provider.id }}"
+                                hx-swap="innerHTML"
+                                hx-indicator="#search-test-spinner-{{ provider.id }}"
+                                class="px-4 py-2 border border-blackbook-300 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-50 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2 text-sm inline-flex items-center">
+                            <svg id="search-test-spinner-{{ provider.id }}" class="htmx-indicator animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Test
+                        </button>
+                        {% endif %}
+                    </form>
+                    <div id="search-test-result-{{ provider.id }}" class="mt-2"></div>
+                    {% if provider.api_keys and provider.api_keys|length > 0 and provider.api_keys[0].last_tested %}
+                    <p class="text-xs text-blackbook-400 mt-2">
+                        Last tested: {{ provider.api_keys[0].last_tested.strftime('%b %d, %Y at %I:%M %p') }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-blackbook-500">
+                <p>No search providers configured. Please run database migrations.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- API Key Instructions -->
+        <div class="mt-6 p-4 bg-blackbook-50 rounded-lg">
+            <h3 class="font-medium text-blackbook-900 mb-2">Get API Keys</h3>
+            <ul class="text-sm text-blackbook-600 space-y-1">
+                <li><strong>Brave Search:</strong> <a href="https://api.search.brave.com" target="_blank" class="text-blackbook-700 underline hover:text-blackbook-900">api.search.brave.com</a> - Free tier: 2,000 searches/month</li>
+                <li><strong>YouTube:</strong> <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="text-blackbook-700 underline hover:text-blackbook-900">Google Cloud Console</a> - Enable YouTube Data API v3</li>
+                <li><strong>Listen Notes:</strong> <a href="https://www.listennotes.com/api/" target="_blank" class="text-blackbook-700 underline hover:text-blackbook-900">listennotes.com/api</a> - Free tier: 300 requests/month</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Quick Prompts Section -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-blackbook-900 flex items-center gap-2">
+                <svg class="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Quick Prompts
+            </h2>
+            <p class="text-sm text-blackbook-500 mt-1">
+                Customize the quick action buttons shown in the AI chat sidebar
+            </p>
+        </div>
+
+        <!-- Quick Prompts List -->
+        <div id="quick-prompts-list">
+            {% include "settings/_quick_prompts_list.html" %}
+        </div>
+
+        <!-- Add New Prompt Form -->
+        <div class="mt-6 pt-6 border-t border-blackbook-200">
+            <h3 class="text-sm font-medium text-blackbook-700 mb-4">Add New Prompt</h3>
+            <form hx-post="/settings/ai/prompts"
+                  hx-target="#quick-prompts-list"
+                  hx-swap="innerHTML"
+                  class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs text-blackbook-500 mb-1">Button Label</label>
+                        <input type="text"
+                               name="label"
+                               placeholder="e.g., 'Recent news'"
+                               maxlength="50"
+                               required
+                               class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-blackbook-500 mb-1">Entity Type</label>
+                        <select name="entity_type"
+                                class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent text-sm">
+                            <option value="both">Both (People & Organizations)</option>
+                            <option value="person">People Only</option>
+                            <option value="organization">Organizations Only</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit"
+                                class="w-full px-4 py-2 bg-purple-600 text-white font-medium rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 text-sm">
+                            Add Prompt
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-blackbook-500 mb-1">Prompt Text</label>
+                    <textarea name="prompt_text"
+                              placeholder="Enter the full prompt text that will be sent to AI..."
+                              required
+                              rows="2"
+                              class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:border-transparent text-sm resize-y"></textarea>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Data Access Controls -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-blackbook-900">Data Access Controls</h2>
+            <p class="text-sm text-blackbook-500 mt-1">
+                Control what CRM data the AI can access. Email addresses and phone numbers are never sent to external AI.
+            </p>
+        </div>
+
+        <form hx-put="/settings/ai/access"
+              hx-swap="none"
+              class="space-y-4">
+            <div class="space-y-3">
+                <label class="flex items-center">
+                    <input type="checkbox" name="allow_notes" value="true"
+                           {% if data_access_settings and data_access_settings.allow_notes %}checked{% endif %}
+                           class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                    <span class="ml-2 text-sm text-blackbook-700">Allow AI to see notes</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" name="allow_tags" value="true"
+                           {% if data_access_settings and data_access_settings.allow_tags %}checked{% endif %}
+                           class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                    <span class="ml-2 text-sm text-blackbook-700">Allow AI to see tags</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" name="allow_interactions" value="true"
+                           {% if data_access_settings and data_access_settings.allow_interactions %}checked{% endif %}
+                           class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                    <span class="ml-2 text-sm text-blackbook-700">Allow AI to see interaction history summaries</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" name="allow_linkedin" value="true"
+                           {% if data_access_settings and data_access_settings.allow_linkedin %}checked{% endif %}
+                           class="h-4 w-4 text-blackbook-600 focus:ring-blackbook-500 border-blackbook-300 rounded">
+                    <span class="ml-2 text-sm text-blackbook-700">Allow AI to see LinkedIn URLs</span>
+                </label>
+            </div>
+
+            <div class="pt-4 border-t border-blackbook-200">
+                <label class="flex items-center">
+                    <input type="checkbox" name="auto_apply_suggestions" value="true"
+                           {% if data_access_settings and data_access_settings.auto_apply_suggestions %}checked{% endif %}
+                           class="h-4 w-4 text-red-600 focus:ring-red-500 border-blackbook-300 rounded">
+                    <span class="ml-2 text-sm text-blackbook-700">Auto-apply AI suggestions without approval</span>
+                </label>
+                <p class="text-xs text-blackbook-400 ml-6 mt-1">
+                    Warning: When enabled, AI suggestions will be applied immediately without review.
+                </p>
+            </div>
+
+            <div class="pt-4">
+                <button type="submit"
+                        class="px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2 text-sm">
+                    Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Privacy Notice -->
+    <div class="bg-blue-50 rounded-lg p-4">
+        <div class="flex">
+            <svg class="h-5 w-5 text-blue-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="text-sm text-blue-700">
+                <p class="font-medium mb-1">Privacy Protection</p>
+                <p>
+                    Email addresses and phone numbers are <strong>never</strong> sent to external AI providers.
+                    These are automatically stripped from any data sent for research purposes.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

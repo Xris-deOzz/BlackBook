@@ -1,0 +1,67 @@
+<!-- Organization Tag Management Widget -->
+<div id="org-tag-widget" class="space-y-3">
+    <!-- Current Tags -->
+    <div class="flex flex-wrap gap-2">
+        {% if current_tags %}
+        {% for tag in current_tags %}
+        <span class="inline-flex items-center px-3 py-1 text-sm font-medium rounded-full group"
+              style="background-color: {{ tag.color or '#e5e7eb' }}20; color: {{ tag.color or '#374151' }}; border: 1px solid {{ tag.color or '#d1d5db' }};">
+            {{ tag.name }}
+            <button hx-delete="/organizations/{{ organization.id }}/tags/{{ tag.id }}"
+                    hx-target="#org-tag-widget"
+                    hx-swap="outerHTML"
+                    class="ml-1.5 text-current hover:text-red-600 opacity-60 hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </span>
+        {% endfor %}
+        {% else %}
+        <span class="text-sm text-blackbook-400 italic">No tags assigned</span>
+        {% endif %}
+    </div>
+
+    <!-- Add Tag Dropdown (grouped by category) -->
+    {% set has_tags = firm_category_tags or company_category_tags %}
+    {% if has_tags %}
+    <div class="relative">
+        <select id="add-org-tag-select"
+                class="w-full px-3 py-2 text-sm border border-blackbook-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white dark:bg-blackbook-800 dark:border-blackbook-600 dark:text-white"
+                onchange="if(this.value) addOrgTag('{{ organization.id }}', this.value, this)">
+            <option value="">+ Add a tag...</option>
+            {% if firm_category_tags %}
+            <optgroup label="Firm Category">
+                {% for tag in firm_category_tags %}
+                <option value="{{ tag.id }}">{{ tag.name }}</option>
+                {% endfor %}
+            </optgroup>
+            {% endif %}
+            {% if company_category_tags %}
+            <optgroup label="Company Category">
+                {% for tag in company_category_tags %}
+                <option value="{{ tag.id }}">{{ tag.name }}</option>
+                {% endfor %}
+            </optgroup>
+            {% endif %}
+        </select>
+        <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+            <svg class="w-4 h-4 text-blackbook-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-xs text-blackbook-400">All available tags have been added</p>
+    {% endif %}
+</div>
+
+<script>
+function addOrgTag(orgId, tagId, selectEl) {
+    htmx.ajax('POST', `/organizations/${orgId}/tags/${tagId}`, {
+        target: '#org-tag-widget',
+        swap: 'outerHTML'
+    });
+    selectEl.value = '';
+}
+</script>
