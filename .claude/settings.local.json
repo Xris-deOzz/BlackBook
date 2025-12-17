@@ -166,7 +166,12 @@
       "Bash(git init:*)",
       "Bash(git add:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit - Perun''s BlackBook Personal CRM\n\nFull-featured personal CRM with:\n- Person and organization management\n- Google Calendar and Gmail integration\n- AI-powered research assistant\n- Email inbox integration\n- Docker deployment support\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nUpdate documentation for Synology deployment\n\n- Updated SYNOLOGY_DEPLOYMENT.md with completed deployment details\n- Added Tailscale Serve HTTPS setup instructions\n- Added Google OAuth troubleshooting (Client ID mismatch)\n- Added GitHub workflow for code updates\n- Added deployment summary with data counts\n- Updated README.md with Synology deployment section\n- Updated CHANGELOG with deployment session details\n- Removed junk files (=1.0.0, =3.10.0, _ul)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

@@ -110,7 +110,7 @@ sudo chown -R 1000:1000 /volume1/docker/blackbook
 
 ```bash
 cd /volume1/docker/blackbook
-git clone https://github.com/YOUR_USERNAME/PerunsBlackBook.git .
+git clone https://github.com/Xris-deOzz/BlackBook.git .
 ```
 
 ### Option B: Using SCP
@@ -414,7 +414,7 @@ The codebase is version-controlled with Git and can be pushed to GitHub for easy
 cd C:\Users\ossow\OneDrive\PerunsBlackBook
 
 # Already initialized - just add remote
-git remote add origin https://github.com/YOUR_USERNAME/PerunsBlackBook.git
+git remote add origin https://github.com/Xris-deOzz/BlackBook.git
 git push -u origin master
 ```
 
@@ -422,7 +422,7 @@ git push -u origin master
 
 ```bash
 cd /volume1/docker/blackbook
-git clone https://github.com/YOUR_USERNAME/PerunsBlackBook.git .
+git clone https://github.com/Xris-deOzz/BlackBook.git .
 ```
 
 ### Update Workflow
