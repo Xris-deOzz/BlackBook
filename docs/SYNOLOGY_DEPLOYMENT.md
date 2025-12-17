@@ -439,7 +439,7 @@ git push
 **2. Pull and deploy on Synology**
 
 ```bash
-ssh admin@bearcave
+ssh XrisNYC@bearcave
 cd /volume1/docker/blackbook
 git pull
 sudo docker-compose -f docker-compose.prod.yml down
