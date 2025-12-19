@@ -52,10 +52,6 @@ class GoogleContact:
     notes: str | None = None  # From biographies
     addresses: list[dict[str, Any]] = field(default_factory=list)  # Home/Work addresses
     labels: list[str] = field(default_factory=list)  # Contact group names (Labels)
-    # Additional fields for sync tracking and URLs
-    etag: str | None = None  # Google etag for change detection
-    urls: list[dict[str, Any]] = field(default_factory=list)  # Website URLs
-    nickname: str | None = None  # Nickname
 
     @property
     def google_contact_id(self) -> str:
@@ -206,7 +202,7 @@ class ContactsService:
                 results = service.people().connections().list(
                     resourceName="people/me",
                     pageSize=1000,
-                    personFields="names,nicknames,emailAddresses,phoneNumbers,photos,organizations,metadata,birthdays,biographies,addresses,memberships,urls",
+                    personFields="names,emailAddresses,phoneNumbers,photos,organizations,metadata,birthdays,biographies,addresses,memberships",
                     pageToken=page_token,
                 ).execute()
 
@@ -467,22 +463,6 @@ class ContactsService:
                 if group_display_name:
                     labels.append(group_display_name)
 
-        # Get etag for change detection
-        etag = None
-        metadata = person_data.get("metadata", {})
-        sources = metadata.get("sources", [])
-        if sources:
-            etag = sources[0].get("etag")
-
-        # Get URLs (websites, social profiles)
-        urls = person_data.get("urls", [])
-
-        # Get nickname
-        nickname = None
-        nicknames = person_data.get("nicknames", [])
-        if nicknames:
-            nickname = nicknames[0].get("value")
-
         return GoogleContact(
             resource_name=resource_name,
             display_name=display_name,
@@ -497,9 +477,6 @@ class ContactsService:
             notes=notes,
             addresses=addresses,
             labels=labels,
-            etag=etag,
-            urls=urls,
-            nickname=nickname,
         )
 
     def _build_email_cache(self) -> None:
@@ -520,54 +497,8 @@ class ContactsService:
                     if email and email not in self._email_to_person_cache:
                         self._email_to_person_cache[email] = p.id
 
-    def _parse_urls(self, urls: list[dict[str, Any]]) -> dict[str, Any]:
-        """
-        Parse Google Contact URLs into categorized fields.
-        
-        Returns dict with keys: linkedin, twitter, website, other_urls
-        """
-        result = {
-            "linkedin": None,
-            "twitter": None, 
-            "website": None,
-            "other_urls": []
-        }
-        
-        for url_data in urls:
-            url = url_data.get("value", "")
-            url_lower = url.lower()
-            url_type = url_data.get("type", "").lower()
-            
-            if "linkedin.com" in url_lower:
-                result["linkedin"] = url
-            elif "twitter.com" in url_lower or "x.com" in url_lower:
-                result["twitter"] = url
-            elif url_type in ("homepage", "home", "work", "blog") and not result["website"]:
-                result["website"] = url
-            else:
-                result["other_urls"].append({
-                    "url": url,
-                    "label": url_data.get("type", "other")
-                })
-        
-        return result
-
     def _match_contact_to_person(self, contact: GoogleContact) -> Person | None:
-        """
-        Try to find an existing person using 3-tier matching:
-        1. Match by google_resource_name (exact Google ID) 
-        2. Match by email address
-        3. (Future) Match by phone + similar name
-        """
-        # Tier 1: Match by google_resource_name (most reliable)
-        if contact.resource_name:
-            person = self.db.query(Person).filter(
-                Person.google_resource_name == contact.resource_name
-            ).first()
-            if person:
-                return person
-
-        # Tier 2: Match by email
+        """Try to find an existing person by matching email addresses."""
         if self._email_to_person_cache is None:
             self._build_email_cache()
 
@@ -576,8 +507,6 @@ class ContactsService:
             if email and email in self._email_to_person_cache:
                 person_id = self._email_to_person_cache[email]
                 return self.db.query(Person).filter_by(id=person_id).first()
-
-        # Tier 3: TODO - Match by phone + similar name (future enhancement)
 
         return None
 
@@ -608,30 +537,11 @@ class ContactsService:
             notes=contact.notes,
             location=contact.formatted_address,  # Primary address to location
             custom_fields=custom_fields,
-            # Google Contacts sync tracking
-            google_resource_name=contact.resource_name,
-            google_etag=contact.etag,
-            google_synced_at=datetime.now(timezone.utc),
-            # New fields from Google
-            nickname=contact.nickname,
         )
 
         # Set phone from first phone number
         if contact.phones:
             person.phone = contact.phones[0].get("value")
-
-        # Parse URLs into linkedin, twitter, website fields
-        if contact.urls:
-            parsed_urls = self._parse_urls(contact.urls)
-            if parsed_urls["linkedin"]:
-                person.linkedin = parsed_urls["linkedin"]
-            if parsed_urls["twitter"]:
-                person.twitter = parsed_urls["twitter"]
-            if parsed_urls["website"]:
-                person.website = parsed_urls["website"]
-            # Store other URLs in custom_fields
-            if parsed_urls["other_urls"]:
-                person.custom_fields["other_urls"] = parsed_urls["other_urls"]
 
         self.db.add(person)
         self.db.flush()  # Get person.id
@@ -725,32 +635,6 @@ class ContactsService:
             person.location = contact.formatted_address
             updated = True
 
-        # Update nickname if not set
-        if not person.nickname and contact.nickname:
-            person.nickname = contact.nickname
-            updated = True
-
-        # Update URL fields if not set
-        if contact.urls:
-            parsed_urls = self._parse_urls(contact.urls)
-            if not person.linkedin and parsed_urls["linkedin"]:
-                person.linkedin = parsed_urls["linkedin"]
-                updated = True
-            if not person.twitter and parsed_urls["twitter"]:
-                person.twitter = parsed_urls["twitter"]
-                updated = True
-            if not person.website and parsed_urls["website"]:
-                person.website = parsed_urls["website"]
-                updated = True
-
-        # Always update Google sync tracking fields
-        if contact.resource_name and person.google_resource_name != contact.resource_name:
-            person.google_resource_name = contact.resource_name
-            updated = True
-        if contact.etag:
-            person.google_etag = contact.etag
-        person.google_synced_at = datetime.now(timezone.utc)
-
         # Store Google Contact ID and addresses in custom_fields
         if person.custom_fields is None:
             person.custom_fields = {}
@@ -830,7 +714,6 @@ class ContactsService:
                 color="#4285F4",  # Google blue
             )
             self.db.add(tag)
-            self.db.flush()  # Flush to get tag.id
             self.db.flush()
 
         return tag
@@ -848,44 +731,20 @@ class ContactsService:
         if not labels:
             return False
 
-        # Deduplicate labels (case-insensitive)
-        seen_labels: set[str] = set()
-        unique_labels: list[str] = []
-        for label in labels:
-            label_lower = label.lower().strip()
-            if label_lower and label_lower not in seen_labels:
-                seen_labels.add(label_lower)
-                unique_labels.append(label)
-
         assigned_any = False
-        
-        # Query existing tag IDs directly from DB (relationship may not be loaded)
-        from app.models.tag import PersonTag as PT
-        existing_person_tags = self.db.query(PT.tag_id).filter(PT.person_id == person.id).all()
-        existing_tag_ids = {pt.tag_id for pt in existing_person_tags}
-        
-        # Track tag IDs we've added in THIS call (handles duplicate labels resolving to same tag)
-        added_tag_ids: set = set()
+        existing_tag_ids = {tag.id for tag in person.tags}
 
-        for label_name in unique_labels:
+        for label_name in labels:
             tag = self._get_or_create_tag(label_name)
-            # Skip if already exists OR already added in this batch
-            if tag.id in existing_tag_ids or tag.id in added_tag_ids:
-                continue
-            # Create PersonTag link - use merge to handle duplicates
-            try:
+            if tag.id not in existing_tag_ids:
+                # Create PersonTag link
                 person_tag = PersonTag(
                     person_id=person.id,
                     tag_id=tag.id,
                 )
                 self.db.add(person_tag)
-                self.db.flush()  # Flush each tag individually to catch duplicates early
-                added_tag_ids.add(tag.id)
+                existing_tag_ids.add(tag.id)
                 assigned_any = True
-            except Exception:
-                # Duplicate - rollback this specific insert and continue
-                self.db.rollback()
-                added_tag_ids.add(tag.id)
 
         return assigned_any
 
@@ -945,7 +804,7 @@ class ContactsService:
 
             result = service.people().createContact(
                 body=contact_body,
-                personFields="names,nicknames,emailAddresses,phoneNumbers,organizations,birthdays,addresses,biographies,metadata,urls"
+                personFields="names,emailAddresses,phoneNumbers,organizations,birthdays,addresses,biographies,metadata"
             ).execute()
 
             person.google_resource_name = result.get("resourceName")

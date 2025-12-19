@@ -24,6 +24,8 @@ services:
 
   # FastAPI Application
   app:
+    env_file:
+      - .env
     build:
       context: .
       dockerfile: Dockerfile
@@ -72,3 +74,4 @@ services:
 
 volumes:
   postgres_data:
+
