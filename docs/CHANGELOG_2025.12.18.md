@@ -1,130 +1,209 @@
 # Changelog - December 18, 2025
 
+**Document Version:** 2025.12.18.1
+
 ## Session Summary
-This session focused on implementing **bidirectional Google Contacts sync** - the ability to push BlackBook contacts to Google Contacts so they sync to your phone.
+
+This session verified the production deployment on Synology, confirmed MCP Filesystem integration for direct code editing from Claude.ai, and created a comprehensive specification for Bidirectional Google Contacts Sync (Phase 7).
 
 ---
 
-## Features Implemented
+## Production Status Verification
 
-### 1. Push to Google Contacts (Bidirectional Sync)
-**Location:** Person detail page → Record Info → Google Sync section
+### BlackBook Running on Synology ✅
 
-BlackBook can now push contacts TO Google Contacts, not just import from them. This enables:
-- Creating new contacts in Google Contacts from BlackBook
-- Syncing BlackBook-only contacts to your phone
-- True bidirectional sync workflow
+| Item | Status |
+|------|--------|
+| **Access URL** | `https://bearcave.tail1d5888.ts.net/` |
+| **App Container** | `blackbook-app` - Running |
+| **Database Container** | `blackbook-db` - Running |
+| **Tailscale HTTPS** | Working |
+| **Browser Access** | Verified ✅ |
 
-**How it works:**
-1. Navigate to any person's detail page
-2. In the "Google Sync" section (Record Info sidebar), select a Google account
-3. Click "Push to Google"
-4. The contact is created in Google Contacts with all available data
-5. Status changes from "Not linked" to "Linked"
+### Deployed Data (from Dec 16 migration)
+- **People:** 5,215 records
+- **Organizations:** 1,867 records
+- **Google Accounts:** 2 connected
 
-**Data pushed to Google:**
-- First name, Last name
-- Email addresses (all from PersonEmail table)
-- Phone number
-- Current organization and title
-- Birthday
-- Location/Address
-- Notes
-
-**Files Added/Modified:**
-- `app/services/contacts_service.py` - Added `push_to_google()` method to ContactsService class
-- `app/routers/import_contacts.py` - Added `/import/google/push/{person_id}` POST endpoint
-- `app/templates/persons/detail.html` - Added Push to Google button and account selector UI
-- `app/templates/persons/_google_sync_status.html` - New HTMX partial for success/error states
-
-### 2. Settings Page UI Consolidation
-**Location:** `/settings`
-
-Merged redundant UI sections into a cleaner layout:
-- Combined "Google Contacts Sync" and "Recent Sync Activity" into one unified section
-- Made sync history inline and compact (shows last 3 items)
-- Reduced visual clutter while maintaining full functionality
+### Database Backups Available
+- `backups/blackbook_export_20251216_132943.sql` (7.01 MB)
+- `backups/blackbook_export_20251216_144412.sql` (7.00 MB)
 
 ---
 
-## Technical Details
+## MCP Filesystem Integration ✅ NEW
 
-### Google OAuth Scopes
-The Push to Google feature requires the full `contacts` scope (not just `contacts.readonly`). Users who connected their Google account before this update need to:
-1. Disconnect their Google account in Settings
-2. Reconnect to grant the new write permissions
-3. The OAuth consent screen will now show "See, edit, download, and permanently delete your contacts"
+### What Was Configured
 
-### API Used
-- Google People API `people.createContact` endpoint
-- Creates contact in user's saved contacts (not "Other contacts")
+Claude.ai now has direct read/write access to the BlackBook codebase on Synology via the MCP (Model Context Protocol) Filesystem server.
 
-### Error Handling
-- Authentication failures prompt user to reconnect account
-- 403 errors indicate scope issues (need `contacts` not just `contacts.readonly`)
-- Already-linked contacts cannot be pushed again (prevents duplicates)
+**Allowed Directory:**
+```
+\\BearCave\docker\blackbook
+```
 
----
+This is a Windows UNC path that maps to `/volume1/docker/blackbook` on the Synology NAS.
 
-## Deployment Notes
+### Capabilities Verified
 
-### Network Share Copy Issues
-Discovered that Windows network share copies (`\\bearcave\...`) don't reliably update files on Synology NAS. The workaround:
-1. Edit files locally on Windows
-2. Use SSH heredoc to add code directly to Synology, OR
-3. Use `head`/`cat` commands to reconstruct files on Synology
+| Operation | Status | Test |
+|-----------|--------|------|
+| **Read files** | ✅ Working | Read `Claude_Code_Context.md` |
+| **Write files** | ✅ Working | Created test file |
+| **List directories** | ✅ Working | Listed project structure |
+| **Edit files** | ✅ Working | Can use `str_replace` for edits |
 
-### Deployment Commands (Synology)
+### How It Works
+
+1. **MCP Server:** A Filesystem MCP server runs locally on Christopher's Windows machine
+2. **Network Share:** The Synology `docker` share is mounted as `\\BearCave\docker`
+3. **Claude.ai Access:** Claude can read/write files through the MCP tools:
+   - `Filesystem:read_file` / `Filesystem:read_text_file`
+   - `Filesystem:write_file`
+   - `Filesystem:edit_file` (str_replace)
+   - `Filesystem:list_directory`
+   - `Filesystem:search_files`
+
+### Benefits
+
+- **Direct Code Editing:** Claude can modify BlackBook code without copy/paste
+- **Documentation Updates:** Can update docs directly on production server
+- **File Creation:** Can create new files (routers, templates, etc.)
+- **No SSH Required:** Bypasses the MCP JSON parsing issues seen with SSH
+
+### Limitations
+
+- **No Delete:** MCP Filesystem doesn't support file deletion (use move instead)
+- **No Docker Commands:** Cannot restart containers or run Docker commands
+- **Text Files Only:** Binary file handling is limited
+
+### Usage Pattern
+
+For development work, Claude can now:
+1. Read existing code to understand context
+2. Create new files directly
+3. Edit existing files using `str_replace` 
+4. Update documentation
+
+For deployment (after code changes):
 ```bash
-# Standard rebuild
-sudo docker-compose -f docker-compose.prod.yml down
-sudo docker-compose -f docker-compose.prod.yml build --no-cache
-sudo docker-compose -f docker-compose.prod.yml up -d
-
-# Verify app started
-sudo docker logs blackbook-app --tail 10
-
-# Check for errors
-sudo docker logs blackbook-app --tail 50
+# SSH to Synology and rebuild
+ssh admin@bearcave
+cd /volume1/docker/blackbook
+sudo docker-compose -f docker-compose.prod.yml up -d --build
 ```
 
 ---
 
-## Files Changed Summary
+## Development Environment Summary
 
-### New Files
-- `app/templates/persons/_google_sync_status.html` - HTMX partial for push status
+### Two Development Paths Now Available
 
-### Modified Files
-- `app/services/contacts_service.py` - Added `push_to_google()` method (~120 lines)
-- `app/routers/import_contacts.py` - Added push endpoint, added `Form` import
-- `app/templates/persons/detail.html` - Added Push to Google UI in Google Sync section
-- `app/templates/settings/index.html` - Merged sync sections
+| Environment | Location | Use Case |
+|-------------|----------|----------|
+| **Windows Local** | `C:\Users\ossow\OneDrive\PerunsBlackBook\` | Active development with hot reload |
+| **Synology Production** | `\\BearCave\docker\blackbook` | Production deployment, direct edits via MCP |
 
----
+### Recommended Workflow
 
-## Bug Fixes
-
-### 1. Missing `Form` Import
-**Issue:** App crashed on startup with `NameError: name 'Form' is not defined`
-**Cause:** Added `Form(...)` parameter but forgot to import `Form` from FastAPI
-**Fix:** Added `Form` to imports in `import_contacts.py`
-
-### 2. Method Outside Class
-**Issue:** `push_to_google` method was added after the class definition
-**Cause:** Heredoc append placed method after `get_contacts_service()` function
-**Fix:** Reconstructed file with method inside `ContactsService` class
-
-### 3. `current_company` Attribute Error
-**Issue:** `'Person' object has no attribute 'current_company'`
-**Cause:** Person model uses `organizations` relationship, not a `current_company` field
-**Fix:** Changed code to find current organization from `person.organizations`
+1. **For new features:** Develop locally on Windows with `uvicorn --reload`
+2. **For quick fixes:** Edit directly on Synology via MCP, then rebuild container
+3. **For documentation:** Edit directly on Synology (no rebuild needed for .md files)
 
 ---
 
-## Next Steps (Future Enhancements)
+## Phase 7: Bidirectional Google Contacts Sync (NEW)
 
-1. **Sync Updates** - Push updates when BlackBook contact is modified
-2. **Bulk Push** - Push multiple contacts at once
-3. **Two-way Sync** - Detect and merge changes from both sides
-4. **Conflict Resolution** - Handle when same contact modified in both places
+Created comprehensive specification for full two-way sync between BlackBook and Google Contacts.
+
+**Specification:** `docs/GOOGLE_CONTACTS_BIDIRECTIONAL_SYNC_2025.12.18.1.md`
+
+### Key Features Specified
+
+| Feature | Details |
+|---------|--------|
+| **Sync Direction** | Bidirectional (BlackBook ↔ All Google Accounts) |
+| **Master Database** | BlackBook is source of truth |
+| **Sync Schedule** | 07:00 & 21:00 ET + manual "Sync Now" |
+| **Conflict Resolution** | Merge both values, flag names for review |
+| **Deletion Handling** | Archive before delete, 90-day retention |
+| **Audit Trail** | Full sync_log table with change history |
+
+### Conflict Resolution Rules
+
+- **Phones/Emails:** Keep all values from both systems (dedupe exact matches)
+- **Notes:** Merge with source labels, truncate to 2048 chars for Google
+- **Names:** Recognize nicknames (Chris↔Christopher), flag true conflicts for review
+- **Single fields:** BlackBook wins (it's the master)
+
+### New Database Tables
+
+- `sync_log` - Full audit trail of every sync operation
+- `archived_persons` - Deleted contacts preserved for recovery
+- `sync_review_queue` - Name/data conflicts pending manual review
+- `sync_settings` - Schedule configuration (times, timezone, retention)
+
+### New UI Components
+
+- Sync status badge on person cards (✅ synced / ⏳ pending / ⚠️ error)
+- "Last synced" and "Push to Google" on person detail page
+- New Settings tab: Sync Settings (schedule, toggle, manual sync)
+- Sync Log page (filterable history)
+- Review Queue page (resolve name conflicts)
+- Archive Browser (view/restore deleted contacts)
+- Sync checkbox on person create/edit form
+
+### Estimated Effort
+
+| Phase | Tasks | Hours |
+|-------|-------|-------|
+| 7A: Database & Models | 8 | 5 |
+| 7B: Sync Service Core | 12 | 19.5 |
+| 7C: Scheduler | 5 | 3.75 |
+| 7D: API Endpoints | 8 | 7.5 |
+| 7E: UI Components | 10 | 12.5 |
+| 7F: Testing & Docs | 5 | 7.5 |
+| **Total** | **48** | **~56 hours** |
+
+---
+
+## Files Created
+
+| File | Description |
+|------|-------------|
+| `docs/GOOGLE_CONTACTS_BIDIRECTIONAL_SYNC_2025.12.18.1.md` | Phase 7 specification (48 tasks, ~56 hrs) |
+| `docs/CLAUDE_CODE_PROMPT_PHASE_7_SYNC.md` | Claude Code implementation prompt (full) |
+| `docs/CLAUDE_CODE_PROMPT_PHASE_7E_UI.md` | Claude Code prompt for UI only (Phase 7E) |
+| `docs/CHANGELOG_2025.12.18.md` | This changelog |
+
+## Files Modified
+
+| File | Changes |
+|------|---------|
+| `docs/CHANGELOG_2025.12.18.md` | Created - This file |
+| `Claude_Code_Context.md` | Updated version, added MCP section, updated Phase 6 status |
+| `mcp_test.txt` | Created (test file, can be deleted) |
+
+---
+
+## Phase Status Update
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 1-5 | ✅ Complete | All core features built |
+| Phase 5.5 | 🔄 In Progress | Gmail Integration enhancements |
+| **Phase 6** | ✅ **Complete** | Synology deployment done Dec 16! |
+
+**Note:** Phase 6 was previously marked as "Pending" but was actually completed on December 16, 2025. Updated documentation to reflect this.
+
+---
+
+## Next Steps
+
+1. Continue Phase 5.5 Gmail Integration work
+2. Consider code cleanup for potential open-source release
+3. Explore Proton Mail integration as future enhancement
+
+---
+
+*End of Changelog*
