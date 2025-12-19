@@ -1,0 +1,149 @@
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    {% if sync_logs %}
+    <table class="min-w-full divide-y divide-blackbook-200">
+        <thead class="bg-blackbook-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Date & Time</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Source</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Status</th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-blackbook-500 uppercase tracking-wider">Parsed</th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-blackbook-500 uppercase tracking-wider">Created</th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-blackbook-500 uppercase tracking-wider">Updated</th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-blackbook-500 uppercase tracking-wider">Skipped</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Details</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-blackbook-200">
+            {% for log in sync_logs %}
+            <tr class="hover:bg-blackbook-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-blackbook-900">
+                        {{ log.imported_at.strftime('%b %d, %Y') }}
+                    </div>
+                    <div class="text-xs text-blackbook-500">
+                        {{ log.imported_at.strftime('%I:%M %p') }}
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                        {% if log.source.value == 'google_contacts' %}bg-blue-100 text-blue-800
+                        {% elif log.source.value == 'linkedin' %}bg-sky-100 text-sky-800
+                        {% else %}bg-blackbook-100 text-blackbook-800{% endif %}">
+                        {% if log.source.value == 'google_contacts' %}
+                        <svg class="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        </svg>
+                        {% endif %}
+                        {{ log.source.value | replace('_', ' ') | title }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if log.status.value == 'success' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Success
+                    </span>
+                    {% elif log.status.value == 'partial' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        Partial
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Failed
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-blackbook-600 text-right">
+                    {{ log.records_parsed }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 text-right font-medium">
+                    +{{ log.records_created }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 text-right">
+                    {{ log.records_updated }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-blackbook-500 text-right">
+                    {{ log.records_skipped }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-blackbook-500">
+                    {% if log.error_message %}
+                    <span class="text-red-600 cursor-help" title="{{ log.error_message }}">
+                        <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Error
+                    </span>
+                    {% elif log.original_filename %}
+                    <span class="text-blackbook-500 text-xs truncate max-w-[150px] inline-block" title="{{ log.original_filename }}">
+                        {{ log.original_filename }}
+                    </span>
+                    {% else %}
+                    <span class="text-blackbook-400">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="px-6 py-4 bg-blackbook-50 border-t border-blackbook-200 flex items-center justify-between">
+        <div class="text-sm text-blackbook-500">
+            Showing {{ (page - 1) * per_page + 1 }} to {{ min(page * per_page, total_count) }} of {{ total_count }} entries
+        </div>
+        <div class="flex items-center gap-2">
+            {% if page > 1 %}
+            <a href="/settings/sync/log?page={{ page - 1 }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if direction_filter %}&direction={{ direction_filter }}{% endif %}"
+               class="px-3 py-1 border border-blackbook-300 rounded text-sm text-blackbook-600 hover:bg-blackbook-100">
+                Previous
+            </a>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <span class="px-3 py-1 bg-blackbook-600 text-white rounded text-sm">{{ p }}</span>
+                {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                <a href="/settings/sync/log?page={{ p }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if direction_filter %}&direction={{ direction_filter }}{% endif %}"
+                   class="px-3 py-1 border border-blackbook-300 rounded text-sm text-blackbook-600 hover:bg-blackbook-100">
+                    {{ p }}
+                </a>
+                {% elif p == 2 or p == total_pages - 1 %}
+                <span class="px-2 text-blackbook-400">...</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+            <a href="/settings/sync/log?page={{ page + 1 }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if direction_filter %}&direction={{ direction_filter }}{% endif %}"
+               class="px-3 py-1 border border-blackbook-300 rounded text-sm text-blackbook-600 hover:bg-blackbook-100">
+                Next
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="px-6 py-12 text-center">
+        <svg class="mx-auto h-12 w-12 text-blackbook-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-blackbook-900">No sync logs found</h3>
+        <p class="mt-1 text-sm text-blackbook-500">
+            {% if status_filter or direction_filter %}
+            Try adjusting your filters to see more results.
+            {% else %}
+            Sync your Google Contacts to see sync history here.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>

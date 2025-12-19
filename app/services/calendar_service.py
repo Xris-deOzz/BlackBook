@@ -122,12 +122,17 @@ class CalendarService:
         except HttpError as e:
             raise CalendarAPIError(f"Calendar API error: {e}")
 
-    def get_todays_events(self, local_tz: ZoneInfo | None = None) -> list[CalendarEvent]:
+    def get_todays_events(
+        self,
+        local_tz: ZoneInfo | None = None,
+        account_id: UUID | None = None,
+    ) -> list[CalendarEvent]:
         """
-        Get today's calendar events across all active accounts.
+        Get today's calendar events, optionally filtered by account.
 
         Args:
             local_tz: Local timezone to determine "today". If None, uses UTC.
+            account_id: Optional UUID to filter events to a specific Google account.
 
         Returns:
             List of CalendarEvent objects for today, sorted by start time
@@ -146,37 +151,61 @@ class CalendarService:
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             today_end = today_start + timedelta(days=1)
 
-        # Fetch fresh events from all accounts
-        accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
-        for account in accounts:
-            try:
-                self.fetch_events(
-                    account_id=account.id,
-                    time_min=today_start,
-                    time_max=today_end,
-                )
-            except (CalendarAuthError, CalendarAPIError):
-                # Continue with other accounts if one fails
-                continue
+        # Fetch fresh events from accounts
+        if account_id:
+            # Fetch only from specific account
+            account = self.db.query(GoogleAccount).filter_by(id=account_id, is_active=True).first()
+            if account:
+                try:
+                    self.fetch_events(
+                        account_id=account.id,
+                        time_min=today_start,
+                        time_max=today_end,
+                    )
+                except (CalendarAuthError, CalendarAPIError):
+                    pass
+        else:
+            # Fetch from all active accounts
+            accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+            for account in accounts:
+                try:
+                    self.fetch_events(
+                        account_id=account.id,
+                        time_min=today_start,
+                        time_max=today_end,
+                    )
+                except (CalendarAuthError, CalendarAPIError):
+                    # Continue with other accounts if one fails
+                    continue
 
         # Query cached events for today
-        events = (
+        query = (
             self.db.query(CalendarEvent)
             .filter(CalendarEvent.start_time >= today_start)
             .filter(CalendarEvent.start_time < today_end)
-            .order_by(CalendarEvent.start_time)
-            .all()
         )
+
+        # Filter by account if specified
+        if account_id:
+            query = query.filter(CalendarEvent.google_account_id == account_id)
+
+        events = query.order_by(CalendarEvent.start_time).all()
 
         return events
 
-    def get_upcoming_events(self, days: int = 7, offset: int = 0) -> list[CalendarEvent]:
+    def get_upcoming_events(
+        self,
+        days: int = 7,
+        offset: int = 0,
+        account_id: UUID | None = None,
+    ) -> list[CalendarEvent]:
         """
-        Get upcoming calendar events across all active accounts.
+        Get upcoming calendar events, optionally filtered by account.
 
         Args:
             days: Number of days to look ahead (default 7)
             offset: Number of days to skip from today (default 0)
+            account_id: Optional UUID to filter events to a specific Google account.
 
         Returns:
             List of CalendarEvent objects, sorted by start time
@@ -185,26 +214,44 @@ class CalendarService:
         time_min = now + timedelta(days=offset)
         time_max = time_min + timedelta(days=days)
 
-        # Fetch fresh events from all accounts
-        accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
-        for account in accounts:
-            try:
-                self.fetch_events(
-                    account_id=account.id,
-                    time_min=time_min,
-                    time_max=time_max,
-                )
-            except (CalendarAuthError, CalendarAPIError):
-                continue
+        # Fetch fresh events from accounts
+        if account_id:
+            # Fetch only from specific account
+            account = self.db.query(GoogleAccount).filter_by(id=account_id, is_active=True).first()
+            if account:
+                try:
+                    self.fetch_events(
+                        account_id=account.id,
+                        time_min=time_min,
+                        time_max=time_max,
+                    )
+                except (CalendarAuthError, CalendarAPIError):
+                    pass
+        else:
+            # Fetch from all active accounts
+            accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+            for account in accounts:
+                try:
+                    self.fetch_events(
+                        account_id=account.id,
+                        time_min=time_min,
+                        time_max=time_max,
+                    )
+                except (CalendarAuthError, CalendarAPIError):
+                    continue
 
         # Query cached events
-        events = (
+        query = (
             self.db.query(CalendarEvent)
             .filter(CalendarEvent.start_time >= time_min)
             .filter(CalendarEvent.start_time < time_max)
-            .order_by(CalendarEvent.start_time)
-            .all()
         )
+
+        # Filter by account if specified
+        if account_id:
+            query = query.filter(CalendarEvent.google_account_id == account_id)
+
+        events = query.order_by(CalendarEvent.start_time).all()
 
         return events
 

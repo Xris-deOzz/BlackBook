@@ -1,6 +1,6 @@
 # Google Cloud Project Setup Guide
 
-**Document Version:** 2025.12.16.2  
+**Document Version:** 2025.12.18.1
 **Purpose:** Step-by-step instructions for setting up Google OAuth for Perun's BlackBook Gmail, Calendar, Contacts, and People API integration.
 
 ---
@@ -9,6 +9,7 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2025.12.18.1 | 2025-12-18 | Added Push to Google feature - bidirectional contacts sync now implemented; Updated feature enablement table |
 | 2025.12.16.2 | 2025-12-16 | Verified all scopes working; Added Gmail compose utility; Added Workspace admin setup for custom domains; Updated troubleshooting section |
 | 2025.12.16.1 | 2025-12-16 | Added comprehensive scope list including Gmail send/compose, Calendar events (read/write), People API (organization, phone, emails, birthday), Contacts API |
 | 2025.12.08.1 | 2025-12-08 | Initial version with basic Gmail and Calendar readonly scopes |
@@ -308,12 +309,13 @@ After completing the BlackBook OAuth implementation, verify the setup:
 |---------|-----------------|--------|
 | Email history viewing | `gmail.readonly` | ✅ Implemented |
 | Calendar event viewing | `calendar.readonly` | ✅ Implemented |
+| Import Google Contacts | `contacts.readonly` | ✅ Implemented |
+| Import "Other" contacts | `contacts.other.readonly` | ✅ Implemented |
+| **Push contacts to Google** | `contacts` | ✅ Implemented (2025-12-18) |
 | **Send emails from CRM** | `gmail.send`, `gmail.compose` | 🔄 Ready to implement |
 | **Create calendar events** | `calendar.events` | 🔄 Ready to implement |
-| **Import "Other" contacts** | `contacts.other.readonly` | 🔄 Ready to implement |
 | **Enrich profiles with work history** | `user.organization.read` | 🔄 Ready to implement |
 | **Add phone numbers to profiles** | `user.phonenumbers.read` | 🔄 Ready to implement |
-| Sync Google Contacts | `contacts`, `contacts.readonly` | 🔄 Ready to implement |
 | Check calendar availability | `calendar.events.freebusy` | 🔄 Future |
 
 ---

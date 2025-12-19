@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<nav class="bg-white border-b border-blackbook-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="/" class="text-blackbook-500 hover:text-blackbook-700">Home</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li>
+                <a href="/settings?tab=contacts-sync" class="text-blackbook-500 hover:text-blackbook-700">Settings</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li class="text-blackbook-900 font-medium">Sync Log</li>
+        </ol>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-blackbook-900">Sync Log</h1>
+            <p class="text-blackbook-500 mt-1">History of all contact synchronization operations</p>
+        </div>
+        <a href="/settings?tab=contacts-sync"
+           class="inline-flex items-center px-4 py-2 border border-blackbook-300 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-50 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Sync Settings
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow-md p-4">
+        <div class="flex flex-wrap items-center gap-4">
+            <div>
+                <label for="status-filter" class="block text-xs text-blackbook-500 mb-1">Status</label>
+                <select id="status-filter"
+                        hx-get="/settings/sync/log"
+                        hx-target="#sync-log-table"
+                        hx-include="[name='direction']"
+                        name="status"
+                        class="block w-40 rounded-md border-blackbook-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                    <option value="" {% if not status_filter %}selected{% endif %}>All Statuses</option>
+                    <option value="success" {% if status_filter == 'success' %}selected{% endif %}>Success</option>
+                    <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial</option>
+                    <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+            <div>
+                <label for="direction-filter" class="block text-xs text-blackbook-500 mb-1">Direction</label>
+                <select id="direction-filter"
+                        hx-get="/settings/sync/log"
+                        hx-target="#sync-log-table"
+                        hx-include="[name='status']"
+                        name="direction"
+                        class="block w-40 rounded-md border-blackbook-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                    <option value="" {% if not direction_filter %}selected{% endif %}>All Directions</option>
+                    <option value="import" {% if direction_filter == 'import' %}selected{% endif %}>Import (Google to BB)</option>
+                    <option value="export" {% if direction_filter == 'export' %}selected{% endif %}>Export (BB to Google)</option>
+                </select>
+            </div>
+            <div class="ml-auto">
+                <span class="text-sm text-blackbook-500">{{ total_count }} total sync operations</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync Log Table -->
+    <div id="sync-log-table">
+        {% include "settings/_sync_log_table.html" %}
+    </div>
+</div>
+{% endblock %}

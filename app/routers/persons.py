@@ -1239,6 +1239,23 @@ async def get_tag_manage_widget(
     )
     available_tags = [t for t in people_tags if t.id not in current_tag_ids]
 
+    # Group available tags by subcategory
+    available_tags_by_subcategory = {}
+    for tag in available_tags:
+        subcat = tag.subcategory or "Other"
+        if subcat not in available_tags_by_subcategory:
+            available_tags_by_subcategory[subcat] = []
+        available_tags_by_subcategory[subcat].append(tag)
+
+    # Define preferred order for subcategories
+    preferred_order = ["Investor Type", "Role/Industry", "Location", "Classmates",
+                       "Former Colleague", "Professional Services", "Relationship", "Other"]
+    available_subcategories = [s for s in preferred_order if s in available_tags_by_subcategory]
+    # Add any subcategories not in preferred order
+    for subcat in available_tags_by_subcategory:
+        if subcat not in available_subcategories:
+            available_subcategories.append(subcat)
+
     return templates.TemplateResponse(
         "persons/_tag_manage.html",
         {
@@ -1246,6 +1263,8 @@ async def get_tag_manage_widget(
             "person_id": str(person_id),
             "current_tags": person.tags,
             "available_tags": available_tags,
+            "available_tags_by_subcategory": available_tags_by_subcategory,
+            "available_subcategories": available_subcategories,
         },
     )
 
@@ -1288,6 +1307,22 @@ async def add_tag_to_person(
     )
     available_tags = [t for t in people_tags if t.id not in current_tag_ids]
 
+    # Group available tags by subcategory
+    available_tags_by_subcategory = {}
+    for tag in available_tags:
+        subcat = tag.subcategory or "Other"
+        if subcat not in available_tags_by_subcategory:
+            available_tags_by_subcategory[subcat] = []
+        available_tags_by_subcategory[subcat].append(tag)
+
+    # Define preferred order for subcategories
+    preferred_order = ["Investor Type", "Role/Industry", "Location", "Classmates",
+                       "Former Colleague", "Professional Services", "Relationship", "Other"]
+    available_subcategories = [s for s in preferred_order if s in available_tags_by_subcategory]
+    for subcat in available_tags_by_subcategory:
+        if subcat not in available_subcategories:
+            available_subcategories.append(subcat)
+
     return templates.TemplateResponse(
         "persons/_tag_manage.html",
         {
@@ -1295,6 +1330,8 @@ async def add_tag_to_person(
             "person_id": str(person_id),
             "current_tags": person.tags,
             "available_tags": available_tags,
+            "available_tags_by_subcategory": available_tags_by_subcategory,
+            "available_subcategories": available_subcategories,
         },
     )
 
@@ -1332,6 +1369,22 @@ async def remove_tag_from_person(
     )
     available_tags = [t for t in people_tags if t.id not in current_tag_ids]
 
+    # Group available tags by subcategory
+    available_tags_by_subcategory = {}
+    for tag in available_tags:
+        subcat = tag.subcategory or "Other"
+        if subcat not in available_tags_by_subcategory:
+            available_tags_by_subcategory[subcat] = []
+        available_tags_by_subcategory[subcat].append(tag)
+
+    # Define preferred order for subcategories
+    preferred_order = ["Investor Type", "Role/Industry", "Location", "Classmates",
+                       "Former Colleague", "Professional Services", "Relationship", "Other"]
+    available_subcategories = [s for s in preferred_order if s in available_tags_by_subcategory]
+    for subcat in available_tags_by_subcategory:
+        if subcat not in available_subcategories:
+            available_subcategories.append(subcat)
+
     return templates.TemplateResponse(
         "persons/_tag_manage.html",
         {
@@ -1339,6 +1392,8 @@ async def remove_tag_from_person(
             "person_id": str(person_id),
             "current_tags": person.tags,
             "available_tags": available_tags,
+            "available_tags_by_subcategory": available_tags_by_subcategory,
+            "available_subcategories": available_subcategories,
         },
     )
 

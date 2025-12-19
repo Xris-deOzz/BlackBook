@@ -12,6 +12,7 @@ import calendar
 import json
 from datetime import date, timedelta
 from typing import Optional
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Request
@@ -128,18 +129,30 @@ def get_birthdays_for_month(db: Session, year: int, month: int) -> dict[int, lis
 @router.get("/today-widget", response_class=HTMLResponse)
 async def get_today_widget(
     request: Request,
+    account_id: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     """
     Get today's calendar widget showing meetings and today's birthdays.
 
     Combines calendar events for today with any birthdays occurring today.
-    Also includes Google accounts for the "Add Event" feature.
+    Also includes Google accounts for the "Add Event" feature and account filtering.
+
+    Args:
+        account_id: Optional UUID string to filter events to a specific Google account.
     """
     today = date.today()
 
     # Get today's birthdays
     todays_birthdays = [b for b in get_upcoming_birthdays(db, days=0) if b["is_today"]]
+
+    # Parse account_id if provided
+    selected_account_id = None
+    if account_id and account_id.strip():
+        try:
+            selected_account_id = UUID(account_id)
+        except ValueError:
+            pass
 
     # Get today's calendar events using local timezone
     # TODO: Get timezone from user settings, for now default to America/New_York
@@ -148,7 +161,7 @@ async def get_today_widget(
     try:
         from app.services.calendar_service import get_calendar_service
         calendar_service = get_calendar_service(db)
-        events = calendar_service.get_todays_events(local_tz=local_tz)
+        events = calendar_service.get_todays_events(local_tz=local_tz, account_id=selected_account_id)
         # Convert event times to local timezone for display
         for event in events:
             if event.start_time:
@@ -162,7 +175,7 @@ async def get_today_widget(
     except Exception:
         pass
 
-    # Get connected Google accounts for the Add Event dropdown
+    # Get connected Google accounts for the Add Event dropdown and account filter
     accounts = db.query(GoogleAccount).filter_by(is_active=True).all()
 
     return templates.TemplateResponse(
@@ -173,6 +186,7 @@ async def get_today_widget(
             "birthdays": todays_birthdays,
             "today": today,
             "google_accounts": accounts,
+            "selected_account_id": selected_account_id,
         },
     )
 

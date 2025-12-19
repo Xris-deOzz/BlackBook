@@ -126,6 +126,7 @@ async def list_tags(
 @router.get("/new", response_class=HTMLResponse)
 async def new_tag_form(
     request: Request,
+    db: Session = Depends(get_db),
     category: Optional[str] = Query(None, description="Pre-select category for the tag"),
 ):
     """
@@ -140,6 +141,12 @@ async def new_tag_form(
 
     info = category_info.get(category, {"title": "New Tag", "description": "Create a new tag to organize people and organizations"})
 
+    # Get existing subcategories for dropdown
+    existing_subcategories = db.query(Tag.subcategory).filter(
+        Tag.subcategory.isnot(None)
+    ).distinct().order_by(Tag.subcategory).all()
+    existing_subcategories = [s[0] for s in existing_subcategories]
+
     return templates.TemplateResponse(
         "tags/new.html",
         {
@@ -147,6 +154,7 @@ async def new_tag_form(
             "title": info["title"],
             "description": info["description"],
             "category": category,
+            "existing_subcategories": existing_subcategories,
         },
     )
 
@@ -158,6 +166,7 @@ async def create_tag(
     name: str = Form(...),
     color: str = Form("#6B7280"),
     category: Optional[str] = Form(None),
+    subcategory: Optional[str] = Form(None),
 ):
     """
     Create a new tag.
@@ -173,6 +182,12 @@ async def create_tag(
         }
         info = category_info.get(category, {"title": "New Tag", "description": "Create a new tag to organize people and organizations"})
 
+        # Get existing subcategories for dropdown
+        existing_subcategories = db.query(Tag.subcategory).filter(
+            Tag.subcategory.isnot(None)
+        ).distinct().order_by(Tag.subcategory).all()
+        existing_subcategories = [s[0] for s in existing_subcategories]
+
         return templates.TemplateResponse(
             "tags/new.html",
             {
@@ -183,15 +198,22 @@ async def create_tag(
                 "name": name,
                 "color": color,
                 "category": category,
+                "subcategory": subcategory,
+                "existing_subcategories": existing_subcategories,
             },
             status_code=400,
         )
+
+    # Clean subcategory - strip whitespace and set to None if empty
+    if subcategory:
+        subcategory = subcategory.strip() or None
 
     # Create new tag - only set category for org tags (Firm/Company), not People
     tag = Tag(
         name=name,
         color=color,
         category=category if category in ("Firm Category", "Company Category") else None,
+        subcategory=subcategory,
     )
 
     db.add(tag)
@@ -246,23 +268,31 @@ async def edit_tag_form(
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
 
+    # Get existing subcategories for dropdown
+    existing_subcategories = db.query(Tag.subcategory).filter(
+        Tag.subcategory.isnot(None)
+    ).distinct().order_by(Tag.subcategory).all()
+    existing_subcategories = [s[0] for s in existing_subcategories]
+
     return templates.TemplateResponse(
         "tags/edit.html",
         {
             "request": request,
             "title": f"Edit Tag: {tag.name}",
             "tag": tag,
+            "existing_subcategories": existing_subcategories,
         },
     )
 
 
-@router.put("/{tag_id}", response_class=HTMLResponse)
+@router.post("/{tag_id}", response_class=HTMLResponse)
 async def update_tag(
     request: Request,
     tag_id: UUID,
     db: Session = Depends(get_db),
     name: str = Form(...),
     color: str = Form("#6B7280"),
+    subcategory: Optional[str] = Form(None),
 ):
     """
     Update an existing tag.
@@ -275,6 +305,12 @@ async def update_tag(
     # Check if another tag with this name exists
     existing = db.query(Tag).filter(Tag.name == name, Tag.id != tag_id).first()
     if existing:
+        # Get existing subcategories for dropdown
+        existing_subcategories = db.query(Tag.subcategory).filter(
+            Tag.subcategory.isnot(None)
+        ).distinct().order_by(Tag.subcategory).all()
+        existing_subcategories = [s[0] for s in existing_subcategories]
+
         return templates.TemplateResponse(
             "tags/edit.html",
             {
@@ -282,18 +318,24 @@ async def update_tag(
                 "title": f"Edit Tag: {tag.name}",
                 "tag": tag,
                 "error": f"Another tag with the name '{name}' already exists.",
+                "existing_subcategories": existing_subcategories,
             },
             status_code=400,
         )
 
+    # Clean subcategory - strip whitespace and set to None if empty
+    if subcategory:
+        subcategory = subcategory.strip() or None
+
     # Update tag
     tag.name = name
     tag.color = color
+    tag.subcategory = subcategory
 
     db.commit()
     db.refresh(tag)
 
-    return RedirectResponse(url="/tags", status_code=303)
+    return RedirectResponse(url="/settings?tab=tags", status_code=303)
 
 
 @router.delete("/{tag_id}", response_class=HTMLResponse)
@@ -313,4 +355,4 @@ async def delete_tag(
     db.delete(tag)
     db.commit()
 
-    return RedirectResponse(url="/tags", status_code=303)
+    return RedirectResponse(url="/settings?tab=tags", status_code=303)

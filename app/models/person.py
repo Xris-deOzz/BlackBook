@@ -92,6 +92,21 @@ class Person(Base):
     )
     my_relationship_notes: Mapped[str | None] = mapped_column(Text)
 
+    # Google Contacts sync tracking
+    google_resource_name: Mapped[str | None] = mapped_column(
+        String(255),
+        index=True,
+        comment="Google People API resource name (e.g., people/c1234567890)",
+    )
+    google_etag: Mapped[str | None] = mapped_column(
+        String(100),
+        comment="Google etag for change detection",
+    )
+    google_synced_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        comment="Last sync timestamp with Google Contacts",
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=datetime.utcnow,

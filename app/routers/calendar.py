@@ -491,6 +491,7 @@ async def create_calendar_event(
 async def get_week_view(
     request: Request,
     days: int = 5,
+    account_id: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     """
@@ -500,6 +501,7 @@ async def get_week_view(
 
     Args:
         days: Number of days to show (default 5)
+        account_id: Optional UUID string to filter events to a specific Google account.
     """
     import calendar as cal_module
 
@@ -507,9 +509,17 @@ async def get_week_view(
     local_tz = get_local_timezone(db)
     today_local = datetime.now(local_tz).date()
 
+    # Parse account_id if provided
+    selected_account_id = None
+    if account_id and account_id.strip():
+        try:
+            selected_account_id = UUID(account_id)
+        except ValueError:
+            pass
+
     try:
         # Get events for the next N days starting from tomorrow
-        events = calendar_service.get_upcoming_events(days=days, offset=1)
+        events = calendar_service.get_upcoming_events(days=days, offset=1, account_id=selected_account_id)
 
         # Group events by date
         events_by_date = {}

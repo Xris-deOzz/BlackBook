@@ -67,6 +67,10 @@
                class="{% if active_tab == 'ai-chat' %}border-blackbook-600 text-blackbook-900{% else %}border-transparent text-blackbook-500 hover:text-blackbook-700 hover:border-blackbook-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                 AI Chat
             </a>
+            <a href="/settings?tab=contacts-sync"
+               class="{% if active_tab == 'contacts-sync' %}border-blackbook-600 text-blackbook-900{% else %}border-transparent text-blackbook-500 hover:text-blackbook-700 hover:border-blackbook-300{% endif %} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                Contacts Sync
+            </a>
         </nav>
     </div>
 
@@ -439,95 +443,81 @@
                     </a>
                 </div>
             </summary>
-            <table class="min-w-full divide-y divide-blackbook-200">
-                <thead class="bg-blackbook-50">
-                    <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
-                            <a href="/settings?tab=tags&sort=name&order={{ 'desc' if sort == 'name' and order == 'asc' else 'asc' }}"
-                               class="flex items-center gap-1 hover:text-blackbook-700">
-                                Tag Name
-                                {% if sort == 'name' %}
-                                <svg class="w-4 h-4 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                                </svg>
-                                {% endif %}
-                            </a>
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
-                            <a href="/settings?tab=tags&sort=color&order={{ 'desc' if sort == 'color' and order == 'asc' else 'asc' }}"
-                               class="flex items-center gap-1 hover:text-blackbook-700">
-                                Color
-                                {% if sort == 'color' %}
-                                <svg class="w-4 h-4 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                                </svg>
-                                {% endif %}
-                            </a>
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
-                            <a href="/settings?tab=tags&sort=count&order={{ 'desc' if sort == 'count' and order == 'asc' else 'asc' }}"
-                               class="flex items-center gap-1 hover:text-blackbook-700">
-                                People Count
-                                {% if sort == 'count' %}
-                                <svg class="w-4 h-4 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                                </svg>
-                                {% endif %}
-                            </a>
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-blackbook-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-blackbook-200">
-                    {% for item in people_tags %}
-                    <tr class="hover:bg-blackbook-50">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                  style="background-color: {{ item.tag.color }}20; color: {{ item.tag.color }}; border: 1px solid {{ item.tag.color }};">
-                                {{ item.tag.name }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+
+            <div class="p-4 space-y-4">
+                {% for subcategory in people_subcategories %}
+                <details class="border border-blackbook-200 rounded-lg overflow-hidden" {% if loop.first %}open{% endif %}>
+                    <summary class="px-4 py-3 bg-blackbook-100 cursor-pointer hover:bg-blackbook-200 transition-colors">
+                        <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <span class="w-6 h-6 rounded border border-blackbook-300" style="background-color: {{ item.tag.color }};"></span>
-                                <span class="text-sm text-blackbook-600">{{ item.tag.color }}</span>
+                                <svg class="w-4 h-4 text-blackbook-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                                <span class="font-medium text-blackbook-900">{{ subcategory }}</span>
+                                <span class="text-sm text-blackbook-600">({{ people_tags_by_subcategory[subcategory]|length }} tags)</span>
                             </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-blackbook-500">
-                            <a href="/people?tag_id={{ item.tag.id }}" class="text-blackbook-600 hover:text-blackbook-900 hover:underline">
-                                {{ item.usage_count }} {% if item.usage_count == 1 %}person{% else %}people{% endif %}
-                            </a>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div class="flex justify-end gap-2">
-                                <a href="/tags/{{ item.tag.id }}/edit" class="text-blackbook-600 hover:text-blackbook-900" title="Edit">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                    </svg>
-                                </a>
-                                <button type="button"
-                                        hx-delete="/tags/{{ item.tag.id }}"
-                                        hx-confirm="Delete tag '{{ item.tag.name }}'? This will remove it from {{ item.usage_count }} {% if item.usage_count == 1 %}person{% else %}people{% endif %}."
-                                        hx-target="body"
-                                        class="text-red-600 hover:text-red-900" title="Delete">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="4" class="px-6 py-8 text-center text-blackbook-500">
-                            <p class="text-sm">No tags assigned to people yet</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        </div>
+                    </summary>
+                    <table class="min-w-full divide-y divide-blackbook-200">
+                        <thead class="bg-blackbook-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Tag Name</th>
+                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Color</th>
+                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">People Count</th>
+                                <th scope="col" class="px-6 py-2 text-right text-xs font-medium text-blackbook-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-blackbook-200">
+                            {% for item in people_tags_by_subcategory[subcategory] %}
+                            <tr class="hover:bg-blackbook-50">
+                                <td class="px-6 py-3 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                          style="background-color: {{ item.tag.color }}20; color: {{ item.tag.color }}; border: 1px solid {{ item.tag.color }};">
+                                        {{ item.tag.name }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-3 whitespace-nowrap">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded border border-blackbook-300" style="background-color: {{ item.tag.color }};"></span>
+                                        <span class="text-xs text-blackbook-600">{{ item.tag.color }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-3 whitespace-nowrap text-sm text-blackbook-500">
+                                    <a href="/people?tag_id={{ item.tag.id }}" class="text-blackbook-600 hover:text-blackbook-900 hover:underline">
+                                        {{ item.usage_count }} {% if item.usage_count == 1 %}person{% else %}people{% endif %}
+                                    </a>
+                                </td>
+                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                    <div class="flex justify-end gap-2">
+                                        <a href="/tags/{{ item.tag.id }}/edit" class="text-blackbook-600 hover:text-blackbook-900" title="Edit">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                            </svg>
+                                        </a>
+                                        <button type="button"
+                                                hx-delete="/tags/{{ item.tag.id }}"
+                                                hx-confirm="Delete tag '{{ item.tag.name }}'? This will remove it from {{ item.usage_count }} {% if item.usage_count == 1 %}person{% else %}people{% endif %}."
+                                                hx-target="body"
+                                                class="text-red-600 hover:text-red-900" title="Delete">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </details>
+                {% else %}
+                <div class="px-6 py-8 text-center text-blackbook-500">
+                    <p class="text-sm">No tags assigned to people yet</p>
+                </div>
+                {% endfor %}
+            </div>
         </details>
 
         <!-- Organization Tags Section -->
@@ -1298,6 +1288,326 @@
     {% elif active_tab == 'org-types' %}
     <!-- Organization Types Tab -->
     {% include "settings/organization_types.html" %}
+
+    {% elif active_tab == 'contacts-sync' %}
+    <!-- Contacts Sync Tab -->
+    <div class="space-y-6">
+        <!-- Sync Status Card -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-blackbook-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Google Contacts Sync Status
+                    </h2>
+                    <p class="text-sm text-blackbook-500 mt-1">
+                        Bidirectional sync between BlackBook and Google Contacts
+                    </p>
+                </div>
+            </div>
+
+            <!-- Sync Status Indicators -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-blackbook-50 rounded-lg p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex-shrink-0">
+                            {% if sync_status and sync_status.is_running %}
+                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                            {% else %}
+                            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <p class="text-sm text-blackbook-500">Scheduler Status</p>
+                            <p class="text-base font-medium text-blackbook-900">
+                                {% if sync_status and sync_status.is_running %}
+                                Syncing...
+                                {% elif sync_settings and sync_settings.auto_sync_enabled %}
+                                Active
+                                {% else %}
+                                Idle
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-blackbook-50 rounded-lg p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 rounded-full bg-blackbook-100 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm text-blackbook-500">Last Sync</p>
+                            <p class="text-base font-medium text-blackbook-900">
+                                {% if last_sync %}
+                                {{ last_sync.imported_at.strftime('%b %d, %Y %I:%M %p') }}
+                                {% else %}
+                                Never
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-blackbook-50 rounded-lg p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm text-blackbook-500">Pending Review</p>
+                            <p class="text-base font-medium text-blackbook-900">{{ conflicts_count or 0 }} conflicts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manual Sync Button -->
+            <div class="flex items-center gap-4">
+                <button id="sync-now-btn"
+                        hx-post="/api/sync/contacts/now"
+                        hx-target="#sync-result"
+                        hx-swap="innerHTML"
+                        hx-indicator="#sync-now-spinner"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    <svg id="sync-now-spinner" class="htmx-indicator animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <svg class="w-4 h-4 mr-2 htmx-indicator-hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Sync Now
+                </button>
+                <div id="sync-result"></div>
+            </div>
+        </div>
+
+        <!-- Sync Settings Card -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold text-blackbook-900">Sync Settings</h2>
+                <p class="text-sm text-blackbook-500 mt-1">
+                    Configure automatic synchronization options
+                </p>
+            </div>
+
+            <form id="sync-settings-form" hx-put="/settings/contacts-sync/settings" hx-swap="none" class="space-y-6">
+                <!-- Auto-Sync Toggle -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <label for="auto_sync_enabled" class="text-sm font-medium text-blackbook-900">Enable Auto-Sync</label>
+                        <p class="text-xs text-blackbook-500">Automatically sync contacts at scheduled times</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="auto_sync_enabled" id="auto_sync_enabled"
+                               class="sr-only peer"
+                               {% if sync_settings and sync_settings.auto_sync_enabled %}checked{% endif %}>
+                        <div class="w-11 h-6 bg-blackbook-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-blackbook-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <!-- Sync Times -->
+                <div>
+                    <label class="block text-sm font-medium text-blackbook-900 mb-2">Sync Schedule</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="sync_time_1" class="block text-xs text-blackbook-500 mb-1">Morning Sync</label>
+                            <input type="time" name="sync_time_1" id="sync_time_1"
+                                   value="{{ sync_settings.sync_time_1 if sync_settings else '08:00' }}"
+                                   class="block w-full rounded-md border-blackbook-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label for="sync_time_2" class="block text-xs text-blackbook-500 mb-1">Evening Sync</label>
+                            <input type="time" name="sync_time_2" id="sync_time_2"
+                                   value="{{ sync_settings.sync_time_2 if sync_settings else '18:00' }}"
+                                   class="block w-full rounded-md border-blackbook-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timezone -->
+                <div>
+                    <label for="sync_timezone" class="block text-sm font-medium text-blackbook-900 mb-2">Timezone</label>
+                    <select name="sync_timezone" id="sync_timezone"
+                            class="block w-full rounded-md border-blackbook-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                        {% for tz_value, tz_label in timezones %}
+                        <option value="{{ tz_value }}" {% if sync_settings and sync_settings.timezone == tz_value %}selected{% elif not sync_settings and tz_value == 'America/New_York' %}selected{% endif %}>
+                            {{ tz_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Retention Settings -->
+                <div>
+                    <label for="retention_days" class="block text-sm font-medium text-blackbook-900 mb-2">Log Retention</label>
+                    <p class="text-xs text-blackbook-500 mb-2">How long to keep sync logs before auto-deletion</p>
+                    <select name="retention_days" id="retention_days"
+                            class="block w-48 rounded-md border-blackbook-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+                        <option value="30" {% if sync_settings and sync_settings.retention_days == 30 %}selected{% endif %}>30 days</option>
+                        <option value="60" {% if sync_settings and sync_settings.retention_days == 60 %}selected{% endif %}>60 days</option>
+                        <option value="90" {% if not sync_settings or sync_settings.retention_days == 90 %}selected{% endif %}>90 days</option>
+                        <option value="180" {% if sync_settings and sync_settings.retention_days == 180 %}selected{% endif %}>180 days</option>
+                        <option value="365" {% if sync_settings and sync_settings.retention_days == 365 %}selected{% endif %}>1 year</option>
+                    </select>
+                </div>
+
+                <!-- Save Button -->
+                <div class="flex items-center gap-4">
+                    <button type="submit"
+                            class="inline-flex items-center px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2 text-sm">
+                        Save Settings
+                    </button>
+                    <span id="settings-save-status" class="text-sm"></span>
+                </div>
+            </form>
+        </div>
+
+        <!-- Quick Links Card -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="mb-4">
+                <h2 class="text-lg font-semibold text-blackbook-900">Sync Management</h2>
+                <p class="text-sm text-blackbook-500 mt-1">
+                    Review sync history, resolve conflicts, and manage archived contacts
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Sync Log Link -->
+                <a href="/settings/sync/log"
+                   class="flex items-center p-4 border border-blackbook-200 rounded-lg hover:bg-blackbook-50 transition-colors">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blackbook-100 flex items-center justify-center mr-4">
+                        <svg class="w-5 h-5 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-blackbook-900">Sync Log</p>
+                        <p class="text-xs text-blackbook-500">View sync history & details</p>
+                    </div>
+                    <svg class="w-5 h-5 text-blackbook-400 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </a>
+
+                <!-- Review Conflicts Link -->
+                <a href="/settings/sync/review"
+                   class="flex items-center p-4 border border-blackbook-200 rounded-lg hover:bg-blackbook-50 transition-colors {% if conflicts_count and conflicts_count > 0 %}border-orange-300 bg-orange-50{% endif %}">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full {% if conflicts_count and conflicts_count > 0 %}bg-orange-100{% else %}bg-blackbook-100{% endif %} flex items-center justify-center mr-4">
+                        <svg class="w-5 h-5 {% if conflicts_count and conflicts_count > 0 %}text-orange-600{% else %}text-blackbook-600{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-blackbook-900">Review Conflicts</p>
+                        <p class="text-xs text-blackbook-500">
+                            {% if conflicts_count and conflicts_count > 0 %}
+                            {{ conflicts_count }} item{% if conflicts_count != 1 %}s{% endif %} need review
+                            {% else %}
+                            No conflicts pending
+                            {% endif %}
+                        </p>
+                    </div>
+                    <svg class="w-5 h-5 text-blackbook-400 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </a>
+
+                <!-- Archive Link -->
+                <a href="/settings/sync/archive"
+                   class="flex items-center p-4 border border-blackbook-200 rounded-lg hover:bg-blackbook-50 transition-colors">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blackbook-100 flex items-center justify-center mr-4">
+                        <svg class="w-5 h-5 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-blackbook-900">Archived Contacts</p>
+                        <p class="text-xs text-blackbook-500">{{ archived_count or 0 }} archived contact{% if archived_count != 1 %}s{% endif %}</p>
+                    </div>
+                    <svg class="w-5 h-5 text-blackbook-400 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Sync Activity -->
+        {% if recent_syncs %}
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-blackbook-200">
+                <h2 class="text-lg font-semibold text-blackbook-900">Recent Sync Activity</h2>
+            </div>
+            <div class="divide-y divide-blackbook-200">
+                {% for sync in recent_syncs[:5] %}
+                <div class="px-6 py-4 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="flex-shrink-0">
+                            {% if sync.status.value == 'success' %}
+                            <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            {% elif sync.status.value == 'partial' %}
+                            <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                            {% else %}
+                            <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-blackbook-900">
+                                {{ sync.imported_at.strftime('%b %d, %Y at %I:%M %p') }}
+                            </p>
+                            <p class="text-xs text-blackbook-500">
+                                {{ sync.records_created }} created, {{ sync.records_updated }} updated, {{ sync.records_skipped }} skipped
+                            </p>
+                        </div>
+                    </div>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                        {% if sync.status.value == 'success' %}bg-green-100 text-green-800
+                        {% elif sync.status.value == 'partial' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ sync.status.value|title }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="px-6 py-3 bg-blackbook-50 border-t border-blackbook-200">
+                <a href="/settings/sync/log" class="text-sm text-blue-600 hover:text-blue-800">
+                    View all sync history &rarr;
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
 
     {% endif %}
 </div>

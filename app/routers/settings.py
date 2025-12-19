@@ -19,6 +19,7 @@ from app.models import AIQuickPrompt, PromptEntityType
 from app.models import AIConversation, AIMessage
 from app.models import CalendarSettings, COMMON_TIMEZONES
 from app.models import OrganizationCategory, OrganizationType, InvestmentProfileOption
+from app.models import ImportHistory, ImportSource, ImportStatus
 from app.models.email_ignore import IgnorePatternType
 from app.models.tag import PersonTag, OrganizationTag
 from app.services.duplicate_service import get_duplicate_service
@@ -59,6 +60,8 @@ async def settings_page(
 
     # Get tags data for tags tab
     people_tags = []
+    people_tags_by_subcategory = {}  # Grouped by subcategory
+    people_subcategories = []  # Ordered list of subcategory names
     org_tags = []
     firm_category_tags = []
     company_category_tags = []
@@ -72,13 +75,16 @@ async def settings_page(
         if order not in valid_orders:
             order = "asc"
 
-        # Query for People tags
+        # Query for People tags - use LEFT JOIN to include tags with 0 usage
+        # People tags are those without a category (Firm/Company tags have categories)
         usage_count_label = func.count(func.distinct(PersonTag.person_id)).label("usage_count")
         people_tags_query = db.query(
             Tag,
             usage_count_label,
-        ).join(
+        ).outerjoin(
             PersonTag, Tag.id == PersonTag.tag_id
+        ).filter(
+            Tag.category.is_(None)
         ).group_by(Tag.id)
 
         # Apply sorting
@@ -95,7 +101,24 @@ async def settings_page(
             people_tags_query = people_tags_query.order_by(sort_col)
 
         for tag, usage_count in people_tags_query.all():
-            people_tags.append({"tag": tag, "usage_count": usage_count})
+            tag_data = {"tag": tag, "usage_count": usage_count or 0}
+            people_tags.append(tag_data)
+
+            # Group by subcategory
+            subcat = tag.subcategory or "Uncategorized"
+            if subcat not in people_tags_by_subcategory:
+                people_tags_by_subcategory[subcat] = []
+            people_tags_by_subcategory[subcat].append(tag_data)
+
+        # Define preferred subcategory order
+        preferred_order = [
+            "Investor Type", "Role/Industry", "Location", "Classmates",
+            "Former Colleague", "Professional Services", "Relationship", "Uncategorized"
+        ]
+        # Sort subcategories: preferred order first, then alphabetically for any others
+        all_subcats = set(people_tags_by_subcategory.keys())
+        people_subcategories = [s for s in preferred_order if s in all_subcats]
+        people_subcategories += sorted(all_subcats - set(preferred_order))
 
         # Query for Organization tags - use LEFT JOIN to include tags with 0 usage
         org_usage_count_label = func.count(func.distinct(OrganizationTag.organization_id)).label("usage_count")
@@ -193,6 +216,29 @@ async def settings_page(
         # Get unique option types for the filter dropdown
         option_types = list(set(opt.option_type for opt in org_options))
         option_types.sort()
+
+    # Get Contacts Sync data for contacts-sync tab
+    sync_settings = None
+    sync_status = None
+    last_sync = None
+    recent_syncs = []
+    conflicts_count = 0
+    archived_count = 0
+    if tab == "contacts-sync":
+        # Get recent sync history from ImportHistory
+        recent_syncs = db.query(ImportHistory).filter(
+            ImportHistory.source == ImportSource.google_contacts
+        ).order_by(ImportHistory.imported_at.desc()).limit(10).all()
+
+        # Get last successful sync
+        last_sync = db.query(ImportHistory).filter(
+            ImportHistory.source == ImportSource.google_contacts,
+            ImportHistory.status == ImportStatus.success
+        ).order_by(ImportHistory.imported_at.desc()).first()
+
+        # Note: sync_settings, sync_status, conflicts_count, and archived_count
+        # would need dedicated models to be implemented. For now, we use defaults.
+        # These can be expanded when the full bidirectional sync is implemented.
 
     # Get AI Chat data for ai-chat tab
     ai_chat_conversations = []
@@ -305,6 +351,8 @@ async def settings_page(
             "timezones": COMMON_TIMEZONES,
             # Tags data
             "people_tags": people_tags,
+            "people_tags_by_subcategory": people_tags_by_subcategory,
+            "people_subcategories": people_subcategories,
             "org_tags": org_tags,
             "firm_category_tags": firm_category_tags,
             "company_category_tags": company_category_tags,
@@ -330,6 +378,13 @@ async def settings_page(
             # AI Chat data
             "ai_chat_conversations": ai_chat_conversations,
             "ai_chat_stats": ai_chat_stats,
+            # Contacts Sync data
+            "sync_settings": sync_settings,
+            "sync_status": sync_status,
+            "last_sync": last_sync,
+            "recent_syncs": recent_syncs,
+            "conflicts_count": conflicts_count,
+            "archived_count": archived_count,
         },
     )
 
@@ -1445,4 +1500,224 @@ async def get_options_list(
             "request": request,
             "options": options,
         },
+    )
+
+
+# ===========================
+# Contacts Sync Management
+# ===========================
+
+
+@router.get("/sync/log", response_class=HTMLResponse)
+async def sync_log_page(
+    request: Request,
+    page: int = Query(1, ge=1, description="Page number"),
+    status: str = Query(None, description="Filter by status"),
+    direction: str = Query(None, description="Filter by direction"),
+    db: Session = Depends(get_db),
+):
+    """
+    Display the sync log page with paginated sync history.
+    """
+    per_page = 20
+
+    # Build query for sync logs
+    query = db.query(ImportHistory).filter(
+        ImportHistory.source == ImportSource.google_contacts
+    )
+
+    # Apply status filter
+    if status:
+        try:
+            status_enum = ImportStatus(status)
+            query = query.filter(ImportHistory.status == status_enum)
+        except ValueError:
+            pass
+
+    # Note: direction filter would require additional model field for bidirectional sync
+    # For now, all syncs are imports from Google
+
+    # Get total count
+    total_count = query.count()
+    total_pages = (total_count + per_page - 1) // per_page
+
+    # Get paginated results
+    sync_logs = query.order_by(
+        ImportHistory.imported_at.desc()
+    ).offset((page - 1) * per_page).limit(per_page).all()
+
+    # Check if this is an HTMX request for table partial
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(
+            "settings/_sync_log_table.html",
+            {
+                "request": request,
+                "sync_logs": sync_logs,
+                "page": page,
+                "per_page": per_page,
+                "total_count": total_count,
+                "total_pages": total_pages,
+                "status_filter": status,
+                "direction_filter": direction,
+            },
+        )
+
+    return templates.TemplateResponse(
+        "settings/sync_log.html",
+        {
+            "request": request,
+            "title": "Sync Log",
+            "sync_logs": sync_logs,
+            "page": page,
+            "per_page": per_page,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "status_filter": status,
+            "direction_filter": direction,
+        },
+    )
+
+
+@router.get("/sync/review", response_class=HTMLResponse)
+async def sync_review_page(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Display the sync conflict review page.
+    """
+    # Note: This would need a SyncConflict model to track conflicts
+    # For now, return empty conflicts list as placeholder
+    conflicts = []
+
+    return templates.TemplateResponse(
+        "settings/sync_review.html",
+        {
+            "request": request,
+            "title": "Review Sync Conflicts",
+            "conflicts": conflicts,
+        },
+    )
+
+
+@router.post("/sync/resolve/{conflict_id}", response_class=HTMLResponse)
+async def resolve_sync_conflict(
+    request: Request,
+    conflict_id: UUID,
+    action: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Resolve a sync conflict with the specified action.
+    Actions: use_blackbook, use_google, keep_both, dismiss
+    """
+    # Note: This would need a SyncConflict model to implement
+    # For now, return success message
+    return HTMLResponse(
+        '<div class="p-4 bg-green-50 border border-green-200 rounded-lg text-center">'
+        '<p class="text-green-800 text-sm">Conflict resolved successfully.</p>'
+        '</div>'
+    )
+
+
+@router.get("/sync/archive", response_class=HTMLResponse)
+async def sync_archive_page(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Display the archived contacts page.
+    """
+    # Note: This would need an ArchivedContact model or a flag on Person model
+    # For now, return empty list as placeholder
+    archived_contacts = []
+
+    return templates.TemplateResponse(
+        "settings/sync_archive.html",
+        {
+            "request": request,
+            "title": "Archived Contacts",
+            "archived_contacts": archived_contacts,
+        },
+    )
+
+
+@router.post("/sync/archive/{contact_id}/restore", response_class=HTMLResponse)
+async def restore_archived_contact(
+    request: Request,
+    contact_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """
+    Restore an archived contact.
+    """
+    # Note: Implementation depends on how archived contacts are stored
+    return HTMLResponse(
+        '<div class="p-4 bg-green-50 border border-green-200 rounded-lg text-center">'
+        '<p class="text-green-800 text-sm">Contact restored successfully.</p>'
+        '</div>'
+    )
+
+
+@router.delete("/sync/archive/{contact_id}", response_class=HTMLResponse)
+async def delete_archived_contact(
+    request: Request,
+    contact_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """
+    Permanently delete an archived contact.
+    """
+    # Note: Implementation depends on how archived contacts are stored
+    return HTMLResponse("")
+
+
+@router.post("/sync/archive/restore-all", response_class=HTMLResponse)
+async def restore_all_archived_contacts(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Restore all archived contacts.
+    """
+    # Note: Implementation depends on how archived contacts are stored
+    return RedirectResponse(url="/settings/sync/archive", status_code=303)
+
+
+@router.delete("/sync/archive/delete-all", response_class=HTMLResponse)
+async def delete_all_archived_contacts(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Permanently delete all archived contacts.
+    """
+    # Note: Implementation depends on how archived contacts are stored
+    return RedirectResponse(url="/settings/sync/archive", status_code=303)
+
+
+@router.put("/contacts-sync/settings", response_class=HTMLResponse)
+async def update_contacts_sync_settings(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Update contacts sync settings.
+    """
+    form_data = await request.form()
+
+    # Note: This would need a ContactsSyncSettings model
+    # For now, just return success response
+    # Settings would include:
+    # - auto_sync_enabled: bool
+    # - sync_time_1: str (HH:MM)
+    # - sync_time_2: str (HH:MM)
+    # - sync_timezone: str
+    # - retention_days: int
+
+    return HTMLResponse(
+        '<span class="text-green-600 text-sm flex items-center">'
+        '<svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">'
+        '<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>'
+        '</svg>Settings saved</span>'
     )

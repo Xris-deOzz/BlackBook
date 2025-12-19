@@ -1,4 +1,26 @@
 <div class="space-y-4">
+    <!-- Account Filter (only show if multiple accounts) -->
+    {% if google_accounts|length > 1 %}
+    <div class="flex items-center justify-between mb-2">
+        <span class="text-xs text-blackbook-400">Show calendar:</span>
+        <select
+            id="calendar-account-filter"
+            class="text-xs bg-blackbook-700 border border-blackbook-600 rounded px-2 py-1 text-blackbook-200 focus:outline-none focus:border-blue-500"
+            hx-get="/dashboard/today-widget"
+            hx-target="#todays-calendar-content"
+            hx-swap="innerHTML"
+            name="account_id"
+        >
+            <option value="" {% if not selected_account_id %}selected{% endif %}>All Accounts</option>
+            {% for account in google_accounts %}
+            <option value="{{ account.id }}" {% if selected_account_id and selected_account_id == account.id %}selected{% endif %}>
+                {{ account.email }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
     <!-- Add Event Button -->
     {% if google_accounts %}
     <div class="mb-2">
@@ -637,3 +659,29 @@
 })();
 </script>
 {% endif %}
+
+<!-- Calendar Account Filter Persistence -->
+<script>
+(function() {
+    const STORAGE_KEY = 'calendar_account_filter';
+    const select = document.getElementById('calendar-account-filter');
+
+    if (!select) return;
+
+    // On page load, check if we have a saved preference
+    // and if current selection doesn't match, trigger a refresh
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const currentValue = select.value;
+
+    if (saved !== null && saved !== currentValue) {
+        // Update the select to match saved value and trigger HTMX
+        select.value = saved;
+        htmx.trigger(select, 'change');
+    }
+
+    // Save selection on change
+    select.addEventListener('change', function() {
+        localStorage.setItem(STORAGE_KEY, this.value);
+    });
+})();
+</script>

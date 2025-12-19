@@ -4,6 +4,7 @@ Google Tasks Service.
 Provides integration with Google Tasks API for task management.
 """
 
+import logging
 from datetime import date, datetime, timezone
 from typing import Any
 
@@ -14,6 +15,8 @@ from sqlalchemy.orm import Session
 
 from app.models import GoogleAccount
 from app.services.google_auth import TASKS_SCOPES
+
+logger = logging.getLogger(__name__)
 
 
 class TasksServiceError(Exception):
@@ -80,14 +83,17 @@ class TasksService:
         today = date.today()
 
         accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+        print(f"Tasks: Found {len(accounts)} active Google accounts")
 
         for account in accounts:
             try:
+                print(f"Tasks: Fetching tasks for account {account.email}")
                 credentials = self._get_credentials(account)
                 service = build("tasks", "v1", credentials=credentials)
 
                 # Get all task lists
                 task_lists_result = service.tasklists().list().execute()
+                print(f"Tasks: Found {len(task_lists_result.get('items', []))} task lists for {account.email}")
                 task_lists = task_lists_result.get("items", [])
 
                 for task_list in task_lists:
@@ -163,11 +169,15 @@ class TasksService:
                         all_task_lists.append(list_data)
 
             except HttpError as e:
-                # Log error but continue with other accounts
+                print(f"Tasks: HttpError for {account.email}: {e}")
                 continue
             except Exception as e:
+                print(f"Tasks: Exception for {account.email}: {e}")
+                import traceback
+                traceback.print_exc()
                 continue
 
+        print(f"Tasks: Returning {len(all_task_lists)} task lists with tasks")
         # Sort lists by name by default
         all_task_lists.sort(key=lambda x: x["list_name"].lower())
 

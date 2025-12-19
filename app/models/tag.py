@@ -30,6 +30,7 @@ class Tag(Base):
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     color: Mapped[str | None] = mapped_column(String(20), default="#6B7280")
     category: Mapped[str | None] = mapped_column(String(50), nullable=True)  # e.g., "Firm Category", "Company Category"
+    subcategory: Mapped[str | None] = mapped_column(String(50), nullable=True)  # e.g., "Investor Type", "Location", "Relationship"
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=datetime.utcnow,

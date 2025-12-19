@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<nav class="bg-white border-b border-blackbook-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <ol class="flex items-center space-x-2 text-sm">
+            <li>
+                <a href="/" class="text-blackbook-500 hover:text-blackbook-700">Home</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li>
+                <a href="/settings?tab=contacts-sync" class="text-blackbook-500 hover:text-blackbook-700">Settings</a>
+            </li>
+            <li>
+                <svg class="h-4 w-4 text-blackbook-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </li>
+            <li class="text-blackbook-900 font-medium">Review Conflicts</li>
+        </ol>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-blackbook-900">Review Sync Conflicts</h1>
+            <p class="text-blackbook-500 mt-1">Resolve differences between BlackBook and Google Contacts</p>
+        </div>
+        <a href="/settings?tab=contacts-sync"
+           class="inline-flex items-center px-4 py-2 border border-blackbook-300 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-50 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Sync Settings
+        </a>
+    </div>
+
+    {% if conflicts %}
+    <!-- Conflict Summary -->
+    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+        <div class="flex">
+            <svg class="h-5 w-5 text-orange-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div>
+                <h3 class="text-sm font-medium text-orange-800">{{ conflicts|length }} conflict{% if conflicts|length != 1 %}s{% endif %} need your attention</h3>
+                <p class="mt-1 text-sm text-orange-700">
+                    These contacts have different data in BlackBook vs Google Contacts. Choose which version to keep.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conflicts List -->
+    <div class="space-y-6">
+        {% for conflict in conflicts %}
+        <div id="conflict-{{ conflict.id }}" class="bg-white rounded-lg shadow-md overflow-hidden">
+            <!-- Conflict Header -->
+            <div class="px-6 py-4 bg-blackbook-50 border-b border-blackbook-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-blackbook-200 flex items-center justify-center text-blackbook-600 font-medium">
+                            {{ (conflict.blackbook_data.full_name or conflict.google_data.display_name or 'U')[0]|upper }}
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-blackbook-900">
+                                {{ conflict.blackbook_data.full_name or conflict.google_data.display_name or 'Unknown Contact' }}
+                            </h3>
+                            <p class="text-sm text-blackbook-500">
+                                {{ conflict.field_conflicts|length }} field{% if conflict.field_conflicts|length != 1 %}s{% endif %} differ
+                            </p>
+                        </div>
+                    </div>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                        Conflict
+                    </span>
+                </div>
+            </div>
+
+            <!-- Side-by-Side Comparison -->
+            <div class="px-6 py-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- BlackBook Side -->
+                    <div class="border border-blackbook-200 rounded-lg overflow-hidden">
+                        <div class="px-4 py-2 bg-blackbook-700 text-white text-sm font-medium flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                            </svg>
+                            BlackBook
+                        </div>
+                        <div class="p-4 space-y-3">
+                            {% for field in conflict.field_conflicts %}
+                            <div>
+                                <label class="block text-xs text-blackbook-500 uppercase">{{ field.field_name | replace('_', ' ') }}</label>
+                                <p class="text-sm text-blackbook-900 mt-1">
+                                    {{ field.blackbook_value or '(empty)' }}
+                                </p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Google Side -->
+                    <div class="border border-blue-200 rounded-lg overflow-hidden">
+                        <div class="px-4 py-2 bg-blue-600 text-white text-sm font-medium flex items-center gap-2">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#fff"/>
+                            </svg>
+                            Google Contacts
+                        </div>
+                        <div class="p-4 space-y-3">
+                            {% for field in conflict.field_conflicts %}
+                            <div>
+                                <label class="block text-xs text-blackbook-500 uppercase">{{ field.field_name | replace('_', ' ') }}</label>
+                                <p class="text-sm text-blackbook-900 mt-1">
+                                    {{ field.google_value or '(empty)' }}
+                                </p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="px-6 py-4 bg-blackbook-50 border-t border-blackbook-200">
+                <div class="flex flex-wrap items-center gap-3">
+                    <button hx-post="/settings/sync/resolve/{{ conflict.id }}"
+                            hx-vals='{"action": "use_blackbook"}'
+                            hx-target="#conflict-{{ conflict.id }}"
+                            hx-swap="outerHTML"
+                            class="inline-flex items-center px-4 py-2 bg-blackbook-700 text-white font-medium rounded-md hover:bg-blackbook-800 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2 text-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Use BlackBook
+                    </button>
+                    <button hx-post="/settings/sync/resolve/{{ conflict.id }}"
+                            hx-vals='{"action": "use_google"}'
+                            hx-target="#conflict-{{ conflict.id }}"
+                            hx-swap="outerHTML"
+                            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Use Google
+                    </button>
+                    <button hx-post="/settings/sync/resolve/{{ conflict.id }}"
+                            hx-vals='{"action": "keep_both"}'
+                            hx-target="#conflict-{{ conflict.id }}"
+                            hx-swap="outerHTML"
+                            class="inline-flex items-center px-4 py-2 border border-blackbook-300 text-blackbook-700 font-medium rounded-md hover:bg-blackbook-100 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2 text-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                        </svg>
+                        Keep Both (Duplicate)
+                    </button>
+                    <button hx-post="/settings/sync/resolve/{{ conflict.id }}"
+                            hx-vals='{"action": "dismiss"}'
+                            hx-target="#conflict-{{ conflict.id }}"
+                            hx-swap="outerHTML"
+                            class="inline-flex items-center px-4 py-2 text-blackbook-500 font-medium rounded-md hover:bg-blackbook-100 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2 text-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Dismiss
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- No Conflicts -->
+    <div class="bg-white rounded-lg shadow-md p-12 text-center">
+        <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+        <h3 class="text-lg font-medium text-blackbook-900 mb-2">All synced up!</h3>
+        <p class="text-blackbook-500 mb-6">
+            There are no conflicts between BlackBook and Google Contacts.
+        </p>
+        <a href="/settings?tab=contacts-sync"
+           class="inline-flex items-center px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+            Return to Sync Settings
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
