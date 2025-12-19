@@ -748,36 +748,18 @@ class ContactsService:
 
         return assigned_any
 
+
     def push_to_google(self, person_id: UUID, account_id: UUID) -> dict[str, Any]:
-        """
-        Push a BlackBook person to Google Contacts.
-
-        Creates a new contact in Google Contacts and links it to the BlackBook person.
-
-        Args:
-            person_id: UUID of the Person to push
-            account_id: UUID of the Google account to push to
-
-        Returns:
-            Dict with success status and details
-
-        Raises:
-            ContactsServiceError: If person or account not found
-            ContactsAuthError: If authentication fails
-            ContactsAPIError: If API call fails
-        """
+        """Push a BlackBook person to Google Contacts."""
         from app.models import PersonEmail
 
-        # Get the person
         person = self.db.query(Person).filter_by(id=person_id).first()
         if not person:
             raise ContactsServiceError(f"Person not found: {person_id}")
 
-        # Check if already linked
         if person.google_resource_name:
             raise ContactsServiceError("Person is already linked to Google Contacts")
 
-        # Get the Google account
         account = self.db.query(GoogleAccount).filter_by(id=account_id).first()
         if not account:
             raise ContactsServiceError(f"Google account not found: {account_id}")
@@ -786,15 +768,10 @@ class ContactsService:
             credentials = self._get_credentials(account)
             service = build("people", "v1", credentials=credentials)
 
-            # Build the contact data
             contact_body: dict[str, Any] = {
-                "names": [{
-                    "givenName": person.first_name or "",
-                    "familyName": person.last_name or "",
-                }]
+                "names": [{"givenName": person.first_name or "", "familyName": person.last_name or ""}]
             }
 
-            # Add emails
             emails = self.db.query(PersonEmail).filter_by(person_id=person_id).all()
             if emails:
                 contact_body["emailAddresses"] = [
@@ -802,80 +779,52 @@ class ContactsService:
                     for email in emails
                 ]
 
-            # Add phone if available
             if person.phone:
                 contact_body["phoneNumbers"] = [{"value": person.phone, "type": "mobile"}]
 
-            # Add organization if available
-            current_org = next(
-                (po for po in person.organizations if po.is_current),
-                None
-            )
+            current_org = next((po for po in person.organizations if po.is_current), None)
             if person.title or current_org:
                 contact_body["organizations"] = [{
                     "title": person.title or (current_org.role if current_org else "") or "",
                     "name": current_org.organization.name if current_org else "",
                 }]
 
-            # Add birthday if available
             if person.birthday:
-                contact_body["birthdays"] = [{
-                    "date": {
-                        "year": person.birthday.year if person.birthday.year != 1900 else None,
-                        "month": person.birthday.month,
-                        "day": person.birthday.day,
-                    }
-                }]
+                contact_body["birthdays"] = [{"date": {
+                    "year": person.birthday.year if person.birthday.year != 1900 else None,
+                    "month": person.birthday.month,
+                    "day": person.birthday.day,
+                }}]
 
-            # Add location/address if available
             if person.location:
-                contact_body["addresses"] = [{
-                    "formattedValue": person.location,
-                    "type": "home",
-                }]
+                contact_body["addresses"] = [{"formattedValue": person.location, "type": "home"}]
 
-            # Add notes if available
             if person.notes:
-                contact_body["biographies"] = [{
-                    "value": person.notes,
-                    "contentType": "TEXT_PLAIN",
-                }]
+                contact_body["biographies"] = [{"value": person.notes, "contentType": "TEXT_PLAIN"}]
 
-            # Create the contact in Google
             result = service.people().createContact(
                 body=contact_body,
                 personFields="names,emailAddresses,phoneNumbers,organizations,birthdays,addresses,biographies,metadata"
             ).execute()
 
-            # Update the person with Google sync info
             person.google_resource_name = result.get("resourceName")
             person.google_etag = result.get("etag")
             person.google_synced_at = datetime.now(timezone.utc)
             self.db.commit()
 
-            return {
-                "success": True,
-                "resource_name": person.google_resource_name,
-                "message": f"Successfully pushed {person.full_name} to Google Contacts",
-            }
+            return {"success": True, "resource_name": person.google_resource_name,
+                    "message": f"Successfully pushed {person.full_name} to Google Contacts"}
 
         except Exception as e:
             error_msg = str(e)
             if "401" in error_msg or "invalid_grant" in error_msg:
                 raise ContactsAuthError(f"Authentication failed: {e}")
             elif "403" in error_msg:
-                raise ContactsAPIError(f"Permission denied - check Google API scopes: {e}")
+                raise ContactsAPIError(f"Permission denied: {e}")
             else:
                 raise ContactsServiceError(f"Failed to push contact: {e}")
 
 
 def get_contacts_service(db: Session) -> ContactsService:
-    """Get a Contacts service instance.
-
-    Args:
-        db: Database session
-
-    Returns:
-        ContactsService instance
-    """
+    """Get a Contacts service instance."""
     return ContactsService(db)

@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -409,3 +409,64 @@ async def download_import_file(
         filename=history.original_filename,
         media_type="text/csv",
     )
+
+
+@router.post("/google/push/{person_id}", response_class=HTMLResponse)
+async def push_person_to_google(
+    request: Request,
+    person_id: UUID,
+    account_id: UUID = Form(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Push a BlackBook person to Google Contacts.
+
+    Creates a new contact in Google Contacts and links it to the person record.
+
+    Args:
+        person_id: UUID of the person to push
+        account_id: UUID of the Google account to push to
+
+    Returns HTML partial for HTMX.
+    """
+    service = get_contacts_service(db)
+
+    try:
+        result = service.push_to_google(person_id, account_id)
+
+        return templates.TemplateResponse(
+            "persons/_google_sync_status.html",
+            {
+                "request": request,
+                "success": True,
+                "message": result["message"],
+            },
+        )
+
+    except ContactsAuthError as e:
+        return templates.TemplateResponse(
+            "persons/_google_sync_status.html",
+            {
+                "request": request,
+                "success": False,
+                "message": "Authentication failed. Please reconnect your Google account.",
+            },
+        )
+    except ContactsAPIError as e:
+        return templates.TemplateResponse(
+            "persons/_google_sync_status.html",
+            {
+                "request": request,
+                "success": False,
+                "message": f"Google API error: {e}",
+            },
+        )
+    except ContactsServiceError as e:
+        return templates.TemplateResponse(
+            "persons/_google_sync_status.html",
+            {
+                "request": request,
+                "success": False,
+                "message": str(e),
+            },
+        )

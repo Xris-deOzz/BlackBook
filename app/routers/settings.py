@@ -217,14 +217,14 @@ async def settings_page(
         option_types = list(set(opt.option_type for opt in org_options))
         option_types.sort()
 
-    # Get Contacts Sync data for contacts-sync tab
+    # Get Contacts Sync data for syncing tab (moved from contacts-sync tab)
     sync_settings = None
     sync_status = None
     last_sync = None
     recent_syncs = []
     conflicts_count = 0
     archived_count = 0
-    if tab == "contacts-sync":
+    if tab == "syncing":
         # Get recent sync history from ImportHistory
         recent_syncs = db.query(ImportHistory).filter(
             ImportHistory.source == ImportSource.google_contacts
