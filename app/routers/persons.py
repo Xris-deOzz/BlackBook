@@ -60,11 +60,11 @@ async def list_people(
     Full page person list view.
     Supports multi-tag filter with AND/OR logic.
     """
-    # Get only tags that are associated with people (not all tags)
+    # Get all "People Tags" - tags without a category (org tags have categories like "Firm Category")
+    # This includes newly created tags with 0 people associations
     all_tags = (
         db.query(Tag)
-        .join(PersonTag, Tag.id == PersonTag.tag_id)
-        .distinct()
+        .filter(Tag.category.is_(None))
         .order_by(Tag.name)
         .all()
     )
@@ -435,11 +435,10 @@ async def get_batch_tags_modal(
     """
     Get the modal for batch adding tags to selected persons.
     """
-    # Get only "People Tags" - tags that have been used with at least one person
+    # Get all "People Tags" - tags without a category (includes newly created tags with 0 associations)
     all_tags = (
         db.query(Tag)
-        .join(PersonTag, Tag.id == PersonTag.tag_id)
-        .distinct()
+        .filter(Tag.category.is_(None))
         .order_by(Tag.name)
         .all()
     )
@@ -716,11 +715,10 @@ async def edit_person_form(
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
 
-    # Get only "People Tags" - tags that have been used with at least one person
+    # Get all "People Tags" - tags without a category (includes newly created tags with 0 associations)
     all_tags = (
         db.query(Tag)
-        .join(PersonTag, Tag.id == PersonTag.tag_id)
-        .distinct()
+        .filter(Tag.category.is_(None))
         .order_by(Tag.name)
         .all()
     )
@@ -1229,11 +1227,10 @@ async def get_tag_manage_widget(
     # Get person's current tags
     current_tag_ids = {t.id for t in person.tags}
 
-    # Get only "People Tags" - tags that have been used with at least one person
+    # Get all "People Tags" - tags without a category (includes newly created tags with 0 associations)
     people_tags = (
         db.query(Tag)
-        .join(PersonTag, Tag.id == PersonTag.tag_id)
-        .distinct()
+        .filter(Tag.category.is_(None))
         .order_by(Tag.name)
         .all()
     )
@@ -1297,11 +1294,10 @@ async def add_tag_to_person(
     # Return updated widget
     db.refresh(person)
     current_tag_ids = {t.id for t in person.tags}
-    # Get only "People Tags" - tags that have been used with at least one person
+    # Get all "People Tags" - tags without a category (includes newly created tags with 0 associations)
     people_tags = (
         db.query(Tag)
-        .join(PersonTag, Tag.id == PersonTag.tag_id)
-        .distinct()
+        .filter(Tag.category.is_(None))
         .order_by(Tag.name)
         .all()
     )
@@ -1359,11 +1355,10 @@ async def remove_tag_from_person(
     # Return updated widget
     db.refresh(person)
     current_tag_ids = {t.id for t in person.tags}
-    # Get only "People Tags" - tags that have been used with at least one person
+    # Get all "People Tags" - tags without a category (includes newly created tags with 0 associations)
     people_tags = (
         db.query(Tag)
-        .join(PersonTag, Tag.id == PersonTag.tag_id)
-        .distinct()
+        .filter(Tag.category.is_(None))
         .order_by(Tag.name)
         .all()
     )

@@ -415,27 +415,56 @@
         return Array.from(checkboxes).map(cb => cb.dataset.personId);
     }
 
-    // Delete selected people
-    async function deleteSelected() {
+    // Delete selected people - opens modal with scope options
+    function deleteSelected() {
         const ids = getSelectedIds();
-        if (ids.length === 0) return;
+        if (ids.length === 0) {
+            alert('Please select at least one person');
+            return;
+        }
 
-        const message = ids.length === 1
-            ? 'Are you sure you want to delete this person?'
-            : `Are you sure you want to delete ${ids.length} people?`;
+        // Update count in modal when it loads
+        const updateModalCount = () => {
+            const countEl = document.getElementById('bulk-delete-count');
+            if (countEl) countEl.textContent = ids.length;
+        };
 
-        if (!confirm(message)) return;
+        // Create container if it doesn't exist
+        let container = document.getElementById('bulk-delete-modal-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'bulk-delete-modal-container';
+            document.body.appendChild(container);
+        }
 
+        // Fetch and display modal
+        fetch('/people/batch/delete/modal')
+            .then(response => response.text())
+            .then(html => {
+                container.innerHTML = html;
+                updateModalCount();
+            })
+            .catch(error => {
+                console.error('Error loading delete modal:', error);
+                // Fallback to simple confirm
+                if (confirm(`Are you sure you want to delete ${ids.length} people?`)) {
+                    performBulkDelete(ids, 'both');
+                }
+            });
+    }
+
+    // Fallback bulk delete function (used if modal fails to load)
+    async function performBulkDelete(ids, scope) {
         try {
             const response = await fetch('/people/batch/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids: ids })
+                body: JSON.stringify({ ids: ids, scope: scope })
             });
 
             if (response.ok) {
-                // Refresh the table
                 htmx.trigger('#search', 'search');
+                clearSelection();
             } else {
                 const data = await response.json();
                 alert(data.detail || 'Failed to delete people');

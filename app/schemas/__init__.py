@@ -44,6 +44,13 @@ from app.schemas.organization_relationship_status import (
     OrganizationRelationshipStatusUpdate,
     OrganizationRelationshipStatusResponse,
 )
+from app.schemas.person import (
+    DeleteScope,
+    PersonDeleteRequest,
+    PersonBulkDeleteRequest,
+    DeleteResult,
+    BulkDeleteResult,
+)
 
 __all__ = [
     # Websites
@@ -78,4 +85,10 @@ __all__ = [
     "OrganizationRelationshipStatusCreate",
     "OrganizationRelationshipStatusUpdate",
     "OrganizationRelationshipStatusResponse",
+    # Person Delete
+    "DeleteScope",
+    "PersonDeleteRequest",
+    "PersonBulkDeleteRequest",
+    "DeleteResult",
+    "BulkDeleteResult",
 ]

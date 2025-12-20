@@ -8,7 +8,7 @@ A self-hosted personal CRM for managing professional relationships, contacts, or
 - **People Management**: Track contacts with detailed profiles, multiple emails, tags, and organization affiliations
 - **Organization Management**: Manage companies, investment firms, and other entities with type/category classification
 - **Interaction Logging**: Record meetings, calls, emails, and other touchpoints
-- **Tag System**: Organize contacts and organizations with customizable, color-coded tags
+- **Tag System**: Organize contacts with customizable, color-coded tags grouped by subcategory
 - **Saved Views**: Create and save filtered views for quick access
 - **Social Graph**: Visualize relationships between people and organizations
 
@@ -20,7 +20,8 @@ A self-hosted personal CRM for managing professional relationships, contacts, or
 - **Calendar Events**: Create calendar events with contacts (OAuth scopes ready)
 - **Google Tasks**: Sync and manage tasks from Google Tasks, with dashboard widget
 - **People API**: Enrich contact profiles with work history, phone numbers, birthdays (OAuth scopes ready)
-- **Contacts Sync**: Import "Other contacts" (people you've emailed but not saved)
+- **Contacts Sync**: Import contacts from Google with smart deduplication (matches by Google ID, email, name)
+- **Bidirectional Delete**: Delete contacts from BlackBook only, Google only, or both (single & bulk)
 
 ### Dashboard Widgets
 - **Today's Calendar**: View upcoming meetings with attendee matching
@@ -248,7 +249,8 @@ To enable Gmail integration:
 - `GET /people/{id}` - Person detail
 - `POST /people` - Create person
 - `PUT /people/{id}` - Update person
-- `DELETE /people/{id}` - Delete person
+- `DELETE /people/{id}?scope=both|blackbook_only|google_only` - Delete person with scope
+- `POST /people/batch/delete` - Bulk delete with scope selection
 
 ### Organizations
 - `GET /organizations` - List organizations with filters

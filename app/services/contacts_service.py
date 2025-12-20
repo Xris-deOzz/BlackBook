@@ -965,6 +965,194 @@ class ContactsService:
             else:
                 raise ContactsServiceError(f"Failed to push contact: {e}")
 
+    def delete_contact_from_google(
+        self,
+        resource_name: str,
+        account_id: UUID | None = None
+    ) -> bool:
+        """
+        Delete a contact from Google Contacts.
+
+        Args:
+            resource_name: Google People API resource name (e.g., "people/c1234567890")
+            account_id: Optional specific Google account to use. If not provided,
+                       tries all active accounts.
+
+        Returns:
+            True if successfully deleted from Google
+
+        Raises:
+            ContactsAuthError: If authentication fails
+            ContactsAPIError: If API call fails
+            ContactsServiceError: If no valid account found or other error
+        """
+        if not resource_name:
+            raise ContactsServiceError("No Google resource name provided")
+
+        # Get account(s) to try
+        if account_id:
+            accounts = [self.db.query(GoogleAccount).filter_by(id=account_id, is_active=True).first()]
+            if not accounts[0]:
+                raise ContactsServiceError(f"Google account not found or inactive: {account_id}")
+        else:
+            accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+            if not accounts:
+                raise ContactsServiceError("No active Google accounts configured")
+
+        last_error = None
+        for account in accounts:
+            try:
+                credentials = self._get_credentials(account)
+                service = build("people", "v1", credentials=credentials)
+
+                # Delete the contact
+                # Google People API: DELETE https://people.googleapis.com/v1/{resourceName}:deleteContact
+                service.people().deleteContact(resourceName=resource_name).execute()
+
+                return True
+
+            except HttpError as e:
+                error_str = str(e)
+                if "404" in error_str:
+                    # Contact doesn't exist in Google - consider this a success
+                    return True
+                elif "403" in error_str or "401" in error_str:
+                    # Permission denied or auth failed - try next account
+                    last_error = e
+                    continue
+                else:
+                    last_error = e
+                    continue
+            except Exception as e:
+                last_error = e
+                continue
+
+        # All accounts failed
+        if last_error:
+            error_msg = str(last_error)
+            if "401" in error_msg or "invalid_grant" in error_msg:
+                raise ContactsAuthError(f"Authentication failed: {last_error}")
+            elif "403" in error_msg:
+                raise ContactsAPIError(f"Permission denied: {last_error}")
+            else:
+                raise ContactsAPIError(f"Failed to delete from Google: {last_error}")
+
+        raise ContactsServiceError("Failed to delete contact from Google - no accounts succeeded")
+
+    def delete_person_with_scope(
+        self,
+        person_id: UUID,
+        scope: str = "both",
+    ) -> dict[str, Any]:
+        """
+        Delete a person with the specified scope.
+
+        Args:
+            person_id: UUID of the person to delete
+            scope: One of "blackbook_only", "google_only", or "both" (default)
+
+        Returns:
+            Dict with deletion results
+
+        Raises:
+            ContactsServiceError: If person not found or deletion fails
+        """
+        person = self.db.query(Person).filter_by(id=person_id).first()
+        if not person:
+            raise ContactsServiceError(f"Person not found: {person_id}")
+
+        result = {
+            "success": True,
+            "person_id": str(person_id),
+            "person_name": person.full_name,
+            "blackbook_deleted": False,
+            "google_deleted": False,
+            "google_resource_name": person.google_resource_name,
+            "error": None,
+        }
+
+        # Handle Google deletion first (so we can rollback if it fails)
+        if scope in ("google_only", "both") and person.google_resource_name:
+            try:
+                self.delete_contact_from_google(person.google_resource_name)
+                result["google_deleted"] = True
+
+                # If only deleting from Google, clear the sync fields
+                if scope == "google_only":
+                    person.google_resource_name = None
+                    person.google_etag = None
+                    person.google_synced_at = None
+                    self.db.commit()
+
+            except (ContactsAuthError, ContactsAPIError, ContactsServiceError) as e:
+                result["success"] = False
+                result["error"] = str(e)
+                # Don't proceed with BlackBook deletion if Google deletion failed
+                if scope == "both":
+                    return result
+
+        # Handle BlackBook deletion
+        if scope in ("blackbook_only", "both"):
+            try:
+                self.db.delete(person)
+                self.db.commit()
+                result["blackbook_deleted"] = True
+            except Exception as e:
+                self.db.rollback()
+                result["success"] = False
+                result["error"] = f"Failed to delete from BlackBook: {e}"
+
+        return result
+
+    def delete_persons_bulk_with_scope(
+        self,
+        person_ids: list[UUID],
+        scope: str = "both",
+    ) -> dict[str, Any]:
+        """
+        Delete multiple persons with the specified scope.
+
+        Args:
+            person_ids: List of person UUIDs to delete
+            scope: One of "blackbook_only", "google_only", or "both" (default)
+
+        Returns:
+            Dict with bulk deletion results
+        """
+        results = []
+        blackbook_deleted = 0
+        google_deleted = 0
+        failed = 0
+        errors = []
+
+        for person_id in person_ids:
+            try:
+                result = self.delete_person_with_scope(person_id, scope)
+                results.append(result)
+
+                if result["blackbook_deleted"]:
+                    blackbook_deleted += 1
+                if result["google_deleted"]:
+                    google_deleted += 1
+                if not result["success"]:
+                    failed += 1
+                    if result["error"]:
+                        errors.append(f"{result['person_name']}: {result['error']}")
+
+            except Exception as e:
+                failed += 1
+                errors.append(f"Person {person_id}: {e}")
+
+        return {
+            "success": failed == 0,
+            "total_requested": len(person_ids),
+            "blackbook_deleted": blackbook_deleted,
+            "google_deleted": google_deleted,
+            "failed": failed,
+            "errors": errors,
+            "results": results,
+        }
+
 
 def get_contacts_service(db: Session) -> ContactsService:
     """Get a Contacts service instance."""
