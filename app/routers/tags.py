@@ -924,3 +924,37 @@ async def apply_category_color(
         "category": category_name,
         "color": color,
     }
+
+
+@router.post("/categories/delete", response_class=JSONResponse)
+async def delete_category(
+    db: Session = Depends(get_db),
+    category: str = Form(...),
+):
+    """
+    Delete a category by removing the category field from all tags.
+    Tags will remain but have category set to NULL.
+    """
+    category = category.strip()
+
+    if not category:
+        raise HTTPException(status_code=400, detail="Category name is required")
+
+    # Check if any tags use this category
+    tags_count = db.query(Tag).filter(Tag.category == category).count()
+    if tags_count == 0:
+        raise HTTPException(status_code=404, detail=f"No tags found with category '{category}'")
+
+    # Remove category from all tags (set to NULL)
+    updated_count = db.query(Tag).filter(Tag.category == category).update(
+        {"category": None},
+        synchronize_session=False
+    )
+
+    db.commit()
+
+    return {
+        "success": True,
+        "deleted": category,
+        "updated_count": updated_count,
+    }
