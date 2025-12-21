@@ -17,6 +17,11 @@ from sqlalchemy.orm import Session
 from app.models import GoogleAccount, Person, PersonEmail, Tag
 from app.models.person_email import EmailLabel
 from app.models.tag import PersonTag
+from app.models.tag_subcategory import (
+    get_subcategory_for_label,
+    get_color_for_subcategory,
+    GOOGLE_LABEL_TO_SUBCATEGORY,
+)
 from app.services.google_auth import CONTACTS_SCOPES
 
 
@@ -812,8 +817,13 @@ class ContactsService:
 
         Returns:
             Tag object (existing or newly created)
+            
+        Note:
+            When creating new tags, this method auto-assigns subcategories
+            based on the GOOGLE_LABEL_TO_SUBCATEGORY mapping in tag_subcategory.py.
+            See docs/TAG_SUBCATEGORY_MAPPING_2024.12.21.1.md for the full mapping.
         """
-        # Normalize tag name (strip whitespace, title case)
+        # Normalize tag name (strip whitespace)
         normalized_name = tag_name.strip()
         if not normalized_name:
             normalized_name = "Google Contact"
@@ -824,14 +834,23 @@ class ContactsService:
         ).first()
 
         if not tag:
-            # Create new tag with default Google label color
+            # Look up subcategory from mapping
+            subcategory = get_subcategory_for_label(normalized_name)
+            
+            # Get color based on subcategory (or default Google blue if no mapping)
+            if subcategory:
+                color = get_color_for_subcategory(subcategory)
+            else:
+                color = "#4285F4"  # Google blue for unmapped labels
+            
+            # Create new tag with subcategory and color
             tag = Tag(
                 name=normalized_name,
-                color="#4285F4",  # Google blue
+                color=color,
+                subcategory=subcategory,  # Will be None if not in mapping
             )
             self.db.add(tag)
             self.db.flush()  # Flush to get tag.id
-            self.db.flush()
 
         return tag
 

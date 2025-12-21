@@ -530,13 +530,50 @@
     </div>
 
     {% elif active_tab == 'tags' %}
-    <!-- Tags Management Tab -->
+    <!-- Tags Management Tab - Integrated Design -->
     <div class="space-y-6">
-        <!-- Header -->
-        <div>
-            <h2 class="text-lg font-semibold text-blackbook-900">Tag Management</h2>
-            <p class="text-sm text-blackbook-500">{{ people_count }} people tags, {{ org_count }} organization tags</p>
+        <!-- Header with Combined Add Button -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-semibold text-blackbook-900">Tag Management</h2>
+                <p class="text-sm text-blackbook-500">{{ people_count }} people tags, {{ org_count }} organization tags</p>
+            </div>
+            <!-- Combined Add Button Dropdown -->
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open" 
+                        class="inline-flex items-center px-4 py-2 bg-blackbook-600 text-white font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-2">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add New
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="open" 
+                     @click.away="open = false"
+                     x-transition
+                     class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10">
+                    <a href="/tags/new?category=People" 
+                       class="block px-4 py-2 text-sm text-blackbook-700 hover:bg-blackbook-100 rounded-t-md">
+                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                        </svg>
+                        Add Tag
+                    </a>
+                    <button onclick="document.getElementById('add-subcategory-modal').classList.remove('hidden')" 
+                            class="block w-full text-left px-4 py-2 text-sm text-blackbook-700 hover:bg-blackbook-100 rounded-b-md">
+                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                        </svg>
+                        Add Subcategory
+                    </button>
+                </div>
+            </div>
         </div>
+
+        <!-- Status message for subcategory operations -->
+        <div id="tag-status" class="hidden p-3 rounded-md text-sm"></div>
 
         <!-- People Tags Section -->
         <details class="bg-white rounded-lg shadow-md overflow-hidden group" open>
@@ -553,34 +590,130 @@
                         <h3 class="text-base font-semibold text-blackbook-900">People Tags</h3>
                         <span class="text-sm text-blackbook-500">({{ people_count }} tags)</span>
                     </div>
-                    <a href="/tags/new?category=People"
-                       onclick="event.stopPropagation()"
-                       class="inline-flex items-center px-3 py-1.5 bg-blackbook-600 text-white text-xs font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-1">
-                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        Add Tag
-                    </a>
                 </div>
             </summary>
 
-            <div class="p-4 space-y-4">
+            <div id="subcategory-list" class="p-4 space-y-4">
                 {% for subcategory in people_subcategories %}
-                <details class="border border-blackbook-200 rounded-lg overflow-hidden" {% if loop.first %}open{% endif %}>
-                    <summary class="px-4 py-3 bg-blackbook-100 cursor-pointer hover:bg-blackbook-200 transition-colors">
+                {% set subcat_obj = tag_subcat_by_name.get(subcategory) %}
+                {% set tag_count = people_tags_by_subcategory[subcategory]|length %}
+                {% set is_uncategorized = subcategory == 'Uncategorized' %}
+                <details class="border border-blackbook-200 rounded-lg overflow-hidden subcategory-item" 
+                         {% if subcat_obj %}data-subcategory-id="{{ subcat_obj.id }}"{% endif %}
+                         {% if loop.first %}open{% endif %}>
+                    <!-- Subcategory Header with Integrated Controls -->
+                    <summary class="px-4 py-3 {% if is_uncategorized %}bg-yellow-50{% else %}bg-blackbook-100{% endif %} cursor-pointer hover:bg-blackbook-200 transition-colors
+                             {% if subcat_obj and not is_uncategorized %}draggable-header{% endif %}">
                         <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-3">
+                                <!-- Drag Handle (only for non-Uncategorized subcategories) -->
+                                {% if subcat_obj and not is_uncategorized %}
+                                <div class="drag-handle cursor-grab active:cursor-grabbing p-1 -ml-2 text-blackbook-400 hover:text-blackbook-600" 
+                                     title="Drag to reorder"
+                                     onclick="event.preventDefault(); event.stopPropagation();">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M8 6a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0 7.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0 7.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm8-15a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0 7.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm0 7.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+                                    </svg>
+                                </div>
+                                {% endif %}
                                 <svg class="w-4 h-4 text-blackbook-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                 </svg>
-                                <span class="font-medium text-blackbook-900">{{ subcategory }}</span>
-                                <span class="text-sm text-blackbook-600">({{ people_tags_by_subcategory[subcategory]|length }} tags)</span>
+                                <!-- Subcategory Color Indicator -->
+                                {% if subcat_obj %}
+                                <span class="w-4 h-4 rounded-full border border-blackbook-300" 
+                                      style="background-color: {{ subcat_obj.default_color }};"
+                                      title="Subcategory color: {{ subcat_obj.default_color }}"></span>
+                                {% elif is_uncategorized %}
+                                <span class="w-4 h-4 rounded-full border border-yellow-400 bg-yellow-200" 
+                                      title="Uncategorized tags"></span>
+                                {% endif %}
+                                <span class="font-medium {% if is_uncategorized %}text-yellow-800{% else %}text-blackbook-900{% endif %}">{{ subcategory }}</span>
+                                <span class="text-sm {% if is_uncategorized %}text-yellow-600{% else %}text-blackbook-600{% endif %}">({{ tag_count }} tags)</span>
+                                {% if is_uncategorized %}
+                                <span class="text-xs text-yellow-600 ml-2">← Assign a subcategory to organize</span>
+                                {% endif %}
                             </div>
+                            <!-- Subcategory Actions (only if subcat_obj exists) -->
+                            {% if subcat_obj %}
+                            <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                                <!-- Color Picker -->
+                                <input type="color" 
+                                       value="{{ subcat_obj.default_color }}"
+                                       class="w-7 h-7 rounded border border-blackbook-300 cursor-pointer"
+                                       onchange="updateSubcategoryColor('{{ subcat_obj.id }}', this.value)"
+                                       title="Change subcategory color">
+                                <!-- Apply to All Button -->
+                                <button type="button"
+                                        onclick="applyColorToAllTags('{{ subcat_obj.id }}', '{{ subcategory }}', {{ tag_count }})"
+                                        class="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+                                        title="Apply color to all {{ tag_count }} tags">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                                    </svg>
+                                    Apply
+                                </button>
+                                <!-- Delete Subcategory Button -->
+                                <button type="button"
+                                        onclick="deleteSubcategory('{{ subcat_obj.id }}', '{{ subcategory }}')"
+                                        class="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                        title="Delete subcategory (tags will keep their names)">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            {% endif %}
                         </div>
                     </summary>
+                    <!-- Bulk Assignment Bar (only for Uncategorized) -->
+                    {% if is_uncategorized and tag_count > 0 %}
+                    <div id="bulk-assignment-bar" class="px-4 py-3 bg-yellow-100 border-b border-yellow-200">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <label class="flex items-center gap-2 text-sm text-yellow-800">
+                                    <input type="checkbox" id="select-all-uncategorized" 
+                                           class="rounded border-yellow-400 text-yellow-600 focus:ring-yellow-500"
+                                           onchange="toggleAllUncategorized(this.checked)">
+                                    <span>Select all</span>
+                                </label>
+                                <span id="uncategorized-selection-count" class="text-xs text-yellow-700">(0 selected)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <select id="bulk-subcategory-select" 
+                                        class="text-sm rounded border-yellow-400 focus:ring-yellow-500 focus:border-yellow-500 py-1.5">
+                                    <option value="">Choose subcategory...</option>
+                                    {% for subcat in tag_subcategories %}
+                                    <option value="{{ subcat.name }}">{{ subcat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label class="flex items-center gap-1 text-xs text-yellow-700">
+                                    <input type="checkbox" id="bulk-apply-color" checked
+                                           class="rounded border-yellow-400 text-yellow-600 focus:ring-yellow-500">
+                                    <span>Apply color</span>
+                                </label>
+                                <button type="button" 
+                                        onclick="bulkAssignSubcategory()"
+                                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-yellow-600 rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                                    </svg>
+                                    Assign Subcategory
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Tags Table -->
                     <table class="min-w-full divide-y divide-blackbook-200">
                         <thead class="bg-blackbook-50">
                             <tr>
+                                {% if is_uncategorized %}
+                                <th scope="col" class="px-3 py-2 text-center text-xs font-medium text-blackbook-500 uppercase tracking-wider w-10">
+                                    <span class="sr-only">Select</span>
+                                </th>
+                                {% endif %}
                                 <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Tag Name</th>
                                 <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Color</th>
                                 <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">People Count</th>
@@ -590,6 +723,14 @@
                         <tbody class="bg-white divide-y divide-blackbook-200">
                             {% for item in people_tags_by_subcategory[subcategory] %}
                             <tr class="hover:bg-blackbook-50">
+                                {% if is_uncategorized %}
+                                <td class="px-3 py-3 text-center">
+                                    <input type="checkbox" 
+                                           class="uncategorized-tag-checkbox rounded border-blackbook-300 text-yellow-600 focus:ring-yellow-500"
+                                           value="{{ item.tag.id }}"
+                                           onchange="updateUncategorizedSelection()">
+                                </td>
+                                {% endif %}
                                 <td class="px-6 py-3 whitespace-nowrap">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                                           style="background-color: {{ item.tag.color }}20; color: {{ item.tag.color }}; border: 1px solid {{ item.tag.color }};">
@@ -658,20 +799,20 @@
 
             <div class="p-4 space-y-4">
                 <!-- Firm Category Tags -->
-                <details class="border border-blackbook-200 dark:border-blackbook-600 rounded-lg overflow-hidden" open>
-                    <summary class="px-4 py-3 bg-blackbook-100 dark:bg-blackbook-700 cursor-pointer hover:bg-blackbook-200 dark:hover:bg-blackbook-600 transition-colors">
+                <details class="border border-blackbook-200 rounded-lg overflow-hidden" open>
+                    <summary class="px-4 py-3 bg-blackbook-100 cursor-pointer hover:bg-blackbook-200 transition-colors">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4 text-blackbook-500 dark:text-blackbook-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-blackbook-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                 </svg>
-                                <span class="font-medium text-blackbook-900 dark:text-blackbook-100">Firm Category</span>
-                                <span class="text-sm text-blackbook-600 dark:text-blackbook-400">({{ firm_category_tags|length }} tags)</span>
-                                <span class="text-xs text-blackbook-500 dark:text-blackbook-400 ml-2">Investment Firms: VC, PE, Angels, etc.</span>
+                                <span class="font-medium text-blackbook-900">Firm Category</span>
+                                <span class="text-sm text-blackbook-600">({{ firm_category_tags|length }} tags)</span>
+                                <span class="text-xs text-blackbook-500 ml-2">Investment Firms: VC, PE, Angels, etc.</span>
                             </div>
                             <a href="/tags/new?category=Firm%20Category"
                                onclick="event.stopPropagation()"
-                               class="inline-flex items-center px-2.5 py-1 bg-blackbook-600 text-white text-xs font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-1">
+                               class="inline-flex items-center px-2.5 py-1 bg-blackbook-600 text-white text-xs font-medium rounded-md hover:bg-blackbook-700">
                                 <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                 </svg>
@@ -682,39 +823,9 @@
                     <table class="min-w-full divide-y divide-blackbook-200">
                         <thead class="bg-blackbook-50">
                             <tr>
-                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
-                                    <a href="/settings?tab=tags&sort=name&order={{ 'desc' if sort == 'name' and order == 'asc' else 'asc' }}"
-                                       class="flex items-center gap-1 hover:text-blackbook-700">
-                                        Tag Name
-                                        {% if sort == 'name' %}
-                                        <svg class="w-3 h-3 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                                        </svg>
-                                        {% endif %}
-                                    </a>
-                                </th>
-                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
-                                    <a href="/settings?tab=tags&sort=color&order={{ 'desc' if sort == 'color' and order == 'asc' else 'asc' }}"
-                                       class="flex items-center gap-1 hover:text-blackbook-700">
-                                        Color
-                                        {% if sort == 'color' %}
-                                        <svg class="w-3 h-3 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                                        </svg>
-                                        {% endif %}
-                                    </a>
-                                </th>
-                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
-                                    <a href="/settings?tab=tags&sort=count&order={{ 'desc' if sort == 'count' and order == 'asc' else 'asc' }}"
-                                       class="flex items-center gap-1 hover:text-blackbook-700">
-                                        Organization Count
-                                        {% if sort == 'count' %}
-                                        <svg class="w-3 h-3 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                                        </svg>
-                                        {% endif %}
-                                    </a>
-                                </th>
+                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Tag Name</th>
+                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Color</th>
+                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Organization Count</th>
                                 <th scope="col" class="px-6 py-2 text-right text-xs font-medium text-blackbook-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -771,20 +882,20 @@
                 </details>
 
                 <!-- Company Category Tags -->
-                <details class="border border-blackbook-200 dark:border-blackbook-600 rounded-lg overflow-hidden" open>
-                    <summary class="px-4 py-3 bg-blackbook-100 dark:bg-blackbook-700 cursor-pointer hover:bg-blackbook-200 dark:hover:bg-blackbook-600 transition-colors">
+                <details class="border border-blackbook-200 rounded-lg overflow-hidden" open>
+                    <summary class="px-4 py-3 bg-blackbook-100 cursor-pointer hover:bg-blackbook-200 transition-colors">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4 text-blackbook-500 dark:text-blackbook-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-blackbook-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                 </svg>
-                                <span class="font-medium text-blackbook-900 dark:text-blackbook-100">Company Category</span>
-                                <span class="text-sm text-blackbook-600 dark:text-blackbook-400">({{ company_category_tags|length }} tags)</span>
-                                <span class="text-xs text-blackbook-500 dark:text-blackbook-400 ml-2">Companies: Banking, Payments, Insurance, etc.</span>
+                                <span class="font-medium text-blackbook-900">Company Category</span>
+                                <span class="text-sm text-blackbook-600">({{ company_category_tags|length }} tags)</span>
+                                <span class="text-xs text-blackbook-500 ml-2">Companies: Banking, Payments, Insurance, etc.</span>
                             </div>
                             <a href="/tags/new?category=Company%20Category"
                                onclick="event.stopPropagation()"
-                               class="inline-flex items-center px-2.5 py-1 bg-blackbook-600 text-white text-xs font-medium rounded-md hover:bg-blackbook-700 focus:outline-none focus:ring-2 focus:ring-blackbook-500 focus:ring-offset-1">
+                               class="inline-flex items-center px-2.5 py-1 bg-blackbook-600 text-white text-xs font-medium rounded-md hover:bg-blackbook-700">
                                 <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                 </svg>
@@ -795,39 +906,9 @@
                     <table class="min-w-full divide-y divide-blackbook-200">
                         <thead class="bg-blackbook-50">
                             <tr>
-                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
-                                    <a href="/settings?tab=tags&sort=name&order={{ 'desc' if sort == 'name' and order == 'asc' else 'asc' }}"
-                                       class="flex items-center gap-1 hover:text-blackbook-700">
-                                        Tag Name
-                                        {% if sort == 'name' %}
-                                        <svg class="w-3 h-3 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                                        </svg>
-                                        {% endif %}
-                                    </a>
-                                </th>
-                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
-                                    <a href="/settings?tab=tags&sort=color&order={{ 'desc' if sort == 'color' and order == 'asc' else 'asc' }}"
-                                       class="flex items-center gap-1 hover:text-blackbook-700">
-                                        Color
-                                        {% if sort == 'color' %}
-                                        <svg class="w-3 h-3 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                                        </svg>
-                                        {% endif %}
-                                    </a>
-                                </th>
-                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">
-                                    <a href="/settings?tab=tags&sort=count&order={{ 'desc' if sort == 'count' and order == 'asc' else 'asc' }}"
-                                       class="flex items-center gap-1 hover:text-blackbook-700">
-                                        Organization Count
-                                        {% if sort == 'count' %}
-                                        <svg class="w-3 h-3 {{ 'rotate-180' if order == 'desc' else '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                                        </svg>
-                                        {% endif %}
-                                    </a>
-                                </th>
+                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Tag Name</th>
+                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Color</th>
+                                <th scope="col" class="px-6 py-2 text-left text-xs font-medium text-blackbook-500 uppercase tracking-wider">Organization Count</th>
                                 <th scope="col" class="px-6 py-2 text-right text-xs font-medium text-blackbook-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -885,14 +966,14 @@
 
                 {% if uncategorized_tags %}
                 <!-- Uncategorized Tags -->
-                <details class="border border-blackbook-200 dark:border-blackbook-600 rounded-lg overflow-hidden">
-                    <summary class="px-4 py-3 bg-blackbook-100 dark:bg-blackbook-700 cursor-pointer hover:bg-blackbook-200 dark:hover:bg-blackbook-600 transition-colors">
+                <details class="border border-blackbook-200 rounded-lg overflow-hidden">
+                    <summary class="px-4 py-3 bg-blackbook-100 cursor-pointer hover:bg-blackbook-200 transition-colors">
                         <div class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-blackbook-500 dark:text-blackbook-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-blackbook-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
-                            <span class="font-medium text-blackbook-900 dark:text-blackbook-100">Uncategorized</span>
-                            <span class="text-sm text-blackbook-600 dark:text-blackbook-400">({{ uncategorized_tags|length }} tags)</span>
+                            <span class="font-medium text-blackbook-900">Uncategorized</span>
+                            <span class="text-sm text-blackbook-600">({{ uncategorized_tags|length }} tags)</span>
                         </div>
                     </summary>
                     <table class="min-w-full divide-y divide-blackbook-200">
@@ -953,6 +1034,410 @@
             </div>
         </details>
     </div>
+
+    <!-- Add Subcategory Modal -->
+    <div id="add-subcategory-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-blackbook-200">
+                <h3 class="text-lg font-semibold text-blackbook-900">Add New Subcategory</h3>
+            </div>
+            <form id="add-subcategory-form" class="p-6 space-y-4">
+                <div>
+                    <label for="new-subcat-name" class="block text-sm font-medium text-blackbook-700 mb-1">Name</label>
+                    <input type="text" 
+                           id="new-subcat-name" 
+                           name="name"
+                           required
+                           maxlength="100"
+                           placeholder="e.g., Industry Experts, Alumni Network"
+                           class="w-full px-3 py-2 border border-blackbook-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blackbook-500 text-sm">
+                </div>
+                <div>
+                    <label for="new-subcat-color" class="block text-sm font-medium text-blackbook-700 mb-1">Default Color</label>
+                    <div class="flex items-center gap-3">
+                        <input type="color" 
+                               id="new-subcat-color" 
+                               name="default_color"
+                               value="#6b7280"
+                               class="w-12 h-10 rounded border border-blackbook-300 cursor-pointer">
+                        <input type="text" 
+                               id="new-subcat-color-text"
+                               value="#6b7280"
+                               pattern="^#[0-9A-Fa-f]{6}$"
+                               class="w-24 px-2 py-2 border border-blackbook-300 rounded-md text-sm font-mono">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" 
+                            onclick="document.getElementById('add-subcategory-modal').classList.add('hidden')"
+                            class="px-4 py-2 text-sm font-medium text-blackbook-700 bg-blackbook-100 rounded-md hover:bg-blackbook-200">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 text-sm font-medium text-white bg-blackbook-600 rounded-md hover:bg-blackbook-700">
+                        Add Subcategory
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript for tag management -->
+    <script>
+    function showTagStatus(message, type) {
+        const status = document.getElementById('tag-status');
+        status.textContent = message;
+        status.classList.remove('hidden', 'bg-green-50', 'text-green-700', 'bg-red-50', 'text-red-700');
+        
+        if (type === 'success') {
+            status.classList.add('bg-green-50', 'text-green-700');
+        } else {
+            status.classList.add('bg-red-50', 'text-red-700');
+        }
+        
+        setTimeout(() => status.classList.add('hidden'), 3000);
+    }
+
+    async function updateSubcategoryColor(subcatId, newColor) {
+        try {
+            const formData = new FormData();
+            formData.append('default_color', newColor);
+            
+            const response = await fetch(`/tags/subcategories/${subcatId}`, {
+                method: 'PUT',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showTagStatus(`Color updated to ${newColor}`, 'success');
+            } else {
+                showTagStatus(data.detail || 'Failed to update color', 'error');
+            }
+        } catch (error) {
+            showTagStatus('Error updating color: ' + error.message, 'error');
+        }
+    }
+
+    async function applyColorToAllTags(subcatId, subcatName, tagCount) {
+        if (tagCount === 0) {
+            showTagStatus('No tags in this subcategory to update', 'error');
+            return;
+        }
+        
+        if (!confirm(`Apply the default color to all ${tagCount} tags in "${subcatName}"?`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/tags/subcategories/${subcatId}/apply-color`, {
+                method: 'POST'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showTagStatus(`Updated ${data.updated_count} tags to ${data.color}`, 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showTagStatus(data.detail || 'Failed to apply color', 'error');
+            }
+        } catch (error) {
+            showTagStatus('Error applying color: ' + error.message, 'error');
+        }
+    }
+
+    async function deleteSubcategory(subcatId, subcatName) {
+        if (!confirm(`Delete subcategory "${subcatName}"?\n\nTags using this subcategory will keep their subcategory name.`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/tags/subcategories/${subcatId}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showTagStatus(`Deleted subcategory "${data.deleted}"`, 'success');
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                showTagStatus(data.detail || 'Failed to delete subcategory', 'error');
+            }
+        } catch (error) {
+            showTagStatus('Error deleting subcategory: ' + error.message, 'error');
+        }
+    }
+
+    // Bulk assignment functions for uncategorized tags
+    function toggleAllUncategorized(checked) {
+        const checkboxes = document.querySelectorAll('.uncategorized-tag-checkbox');
+        checkboxes.forEach(cb => cb.checked = checked);
+        updateUncategorizedSelection();
+    }
+    
+    function updateUncategorizedSelection() {
+        const checkboxes = document.querySelectorAll('.uncategorized-tag-checkbox');
+        const checked = document.querySelectorAll('.uncategorized-tag-checkbox:checked');
+        const countSpan = document.getElementById('uncategorized-selection-count');
+        const selectAllCheckbox = document.getElementById('select-all-uncategorized');
+        
+        if (countSpan) {
+            countSpan.textContent = `(${checked.length} selected)`;
+        }
+        
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = checked.length === checkboxes.length && checkboxes.length > 0;
+            selectAllCheckbox.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
+        }
+    }
+    
+    async function bulkAssignSubcategory() {
+        const selectedCheckboxes = document.querySelectorAll('.uncategorized-tag-checkbox:checked');
+        const subcategorySelect = document.getElementById('bulk-subcategory-select');
+        const applyColorCheckbox = document.getElementById('bulk-apply-color');
+        
+        if (selectedCheckboxes.length === 0) {
+            showTagStatus('Please select at least one tag', 'error');
+            return;
+        }
+        
+        const subcategory = subcategorySelect.value;
+        if (!subcategory) {
+            showTagStatus('Please choose a subcategory', 'error');
+            return;
+        }
+        
+        const tagIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+        const applyColor = applyColorCheckbox ? applyColorCheckbox.checked : true;
+        
+        try {
+            const response = await fetch('/tags/bulk-assign-subcategory', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    tag_ids: tagIds,
+                    subcategory: subcategory,
+                    apply_color: applyColor
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showTagStatus(`Assigned ${data.updated_count} tags to "${subcategory}"`, 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showTagStatus(data.detail || 'Failed to assign subcategory', 'error');
+            }
+        } catch (error) {
+            showTagStatus('Error assigning subcategory: ' + error.message, 'error');
+        }
+    }
+    
+    // =============================================
+    // Drag and Drop Reordering for Subcategories
+    // =============================================
+    let draggedItem = null;
+    let dragPlaceholder = null;
+    
+    function initDragAndDrop() {
+        const subcategoryList = document.getElementById('subcategory-list');
+        console.log('[DRAG DEBUG] initDragAndDrop called, subcategoryList:', subcategoryList);
+        if (!subcategoryList) return;
+
+        const items = subcategoryList.querySelectorAll('.subcategory-item[data-subcategory-id]');
+        console.log('[DRAG DEBUG] Found', items.length, 'draggable items');
+        
+        items.forEach(item => {
+            const handle = item.querySelector('.drag-handle');
+            if (!handle) return;
+            
+            // Make the item draggable when using the handle
+            handle.addEventListener('mousedown', function(e) {
+                item.setAttribute('draggable', 'true');
+            });
+            
+            document.addEventListener('mouseup', function() {
+                item.setAttribute('draggable', 'false');
+            });
+            
+            item.addEventListener('dragstart', function(e) {
+                if (!item.getAttribute('draggable') || item.getAttribute('draggable') === 'false') {
+                    e.preventDefault();
+                    return;
+                }
+                draggedItem = item;
+                item.classList.add('opacity-50', 'border-dashed', 'border-2', 'border-blue-500');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', item.innerHTML);
+                
+                // Create placeholder
+                dragPlaceholder = document.createElement('div');
+                dragPlaceholder.className = 'h-16 border-2 border-dashed border-blue-400 rounded-lg bg-blue-50 my-2';
+            });
+            
+            item.addEventListener('dragend', function(e) {
+                console.log('[DRAG DEBUG] dragend fired');
+                item.classList.remove('opacity-50', 'border-dashed', 'border-2', 'border-blue-500');
+                item.setAttribute('draggable', 'false');
+
+                // Remove placeholder
+                if (dragPlaceholder && dragPlaceholder.parentNode) {
+                    dragPlaceholder.parentNode.removeChild(dragPlaceholder);
+                }
+
+                draggedItem = null;
+                dragPlaceholder = null;
+
+                // Save the new order
+                console.log('[DRAG DEBUG] Calling saveSubcategoryOrder...');
+                saveSubcategoryOrder();
+            });
+            
+            item.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                if (draggedItem && draggedItem !== item) {
+                    const rect = item.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    
+                    if (e.clientY < midY) {
+                        item.parentNode.insertBefore(dragPlaceholder, item);
+                    } else {
+                        item.parentNode.insertBefore(dragPlaceholder, item.nextSibling);
+                    }
+                }
+            });
+            
+            item.addEventListener('drop', function(e) {
+                e.preventDefault();
+                console.log('[DRAG DEBUG] drop fired on item');
+
+                if (draggedItem && draggedItem !== item) {
+                    // Insert the dragged item at the placeholder position
+                    if (dragPlaceholder && dragPlaceholder.parentNode) {
+                        dragPlaceholder.parentNode.insertBefore(draggedItem, dragPlaceholder);
+                        console.log('[DRAG DEBUG] Moved item to placeholder position');
+                    }
+                }
+            });
+        });
+
+        // Handle drop on the list container (for dropping between items)
+        subcategoryList.addEventListener('dragover', function(e) {
+            e.preventDefault();
+        });
+
+        subcategoryList.addEventListener('drop', function(e) {
+            e.preventDefault();
+            console.log('[DRAG DEBUG] drop fired on container');
+
+            // Move the dragged item to the placeholder position
+            if (draggedItem && dragPlaceholder && dragPlaceholder.parentNode) {
+                dragPlaceholder.parentNode.insertBefore(draggedItem, dragPlaceholder);
+                console.log('[DRAG DEBUG] Moved item to placeholder position (container drop)');
+            }
+        });
+    }
+    
+    async function saveSubcategoryOrder() {
+        const subcategoryList = document.getElementById('subcategory-list');
+        if (!subcategoryList) return;
+
+        const items = subcategoryList.querySelectorAll('.subcategory-item[data-subcategory-id]');
+        const order = Array.from(items).map(item => item.dataset.subcategoryId).filter(id => id);
+
+        console.log('[DRAG DEBUG] Saving order:', order);
+
+        if (order.length === 0) {
+            console.log('[DRAG DEBUG] No items with IDs found');
+            return;
+        }
+
+        try {
+            const response = await fetch('/tags/subcategories/reorder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ category: 'person', order: order })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showTagStatus('Subcategory order saved', 'success');
+            } else {
+                showTagStatus(data.detail || 'Failed to save order', 'error');
+            }
+        } catch (error) {
+            showTagStatus('Error saving order: ' + error.message, 'error');
+        }
+    }
+
+    // Modal and form handling
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize drag and drop
+        initDragAndDrop();
+        const colorPicker = document.getElementById('new-subcat-color');
+        const colorText = document.getElementById('new-subcat-color-text');
+        
+        if (colorPicker && colorText) {
+            colorPicker.addEventListener('input', function() {
+                colorText.value = this.value.toUpperCase();
+            });
+            
+            colorText.addEventListener('input', function() {
+                if (/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
+                    colorPicker.value = this.value;
+                }
+            });
+        }
+        
+        const form = document.getElementById('add-subcategory-form');
+        if (form) {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                
+                try {
+                    const response = await fetch('/tags/subcategories', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        document.getElementById('add-subcategory-modal').classList.add('hidden');
+                        showTagStatus('Subcategory added successfully!', 'success');
+                        setTimeout(() => window.location.reload(), 500);
+                    } else {
+                        showTagStatus(data.detail || 'Failed to add subcategory', 'error');
+                    }
+                } catch (error) {
+                    showTagStatus('Error adding subcategory: ' + error.message, 'error');
+                }
+            });
+        }
+        
+        // Close modal on background click
+        const modal = document.getElementById('add-subcategory-modal');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+        }
+    });
+    </script>
 
     {% elif active_tab == 'pending' %}
     <!-- Pending Contacts Tab -->

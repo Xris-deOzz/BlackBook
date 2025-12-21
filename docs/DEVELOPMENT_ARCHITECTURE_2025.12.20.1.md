@@ -14,7 +14,7 @@
 C:\BlackBook (edit) → test locally → git push → SSH to Synology → git pull → restart Docker
 ```
 
-**NEVER edit code directly on Synology network share (`\\BearCave\docker\blackbook`)**
+**NEVER edit code directly on Synology network share (`Synology via SSH`)**
 
 This bypasses version control and causes codebase divergence.
 

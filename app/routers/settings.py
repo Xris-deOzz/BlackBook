@@ -13,7 +13,7 @@ from sqlalchemy import func, desc
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import GoogleAccount, EmailIgnoreList, Person, Organization, Tag, PendingContact, PendingContactStatus
+from app.models import GoogleAccount, EmailIgnoreList, Person, Organization, Tag, TagSubcategory, PendingContact, PendingContactStatus
 from app.models import AIProvider, AIAPIKey, AIDataAccessSettings
 from app.models import AIQuickPrompt, PromptEntityType
 from app.models import AIConversation, AIMessage
@@ -110,15 +110,17 @@ async def settings_page(
                 people_tags_by_subcategory[subcat] = []
             people_tags_by_subcategory[subcat].append(tag_data)
 
-        # Define preferred subcategory order
-        preferred_order = [
-            "Investor Type", "Role/Industry", "Location", "Classmates",
-            "Former Colleague", "Professional Services", "Relationship", "Uncategorized"
-        ]
-        # Sort subcategories: preferred order first, then alphabetically for any others
+        # Get subcategory order from database (TagSubcategory.display_order)
+        # This ensures UI matches the order defined in tag_subcategory model
+        ordered_subcats = [s.name for s in TagSubcategory.get_all_ordered(db)]
+        
+        # Build final order: database-ordered subcats first, then any orphan subcats, then Uncategorized last
         all_subcats = set(people_tags_by_subcategory.keys())
-        people_subcategories = [s for s in preferred_order if s in all_subcats]
-        people_subcategories += sorted(all_subcats - set(preferred_order))
+        people_subcategories = [s for s in ordered_subcats if s in all_subcats]
+        orphan_subcats = sorted(all_subcats - set(ordered_subcats) - {"Uncategorized"})
+        people_subcategories += orphan_subcats
+        if "Uncategorized" in all_subcats:
+            people_subcategories.append("Uncategorized")
 
         # Query for Organization tags - use LEFT JOIN to include tags with 0 usage
         org_usage_count_label = func.count(func.distinct(OrganizationTag.organization_id)).label("usage_count")
@@ -151,6 +153,20 @@ async def settings_page(
         firm_category_tags = [t for t in org_tags if t["tag"].category == "Firm Category"]
         company_category_tags = [t for t in org_tags if t["tag"].category == "Company Category"]
         uncategorized_tags = [t for t in org_tags if t["tag"].category not in ("Firm Category", "Company Category")]
+
+    # Get subcategories for tag management
+    tag_subcategories = []
+    tag_subcat_counts = {}
+    tag_subcat_by_name = {}  # name -> TagSubcategory object lookup
+    if tab == "tags":
+        # Ensure all default subcategories exist in the database
+        TagSubcategory.ensure_subcategories_exist(db)
+        tag_subcategories = TagSubcategory.get_all_ordered(db)
+        # Get tag counts for each subcategory and build lookup dict
+        for subcat in tag_subcategories:
+            count = db.query(Tag).filter(Tag.subcategory == subcat.name).count()
+            tag_subcat_counts[subcat.name] = count
+            tag_subcat_by_name[subcat.name] = subcat
 
     # Get pending contacts data for pending tab
     pending_contacts = []
@@ -361,6 +377,10 @@ async def settings_page(
             "org_count": len(org_tags),
             "sort": sort,
             "order": order,
+            # Tag subcategories management
+            "tag_subcategories": tag_subcategories,
+            "tag_subcat_counts": tag_subcat_counts,
+            "tag_subcat_by_name": tag_subcat_by_name,
             # Pending contacts data
             "pending_contacts": pending_contacts,
             "pending_status": pending_status or "pending",
@@ -385,6 +405,37 @@ async def settings_page(
             "recent_syncs": recent_syncs,
             "conflicts_count": conflicts_count,
             "archived_count": archived_count,
+        },
+    )
+
+
+# ===========================
+# Tag Subcategory Management
+# ===========================
+
+
+@router.get("/tags/subcategories", response_class=HTMLResponse)
+async def get_subcategories_list(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Get the tag subcategories list partial for settings page.
+    """
+    subcategories = TagSubcategory.get_all_ordered(db)
+    
+    # Get tag counts for each subcategory
+    subcat_counts = {}
+    for subcat in subcategories:
+        count = db.query(Tag).filter(Tag.subcategory == subcat.name).count()
+        subcat_counts[subcat.name] = count
+
+    return templates.TemplateResponse(
+        "tags/_subcategories_list.html",
+        {
+            "request": request,
+            "subcategories": subcategories,
+            "subcat_counts": subcat_counts,
         },
     )
 

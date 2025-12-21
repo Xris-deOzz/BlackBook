@@ -13,7 +13,7 @@ Implement the UI components for bidirectional Google Contacts sync. The backend 
 ## Project Context
 
 - **Tech Stack:** Python 3.11, FastAPI, PostgreSQL, SQLAlchemy, HTMX, TailwindCSS
-- **Location:** `\\BearCave\docker\blackbook` (Synology NAS via MCP)
+- **Location:** `Synology via SSH` (Synology NAS via MCP)
 - **Existing Settings Page:** `app/templates/settings/index.html` (has 9 tabs, need to add 10th)
 - **Sync API:** `app/routers/sync.py` (all endpoints already working)
 - **Settings Router:** `app/routers/settings.py` (needs sync tab handler)

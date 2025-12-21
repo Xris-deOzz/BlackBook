@@ -2,7 +2,7 @@
 
 **Date:** December 16, 2025
 **Project:** Perun's BlackBook (Personal CRM)
-**Location:** `C:\Users\ossow\OneDrive\PerunsBlackBook`
+**Location:** `C:\BlackBook`
 
 ---
 

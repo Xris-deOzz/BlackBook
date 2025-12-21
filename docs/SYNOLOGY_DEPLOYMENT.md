@@ -31,7 +31,7 @@ This guide walks you through deploying Perun's BlackBook to a Synology NAS with 
 Open PowerShell in your project folder and run:
 
 ```powershell
-cd C:\Users\ossow\OneDrive\PerunsBlackBook
+cd C:\BlackBook
 .\scripts\export_database.bat
 ```
 
@@ -411,7 +411,7 @@ The codebase is version-controlled with Git and can be pushed to GitHub for easy
 ### Initial Setup (Windows Development Machine)
 
 ```bash
-cd C:\Users\ossow\OneDrive\PerunsBlackBook
+cd C:\BlackBook
 
 # Already initialized - just add remote
 git remote add origin https://github.com/Xris-deOzz/BlackBook.git

@@ -7,6 +7,7 @@ they are registered with the declarative base.
 
 from app.models.base import Base
 from app.models.tag import Tag, PersonTag, OrganizationTag
+from app.models.tag_subcategory import TagSubcategory, DEFAULT_SUBCATEGORY_COLORS
 from app.models.organization import Organization, OrgType, RelationshipType
 from app.models.person import Person, PersonOrganization
 from app.models.interaction import Interaction, InteractionMedium, InteractionSource
@@ -60,6 +61,8 @@ __all__ = [
     "Person",
     "Organization",
     "Tag",
+    "TagSubcategory",
+    "DEFAULT_SUBCATEGORY_COLORS",
     "Interaction",
     "SavedView",
     "ImportLog",

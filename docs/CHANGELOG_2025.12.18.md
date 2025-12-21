@@ -39,7 +39,7 @@ Claude.ai now has direct read/write access to the BlackBook codebase on Synology
 
 **Allowed Directory:**
 ```
-\\BearCave\docker\blackbook
+Synology via SSH
 ```
 
 This is a Windows UNC path that maps to `/volume1/docker/blackbook` on the Synology NAS.
@@ -56,7 +56,7 @@ This is a Windows UNC path that maps to `/volume1/docker/blackbook` on the Synol
 ### How It Works
 
 1. **MCP Server:** A Filesystem MCP server runs locally on Christopher's Windows machine
-2. **Network Share:** The Synology `docker` share is mounted as `\\BearCave\docker`
+2. **Network Share:** The Synology `docker` share is mounted as `Synology NAS (access via SSH)`
 3. **Claude.ai Access:** Claude can read/write files through the MCP tools:
    - `Filesystem:read_file` / `Filesystem:read_text_file`
    - `Filesystem:write_file`
@@ -101,8 +101,8 @@ sudo docker-compose -f docker-compose.prod.yml up -d --build
 
 | Environment | Location | Use Case |
 |-------------|----------|----------|
-| **Windows Local** | `C:\Users\ossow\OneDrive\PerunsBlackBook\` | Active development with hot reload |
-| **Synology Production** | `\\BearCave\docker\blackbook` | Production deployment, direct edits via MCP |
+| **Windows Local** | `C:\BlackBook` | Active development with hot reload |
+| **Synology Production** | `Synology via SSH` | Production deployment, direct edits via MCP |
 
 ### Recommended Workflow
 

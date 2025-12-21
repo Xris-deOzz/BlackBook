@@ -23,7 +23,7 @@ Implement bidirectional synchronization between BlackBook and Google Contacts. B
 ## Project Context
 
 - **Tech Stack:** Python 3.11, FastAPI, PostgreSQL, SQLAlchemy, HTMX, TailwindCSS
-- **Location:** `\\BearCave\docker\blackbook` (Synology NAS via MCP) or `C:\Users\ossow\OneDrive\PerunsBlackBook` (local dev)
+- **Location:** `Synology via SSH` (Synology NAS via MCP) or `C:\BlackBook` (local dev)
 - **Existing Contacts Service:** `app/services/contacts_service.py` (one-way import only)
 - **Google Auth:** `app/services/google_auth.py` (OAuth with `contacts` scope already configured)
 - **Settings Router:** `app/routers/settings.py` (9 tabs currently)
