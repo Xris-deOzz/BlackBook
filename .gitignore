@@ -18,6 +18,7 @@ build/
 # Environment
 .env
 *.local
+*.backup
 
 # IDE
 .idea/
