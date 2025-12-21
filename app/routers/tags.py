@@ -841,3 +841,86 @@ async def bulk_assign_subcategory(
         "subcategory": subcategory_name,
         "color": color,
     }
+
+
+@router.put("/categories", response_class=JSONResponse)
+async def update_category(
+    db: Session = Depends(get_db),
+    old_name: str = Form(...),
+    new_name: str = Form(...),
+):
+    """
+    Update a category name across all tags.
+    This renames a category (e.g., "Firm Category" -> "Investment Firms").
+    """
+    old_name = old_name.strip()
+    new_name = new_name.strip()
+
+    if not old_name or not new_name:
+        raise HTTPException(status_code=400, detail="Category names cannot be empty")
+
+    if old_name == new_name:
+        raise HTTPException(status_code=400, detail="New name must be different from old name")
+
+    # Check if any tags use the old category name
+    tags_with_old_name = db.query(Tag).filter(Tag.category == old_name).count()
+    if tags_with_old_name == 0:
+        raise HTTPException(status_code=404, detail=f"No tags found with category '{old_name}'")
+
+    # Check if the new name conflicts with an existing category
+    tags_with_new_name = db.query(Tag).filter(Tag.category == new_name).count()
+    if tags_with_new_name > 0:
+        raise HTTPException(status_code=400, detail=f"Category '{new_name}' already exists")
+
+    # Update all tags with the old category name
+    updated_count = db.query(Tag).filter(Tag.category == old_name).update(
+        {"category": new_name},
+        synchronize_session=False
+    )
+
+    db.commit()
+
+    return {
+        "success": True,
+        "updated_count": updated_count,
+        "old_name": old_name,
+        "new_name": new_name,
+    }
+
+
+@router.post("/categories/apply-color", response_class=JSONResponse)
+async def apply_category_color(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Apply a color to all tags in a specific category.
+    Expects JSON body: {"category": "Firm Category", "color": "#687280"}
+    """
+    data = await request.json()
+    category_name = data.get("category", "").strip()
+    color = data.get("color", "").strip()
+
+    if not category_name:
+        raise HTTPException(status_code=400, detail="Category name is required")
+
+    if not color:
+        raise HTTPException(status_code=400, detail="Color is required")
+
+    # Update all tags in this category
+    updated_count = db.query(Tag).filter(Tag.category == category_name).update(
+        {"color": color},
+        synchronize_session=False
+    )
+
+    if updated_count == 0:
+        raise HTTPException(status_code=404, detail=f"No tags found in category '{category_name}'")
+
+    db.commit()
+
+    return {
+        "success": True,
+        "updated_count": updated_count,
+        "category": category_name,
+        "color": color,
+    }

@@ -12,7 +12,8 @@
       "Bash(powershell -Command:*)",
       "Bash(cmd.exe /c 'copy \"\"c:\\\\Users\\\\ossow\\\\OneDrive\\\\PerunsBlackBook\\\\app\\\\routers\\\\import_contacts.py\"\" \"\"\\\\\\\\bearcave\\\\docker\\\\blackbook\\\\app\\\\routers\\\\import_contacts.py\"\"')",
       "Bash(cmd.exe /c:*)",
-      "Bash(cmd.exe /c 'copy \"\"c:\\\\Users\\\\ossow\\\\OneDrive\\\\PerunsBlackBook\\\\app\\\\templates\\\\settings\\\\index.html\"\" \"\"\\\\\\\\bearcave\\\\docker\\\\blackbook\\\\app\\\\templates\\\\settings\\\\\"\" /Y')"
+      "Bash(cmd.exe /c 'copy \"\"c:\\\\Users\\\\ossow\\\\OneDrive\\\\PerunsBlackBook\\\\app\\\\templates\\\\settings\\\\index.html\"\" \"\"\\\\\\\\bearcave\\\\docker\\\\blackbook\\\\app\\\\templates\\\\settings\\\\\"\" /Y')",
+      "Bash(python -m uvicorn:*)"
     ]
   }
 }
