@@ -53,3 +53,17 @@ htmlcov/
 
 # Node (if TailwindCSS build is added later)
 node_modules/
+
+# Sensitive backups (contain API keys)
+# Note: *.backup already covered above in Environment section
+
+# Personal contact data
+christmas_*.csv
+
+# Temp/debug HTML output files
+*temp*.html
+people_page.html
+orgs_page.html
+
+# Empty backup files
+backup_before_dedup.sql
