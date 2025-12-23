@@ -505,7 +505,9 @@ async def get_mini_calendar(
         month: Month number (1-12), defaults to current month
         year: Year, defaults to current year
     """
-    today = date.today()
+    # Use NYC timezone since server may be in UTC
+    local_tz = ZoneInfo("America/New_York")
+    today = datetime.now(local_tz).date()
     display_month = month if month else today.month
     display_year = year if year else today.year
 
@@ -561,15 +563,16 @@ async def get_schedule_widget(
         except ValueError:
             pass
 
-    # Parse selected date or use today
+    # Parse selected date or use today (use NYC timezone since server may be UTC)
+    today_in_tz = datetime.now(local_tz).date()
     if selected_date:
         try:
             display_date = datetime.strptime(selected_date, "%Y-%m-%d").date()
-            is_today = display_date == date.today()
+            is_today = display_date == today_in_tz
         except ValueError:
-            display_date = date.today()
+            display_date = today_in_tz
     else:
-        display_date = date.today()
+        display_date = today_in_tz
 
     try:
         from app.services.calendar_service import get_calendar_service
@@ -674,7 +677,9 @@ async def get_tasks_panel(
         tasks_service = get_tasks_service(db)
         task_lists = tasks_service.get_tasks_by_list(account_id=selected_account_id)
 
-        today = date.today()
+        # Use NYC timezone for "today" calculation (server may be in UTC)
+        local_tz = ZoneInfo("America/New_York")
+        today = datetime.now(local_tz).date()
         week_end = today + timedelta(days=6)  # Show 7 days including today
 
         overdue_tasks = []
