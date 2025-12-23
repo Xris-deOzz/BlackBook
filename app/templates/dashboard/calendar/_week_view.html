@@ -2,14 +2,14 @@
 <div class="flex flex-col flex-1 min-h-0 overflow-hidden">
     <!-- Week Header with day columns - horizontal scroll on mobile -->
     <div class="flex-shrink-0 border-b border-blackbook-700 overflow-x-auto lg:overflow-x-visible" id="week-header-scroll">
-        <div class="flex pr-[17px] min-w-[800px] lg:min-w-0"><!-- pr-[17px] compensates for scrollbar width -->
+        <div class="flex pr-[17px] min-w-[450px] sm:min-w-[800px] lg:min-w-0"><!-- pr-[17px] compensates for scrollbar width, min-w-[450px] for 5 days on mobile -->
             <!-- Timezone label - hidden on mobile -->
             <div class="w-12 sm:w-16 flex-shrink-0 text-xs text-blackbook-500 text-right pr-2 py-2 hidden md:block">
                 <span class="hidden sm:inline">GMT-05<br></span>NYC
             </div>
             <!-- Day headers -->
             {% for day in days %}
-            <div class="flex-1 min-w-[90px] sm:min-w-[100px] text-center py-2 border-l border-blackbook-700/50 {% if day.is_today %}bg-blackbook-700/30{% endif %}">
+            <div class="flex-1 min-w-[90px] sm:min-w-[100px] text-center py-2 border-l border-blackbook-700/50 {% if day.is_today %}bg-blackbook-700/30{% endif %} {% if day.day_name[:3] in ['Sat', 'Sun'] %}hidden sm:block{% endif %}">
                 <div class="text-xs text-blackbook-500">{{ day.day_name[:3] }}<span class="hidden sm:inline">{{ day.day_name[3:] }}</span></div>
                 <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full mx-auto flex items-center justify-center text-sm font-medium
                             {% if day.is_today %}bg-cyan-600 text-white{% else %}text-blackbook-200{% endif %}">
@@ -22,15 +22,15 @@
         <!-- All-day events and untimed tasks row -->
         {% set has_all_day_content = all_day_events or days|selectattr('untimed_tasks')|list %}
         {% if has_all_day_content %}
-        <div class="flex border-t border-blackbook-700/50 pr-[17px] min-w-[800px] lg:min-w-0">
+        <div class="flex border-t border-blackbook-700/50 pr-[17px] min-w-[800px] lg:min-w-0 sm:min-w-0">
             <div class="w-12 sm:w-16 flex-shrink-0 hidden md:block"></div>
             {% for day in days %}
-            <div class="flex-1 min-w-[90px] sm:min-w-[100px] border-l border-blackbook-700/50 p-1 space-y-0.5 min-h-[28px] max-h-20 overflow-y-auto">
+            <div class="flex-1 min-w-[90px] sm:min-w-[100px] border-l border-blackbook-700/50 p-1 space-y-0.5 min-h-[28px] max-h-20 overflow-y-auto {% if day.day_name[:3] in ['Sat', 'Sun'] %}hidden sm:block{% endif %}">
                 <!-- All-day events -->
                 {% set color_map = {'tomato': '#D50000', 'flamingo': '#E67C73', 'tangerine': '#F4511E', 'banana': '#F6BF26', 'sage': '#33B679', 'basil': '#0B8043', 'peacock': '#039BE5', 'blueberry': '#3F51B5', 'lavender': '#7986CB', 'grape': '#8E24AA', 'graphite': '#616161'} %}
                 {% for event in all_day_events %}
                 {% if event.start_time_local.date() == day.date %}
-                <div class="text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-90 text-white"
+                <div class="text-xs px-1.5 py-0.5 rounded line-clamp-2 sm:line-clamp-1 cursor-pointer hover:opacity-90 text-white"
                      style="background-color: {{ color_map.get(event.calendar_color, '#4b5563') }};"
                      hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
                      hx-target="#event-detail-modal-container"
@@ -66,7 +66,7 @@
 
     <!-- Scrollable time grid - horizontal scroll on mobile -->
     <div class="flex-1 min-h-0 overflow-auto" id="week-view-scroll">
-        <div class="flex relative min-w-[800px] lg:min-w-0">
+        <div class="flex relative min-w-[450px] sm:min-w-[800px] lg:min-w-0">
             <!-- Time labels column - hidden on mobile -->
             <div class="w-12 sm:w-16 flex-shrink-0 sticky left-0 bg-blackbook-800 z-10 hidden md:block">
                 {% for hour in hours %}
@@ -78,7 +78,7 @@
 
             <!-- Day columns -->
             {% for day in days %}
-            <div class="flex-1 min-w-[90px] sm:min-w-[100px] border-l border-blackbook-700/50 relative {% if day.is_today %}bg-blackbook-700/10{% endif %} day-column"
+            <div class="flex-1 min-w-[90px] sm:min-w-[100px] border-l border-blackbook-700/50 relative {% if day.is_today %}bg-blackbook-700/10{% endif %} day-column {% if day.day_name[:3] in ['Sat', 'Sun'] %}hidden sm:block{% endif %}"
                  data-date="{{ day.date.isoformat() }}">
                 <!-- Hour grid lines (drop zones) -->
                 {% for hour in hours %}
@@ -108,7 +108,7 @@
                      hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
                      hx-target="#event-detail-modal-container"
                      hx-swap="innerHTML">
-                    <div class="font-medium text-white truncate">{{ event.summary or '(No title)' }}</div>
+                    <div class="font-medium text-white line-clamp-2 sm:line-clamp-1">{{ event.summary or '(No title)' }}</div>
                     {% if height_px > 24 %}
                     <div class="text-white/80 truncate">
                         {{ event.start_time_local.strftime('%H:%M') }} - {{ event.end_time_local.strftime('%H:%M') if event.end_time_local else '' }}

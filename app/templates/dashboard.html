@@ -604,6 +604,7 @@ function dashboardState() {
             this.initKeyboardNavigation();
             this.loadGoogleAccounts();
             this.loadSidebarPreferences();
+            this.setMobileCalendarDefault();
 
             window.dashboardCurrentView = this.taskTab;
             window.dashboardAccountId = this.selectedAccountId;
@@ -693,6 +694,9 @@ function dashboardState() {
         },
 
         loadCalendarView() {
+            // Save user preference when they change views
+            this.saveCalendarViewPreference();
+
             const dateStr = this.calendarDate.toISOString().split('T')[0];
             const accountParam = this.selectedAccountId ? `&account_id=${this.selectedAccountId}` : '';
             const target = document.getElementById('calendar-view-content');
@@ -808,6 +812,23 @@ function dashboardState() {
                 document.body.style.userSelect = '';
                 this.saveSidebarPreferences();
             }
+        },
+
+        // Mobile calendar default methods
+        setMobileCalendarDefault() {
+            const isMobile = window.innerWidth < 768;
+            const savedView = sessionStorage.getItem('calendarViewPreference');
+
+            // Only set schedule view on mobile if user hasn't manually chosen a view
+            if (isMobile && !savedView) {
+                this.calendarView = 'schedule';
+            } else if (savedView) {
+                this.calendarView = savedView;
+            }
+        },
+
+        saveCalendarViewPreference() {
+            sessionStorage.setItem('calendarViewPreference', this.calendarView);
         },
 
         // Account methods
