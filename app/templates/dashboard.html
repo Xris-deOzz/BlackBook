@@ -76,12 +76,25 @@
     <!-- Mobile Sidebar Toggle Button (FAB) - shown only in tasks view on mobile -->
     <button @click="mobileSidebarOpen = !mobileSidebarOpen"
             x-show="mainTab === 'tasks'"
-            class="lg:hidden fixed bottom-20 left-4 z-50 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-full shadow-lg transition-colors">
+            class="lg:hidden fab fixed bottom-20 left-4 z-50 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white"
+            aria-label="Toggle sidebar">
         <svg x-show="!mobileSidebarOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
         <svg x-show="mobileSidebarOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+    </button>
+
+    <!-- Floating Action Button for Quick Task Add - mobile only -->
+    <button x-show="mainTab === 'tasks' && taskTab === 'week'"
+            hx-get="/dashboard/add-task-modal"
+            hx-target="#add-task-modal-container"
+            hx-swap="innerHTML"
+            class="md:hidden fab fixed bottom-4 right-4 z-50 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white"
+            aria-label="Add new task">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
     </button>
 
@@ -241,8 +254,9 @@
                  x-transition:leave-end="-translate-x-full">
                 <!-- Collapse button (desktop only) -->
                 <button @click="toggleSidebar()"
-                        class="hidden lg:flex sidebar-collapse-btn"
-                        title="Hide sidebar">
+                        class="hidden lg:flex sidebar-collapse-btn min-w-[32px] min-h-[48px]"
+                        title="Hide sidebar"
+                        aria-label="Collapse sidebar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
@@ -363,9 +377,10 @@
             <div class="hidden lg:flex items-start flex-shrink-0 pt-2"
                  x-show="sidebarCollapsed">
                 <button @click="toggleSidebar()"
-                        class="w-8 h-16 bg-blackbook-700 hover:bg-blackbook-600 rounded-r flex items-center justify-center text-blackbook-400 hover:text-white transition-colors"
-                        title="Show sidebar">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="w-10 h-16 min-w-[40px] bg-blackbook-700 hover:bg-blackbook-600 active:bg-blackbook-500 rounded-r flex items-center justify-center text-blackbook-400 hover:text-white transition-colors"
+                        title="Show sidebar"
+                        aria-label="Expand sidebar">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>

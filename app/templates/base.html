@@ -186,6 +186,57 @@
         }
     </style>
 
+    <!-- Mobile Touch Feedback Styles -->
+    <style>
+        /* Better touch feedback for mobile */
+        @media (hover: none) and (pointer: coarse) {
+            /* Touch device detected */
+            button, a, [role="button"] {
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            button:active, a:active, [role="button"]:active {
+                opacity: 0.8;
+                transform: scale(0.98);
+            }
+
+            /* Ensure minimum touch target size */
+            .touch-target {
+                min-width: 44px;
+                min-height: 44px;
+            }
+        }
+
+        /* Prevent text selection on interactive elements */
+        button, [role="button"] {
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* Mobile menu link touch targets */
+        .mobile-nav-link {
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Floating action button base styles */
+        .fab {
+            min-width: 48px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+    </style>
+
     <!-- Column Resizing Styles -->
     <style>
         /* Resizable table columns */
@@ -318,7 +369,7 @@
                 </div>
                 <!-- Mobile menu button -->
                 <div class="md:hidden">
-                    <button type="button" onclick="toggleMobileMenu()" class="inline-flex items-center justify-center p-2 rounded-md text-blackbook-400 hover:text-white hover:bg-blackbook-700 focus:outline-none">
+                    <button type="button" onclick="toggleMobileMenu()" class="inline-flex items-center justify-center p-2 min-w-[44px] min-h-[44px] rounded-md text-blackbook-400 hover:text-white hover:bg-blackbook-700 active:bg-blackbook-600 focus:outline-none transition-colors">
                         <span class="sr-only">Open main menu</span>
                         <svg class="h-6 w-6" id="menu-icon-closed" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -330,34 +381,39 @@
                 </div>
             </div>
         </div>
+        <!-- Mobile menu backdrop -->
+        <div id="mobile-menu-backdrop"
+             class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"
+             onclick="toggleMobileMenu()">
+        </div>
         <!-- Mobile Navigation Menu -->
-        <div class="md:hidden hidden" id="mobile-menu">
-            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+        <div class="md:hidden hidden relative z-50" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-blackbook-800">
                 {% set current_path = request.url.path %}
-                <a href="/" class="block px-3 py-2 rounded-md text-base font-medium text-blackbook-300 {% if current_path == '/' %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                <a href="/" class="mobile-nav-link block px-4 py-3 rounded-md text-base font-medium text-blackbook-300 active:bg-blackbook-600 transition-colors {% if current_path == '/' %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
                     Dashboard
                 </a>
-                <a href="/people" class="block px-3 py-2 rounded-md text-base font-medium text-blackbook-300 {% if current_path.startswith('/people') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                <a href="/people" class="mobile-nav-link block px-4 py-3 rounded-md text-base font-medium text-blackbook-300 active:bg-blackbook-600 transition-colors {% if current_path.startswith('/people') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
                     People
                 </a>
-                <a href="/organizations" class="block px-3 py-2 rounded-md text-base font-medium text-blackbook-300 {% if current_path.startswith('/organizations') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                <a href="/organizations" class="mobile-nav-link block px-4 py-3 rounded-md text-base font-medium text-blackbook-300 active:bg-blackbook-600 transition-colors {% if current_path.startswith('/organizations') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
                     Organizations
                 </a>
                 <!-- Communication Section (Mobile) -->
                 <div x-data="{ open: false }">
                     <button @click="open = !open"
                             style="color: #cbd5e1;"
-                            class="nav-dropdown-btn w-full flex justify-between items-center px-3 py-2 rounded-md text-base font-medium text-blackbook-300 hover:text-white {% if current_path.startswith('/emails') or current_path.startswith('/interactions') %}bg-blackbook-700 !text-white{% else %}hover:bg-blackbook-700{% endif %}">
+                            class="nav-dropdown-btn mobile-nav-link w-full flex justify-between items-center px-4 py-3 rounded-md text-base font-medium text-blackbook-300 hover:text-white active:bg-blackbook-600 transition-colors {% if current_path.startswith('/emails') or current_path.startswith('/interactions') %}bg-blackbook-700 !text-white{% else %}hover:bg-blackbook-700{% endif %}">
                         Communication
-                        <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-5 h-5 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
                     <div x-show="open" x-collapse class="pl-4">
-                        <a href="/emails" class="block px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/emails') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                        <a href="/emails" class="mobile-nav-link block px-4 py-3 rounded-md text-sm font-medium text-blackbook-300 active:bg-blackbook-600 transition-colors {% if current_path.startswith('/emails') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
                             Email
                         </a>
-                        <a href="/interactions" class="block px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/interactions') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                        <a href="/interactions" class="mobile-nav-link block px-4 py-3 rounded-md text-sm font-medium text-blackbook-300 active:bg-blackbook-600 transition-colors {% if current_path.startswith('/interactions') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
                             Interactions
                         </a>
                     </div>
@@ -366,25 +422,25 @@
                 <div x-data="{ open: false }">
                     <button @click="open = !open"
                             style="color: #cbd5e1;"
-                            class="nav-dropdown-btn w-full flex justify-between items-center px-3 py-2 rounded-md text-base font-medium text-blackbook-300 hover:text-white {% if current_path.startswith('/views') or current_path.startswith('/graph') or current_path.startswith('/christmas-lists') %}bg-blackbook-700 !text-white{% else %}hover:bg-blackbook-700{% endif %}">
+                            class="nav-dropdown-btn mobile-nav-link w-full flex justify-between items-center px-4 py-3 rounded-md text-base font-medium text-blackbook-300 hover:text-white active:bg-blackbook-600 transition-colors {% if current_path.startswith('/views') or current_path.startswith('/graph') or current_path.startswith('/christmas-lists') %}bg-blackbook-700 !text-white{% else %}hover:bg-blackbook-700{% endif %}">
                         Lists & Views
-                        <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-5 h-5 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
                     <div x-show="open" x-collapse class="pl-4">
-                        <a href="/views" class="block px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/views') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                        <a href="/views" class="mobile-nav-link block px-4 py-3 rounded-md text-sm font-medium text-blackbook-300 active:bg-blackbook-600 transition-colors {% if current_path.startswith('/views') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
                             Saved Views
                         </a>
-                        <a href="/graph" class="block px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/graph') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                        <a href="/graph" class="mobile-nav-link block px-4 py-3 rounded-md text-sm font-medium text-blackbook-300 active:bg-blackbook-600 transition-colors {% if current_path.startswith('/graph') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
                             Graph
                         </a>
-                        <a href="/christmas-lists" class="block px-3 py-2 rounded-md text-sm font-medium text-blackbook-300 {% if current_path.startswith('/christmas-lists') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                        <a href="/christmas-lists" class="mobile-nav-link block px-4 py-3 rounded-md text-sm font-medium text-blackbook-300 active:bg-blackbook-600 transition-colors {% if current_path.startswith('/christmas-lists') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
                             🎄 Christmas Lists
                         </a>
                     </div>
                 </div>
-                <a href="/settings" class="block px-3 py-2 rounded-md text-base font-medium text-blackbook-300 {% if current_path.startswith('/settings') or current_path.startswith('/tags') or current_path.startswith('/pending-contacts') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
+                <a href="/settings" class="mobile-nav-link block px-4 py-3 rounded-md text-base font-medium text-blackbook-300 active:bg-blackbook-600 transition-colors {% if current_path.startswith('/settings') or current_path.startswith('/tags') or current_path.startswith('/pending-contacts') %}bg-blackbook-700 text-white{% else %}hover:bg-blackbook-700 hover:text-white{% endif %}">
                     Settings
                 </a>
             </div>
@@ -484,12 +540,17 @@
         // Mobile menu toggle
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
+            const backdrop = document.getElementById('mobile-menu-backdrop');
             const iconClosed = document.getElementById('menu-icon-closed');
             const iconOpen = document.getElementById('menu-icon-open');
 
             menu.classList.toggle('hidden');
+            backdrop?.classList.toggle('hidden');
             iconClosed.classList.toggle('hidden');
             iconOpen.classList.toggle('hidden');
+
+            // Prevent body scroll when menu is open
+            document.body.classList.toggle('overflow-hidden', !menu.classList.contains('hidden'));
         }
 
         // Column resizing functionality
