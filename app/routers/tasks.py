@@ -23,6 +23,7 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = None
     notes: Optional[str] = None
     due_date: Optional[str] = None  # Format: YYYY-MM-DD or null to clear
+    due_time: Optional[str] = None  # Format: HH:MM (24h) or null to clear
 
 
 class ListOrderUpdate(BaseModel):
@@ -35,6 +36,8 @@ class TaskCreate(BaseModel):
     title: str
     notes: Optional[str] = None
     due_date: Optional[str] = None  # Format: YYYY-MM-DD
+    due_time: Optional[str] = None  # Format: HH:MM (24h)
+    parent_task_id: Optional[str] = None  # Parent task ID for creating subtasks
 
 
 class TaskMove(BaseModel):
@@ -124,6 +127,7 @@ async def update_task(
             title=task_update.title,
             notes=task_update.notes,
             due_date=task_update.due_date,
+            due_time=task_update.due_time,
         )
 
         if result["success"]:
@@ -197,6 +201,8 @@ async def create_task(
             title=task_create.title,
             notes=task_create.notes,
             due_date=task_create.due_date,
+            due_time=task_create.due_time,
+            parent_task_id=task_create.parent_task_id,
         )
 
         if result["success"]:

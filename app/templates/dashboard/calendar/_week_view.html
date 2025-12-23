@@ -15,34 +15,44 @@
                             {% if day.is_today %}bg-cyan-600 text-white{% else %}text-blackbook-200{% endif %}">
                     {{ day.day_num }}
                 </div>
-                {% if day.is_today and pending_tasks_count > 0 %}
-                <div class="mt-1">
-                    <button onclick="window.dispatchEvent(new CustomEvent('switch-to-tasks'))"
-                            class="text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-1.5 py-0.5 rounded-full cursor-pointer transition-colors">
-                        ○ {{ pending_tasks_count }} pending task{{ 's' if pending_tasks_count != 1 else '' }}
-                    </button>
-                </div>
-                {% endif %}
             </div>
             {% endfor %}
         </div>
 
-        <!-- All-day events row -->
-        {% if all_day_events %}
+        <!-- All-day events and untimed tasks row -->
+        {% set has_all_day_content = all_day_events or days|selectattr('untimed_tasks')|list %}
+        {% if has_all_day_content %}
         <div class="flex border-t border-blackbook-700/50 pr-[17px]">
             <div class="w-16 flex-shrink-0"></div>
             {% for day in days %}
-            <div class="flex-1 border-l border-blackbook-700/50 p-1 space-y-0.5 min-h-[28px]">
+            <div class="flex-1 border-l border-blackbook-700/50 p-1 space-y-0.5 min-h-[28px] max-h-20 overflow-y-auto">
+                <!-- All-day events -->
+                {% set color_map = {'tomato': '#D50000', 'flamingo': '#E67C73', 'tangerine': '#F4511E', 'banana': '#F6BF26', 'sage': '#33B679', 'basil': '#0B8043', 'peacock': '#039BE5', 'blueberry': '#3F51B5', 'lavender': '#7986CB', 'grape': '#8E24AA', 'graphite': '#616161'} %}
                 {% for event in all_day_events %}
                 {% if event.start_time_local.date() == day.date %}
-                <div class="text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-90
-                            {% if event.calendar_color %}bg-{{ event.calendar_color }}-600 text-white{% else %}bg-blackbook-600 text-blackbook-200{% endif %}"
+                <div class="text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-90 text-white"
+                     style="background-color: {{ color_map.get(event.calendar_color, '#4b5563') }};"
                      hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
                      hx-target="#event-detail-modal-container"
                      hx-swap="innerHTML">
                     {{ event.summary or '(No title)' }}
                 </div>
                 {% endif %}
+                {% endfor %}
+                <!-- Untimed tasks -->
+                {% for task in day.untimed_tasks %}
+                <div class="flex items-center gap-1 text-xs bg-cyan-900/20 text-cyan-200 rounded px-1 py-0.5 cursor-move hover:bg-cyan-900/40 border-l-2 border-cyan-500 group calendar-task"
+                     draggable="true"
+                     data-task-id="{{ task.id }}"
+                     data-list-id="{{ task.list_id }}"
+                     data-task-title="{{ task.title }}"
+                     data-has-time="false"
+                     hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
+                     hx-swap="none"
+                     hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')">
+                    <span class="w-2 h-2 rounded-full border border-cyan-400 flex-shrink-0 group-hover:bg-cyan-400/30"></span>
+                    <span class="truncate">{{ task.title }}</span>
+                </div>
                 {% endfor %}
             </div>
             {% endfor %}
@@ -64,10 +74,13 @@
 
             <!-- Day columns -->
             {% for day in days %}
-            <div class="flex-1 border-l border-blackbook-700/50 relative {% if day.is_today %}bg-blackbook-700/10{% endif %}">
-                <!-- Hour grid lines -->
+            <div class="flex-1 border-l border-blackbook-700/50 relative {% if day.is_today %}bg-blackbook-700/10{% endif %} day-column"
+                 data-date="{{ day.date.isoformat() }}">
+                <!-- Hour grid lines (drop zones) -->
                 {% for hour in hours %}
-                <div class="h-16 border-b border-blackbook-700/30"></div>
+                <div class="h-16 border-b border-blackbook-700/30 hour-slot drop-zone transition-colors"
+                     data-hour="{{ hour }}"
+                     data-date="{{ day.date.isoformat() }}"></div>
                 {% endfor %}
 
                 <!-- Events for this day -->
@@ -80,9 +93,14 @@
                 {% set duration_minutes = ((end_hour * 60 + end_minute) - (start_hour * 60 + start_minute)) %}
                 {% set top_px = (start_hour * 64) + (start_minute * 64 / 60) %}
                 {% set height_px = (duration_minutes * 64 / 60) %}
-                <div class="absolute left-1 right-1 rounded px-1 py-0.5 text-xs cursor-pointer hover:opacity-90 overflow-hidden
-                            {% if event.calendar_color %}bg-{{ event.calendar_color }}-600{% else %}bg-blackbook-600{% endif %}"
-                     style="top: {{ top_px }}px; height: {{ [height_px, 20]|max }}px;"
+                {% set color_map = {'tomato': '#D50000', 'flamingo': '#E67C73', 'tangerine': '#F4511E', 'banana': '#F6BF26', 'sage': '#33B679', 'basil': '#0B8043', 'peacock': '#039BE5', 'blueberry': '#3F51B5', 'lavender': '#7986CB', 'grape': '#8E24AA', 'graphite': '#616161'} %}
+                <div class="absolute left-1 right-1 rounded px-1 py-0.5 text-xs cursor-move hover:opacity-90 overflow-hidden calendar-event"
+                     style="top: {{ top_px }}px; height: {{ [height_px, 20]|max }}px; background-color: {{ color_map.get(event.calendar_color, '#4b5563') }};"
+                     draggable="true"
+                     data-event-id="{{ event.google_event_id }}"
+                     data-account-id="{{ event.google_account_id }}"
+                     data-event-title="{{ event.summary or '(No title)' }}"
+                     data-duration-minutes="{{ duration_minutes }}"
                      hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
                      hx-target="#event-detail-modal-container"
                      hx-swap="innerHTML">
@@ -94,6 +112,26 @@
                     {% endif %}
                 </div>
                 {% endif %}
+                {% endfor %}
+
+                <!-- Timed tasks for this day -->
+                {% for task in day.timed_tasks %}
+                {% set task_hour = task.due_time.split(':')[0]|int %}
+                {% set task_minute = task.due_time.split(':')[1]|int %}
+                {% set top_px = (task_hour * 64) + (task_minute * 64 / 60) %}
+                <div class="absolute left-1 right-1 flex items-center gap-1 bg-cyan-900/30 border-l-2 border-cyan-500 rounded px-1 py-0.5 text-xs cursor-move hover:bg-cyan-900/50 z-10 group overflow-hidden calendar-task"
+                     style="top: {{ top_px }}px; height: 22px;"
+                     draggable="true"
+                     data-task-id="{{ task.id }}"
+                     data-list-id="{{ task.list_id }}"
+                     data-task-title="{{ task.title }}"
+                     data-has-time="true"
+                     hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
+                     hx-swap="none"
+                     hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')">
+                    <span class="w-2 h-2 rounded-full border border-cyan-400 flex-shrink-0 group-hover:bg-cyan-400/30"></span>
+                    <span class="text-cyan-200 truncate">{{ task.title }}</span>
+                </div>
                 {% endfor %}
             </div>
             {% endfor %}
@@ -117,5 +155,156 @@ document.addEventListener('DOMContentLoaded', function() {
         const scrollHour = {{ current_hour if show_current_time else 8 }};
         container.scrollTop = Math.max(0, (scrollHour - 1) * 64);
     }
+
+    // Initialize drag-and-drop
+    initWeekDragDrop();
 });
+
+function initWeekDragDrop() {
+    let draggedElement = null;
+    let dragType = null;
+    let ghostElement = null;
+
+    // Handle drag start for events and tasks
+    document.querySelectorAll('.calendar-event, .calendar-task').forEach(item => {
+        item.addEventListener('dragstart', function(e) {
+            draggedElement = this;
+            dragType = this.classList.contains('calendar-event') ? 'event' : 'task';
+
+            if (dragType === 'event') {
+                e.dataTransfer.setData('text/plain', JSON.stringify({
+                    type: 'event',
+                    eventId: this.dataset.eventId,
+                    accountId: this.dataset.accountId,
+                    title: this.dataset.eventTitle,
+                    duration: parseInt(this.dataset.durationMinutes) || 60
+                }));
+            } else {
+                e.dataTransfer.setData('text/plain', JSON.stringify({
+                    type: 'task',
+                    taskId: this.dataset.taskId,
+                    listId: this.dataset.listId,
+                    title: this.dataset.taskTitle,
+                    hasTime: this.dataset.hasTime === 'true'
+                }));
+            }
+
+            e.dataTransfer.effectAllowed = 'move';
+
+            ghostElement = document.createElement('div');
+            ghostElement.className = dragType === 'event'
+                ? 'fixed pointer-events-none bg-blackbook-600/80 rounded px-2 py-1 text-xs text-white z-50'
+                : 'fixed pointer-events-none bg-cyan-900/80 rounded px-2 py-1 text-xs text-cyan-200 z-50 border-l-2 border-cyan-500';
+            ghostElement.textContent = dragType === 'event' ? this.dataset.eventTitle : this.dataset.taskTitle;
+            ghostElement.style.width = '150px';
+            document.body.appendChild(ghostElement);
+
+            setTimeout(() => { this.style.opacity = '0.4'; }, 0);
+        });
+
+        item.addEventListener('dragend', function(e) {
+            this.style.opacity = '1';
+            if (ghostElement) { ghostElement.remove(); ghostElement = null; }
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.classList.remove('bg-cyan-500/20', 'bg-blackbook-600/30');
+            });
+            draggedElement = null;
+            dragType = null;
+        });
+
+        item.addEventListener('drag', function(e) {
+            if (ghostElement && e.clientX && e.clientY) {
+                ghostElement.style.left = (e.clientX + 10) + 'px';
+                ghostElement.style.top = (e.clientY + 10) + 'px';
+            }
+        });
+    });
+
+    // Handle drop zones
+    document.querySelectorAll('.hour-slot').forEach(slot => {
+        slot.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            this.classList.add(dragType === 'task' ? 'bg-cyan-500/20' : 'bg-blackbook-600/30');
+        });
+
+        slot.addEventListener('dragleave', function(e) {
+            this.classList.remove('bg-cyan-500/20', 'bg-blackbook-600/30');
+        });
+
+        slot.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('bg-cyan-500/20', 'bg-blackbook-600/30');
+
+            try {
+                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                const hour = parseInt(this.dataset.hour);
+                const targetDate = this.dataset.date;
+
+                const slotRect = this.getBoundingClientRect();
+                const relativeY = e.clientY - slotRect.top;
+                const minutes = Math.floor((relativeY / slotRect.height) * 60);
+                const roundedMinutes = Math.round(minutes / 15) * 15;
+
+                const newTime = `${hour.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
+
+                if (data.type === 'event') {
+                    updateEventTime(data.eventId, data.accountId, targetDate, newTime, data.duration);
+                } else {
+                    updateTaskTime(data.listId, data.taskId, targetDate, newTime);
+                }
+            } catch (err) {
+                console.error('Drop error:', err);
+            }
+        });
+    });
+}
+
+function updateEventTime(eventId, accountId, date, time, duration) {
+    const [hours, mins] = time.split(':').map(Number);
+    const endMinutes = hours * 60 + mins + duration;
+    const endHours = Math.floor(endMinutes / 60) % 24;
+    const endMins = endMinutes % 60;
+    const endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+
+    fetch(`/calendar/event/${eventId}/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            account_id: accountId,
+            date: date,
+            start_time: time,
+            end_time: endTime
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            htmx.trigger('#calendar-view-content', 'refresh');
+        } else {
+            alert('Failed to move event: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => console.error('Error moving event:', err));
+}
+
+function updateTaskTime(listId, taskId, date, time) {
+    fetch(`/tasks/${listId}/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            due_date: date,
+            due_time: time
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            htmx.trigger('#calendar-view-content', 'refresh');
+        } else {
+            alert('Failed to move task: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => console.error('Error moving task:', err));
+}
 </script>

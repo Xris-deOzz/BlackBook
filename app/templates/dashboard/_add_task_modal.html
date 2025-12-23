@@ -1,17 +1,67 @@
 <!-- Add Task Modal -->
 <div id="add-task-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" @keydown.escape.window="closeAddTaskModal()">
     <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-md mx-4 border border-blackbook-600 max-h-[90vh] overflow-y-auto" @click.outside="closeAddTaskModal()">
-        <h3 class="text-lg font-semibold text-blackbook-100 mb-4">Add New Task</h3>
+        <h3 id="add-task-modal-title" class="text-lg font-semibold text-blackbook-100 mb-4">{% if parent_task_id %}Add Subtask{% else %}Add New Task{% endif %}</h3>
+
+        <!-- Success State (hidden by default) -->
+        <div id="add-task-success" class="hidden">
+            <div class="text-center py-4">
+                <svg class="mx-auto h-12 w-12 text-green-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-blackbook-100 font-medium" id="success-message">Task created!</p>
+                <p class="text-xs text-blackbook-400 mt-1" id="success-task-title"></p>
+            </div>
+            <div class="space-y-2 mt-4">
+                <button type="button" id="add-subtask-after-create"
+                        class="w-full px-4 py-2 text-sm bg-cyan-600 text-white rounded hover:bg-cyan-700 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Subtask to This Task
+                </button>
+                <button type="button" id="add-another-task"
+                        class="w-full px-4 py-2 text-sm bg-blackbook-700 text-blackbook-200 rounded hover:bg-blackbook-600">
+                    Add Another Task
+                </button>
+                <button type="button" id="done-adding-tasks"
+                        class="w-full px-4 py-2 text-sm text-blackbook-400 hover:text-blackbook-200">
+                    Done
+                </button>
+            </div>
+        </div>
+
         <form id="add-task-form" class="space-y-3">
+            <input type="hidden" id="add-task-parent-id" value="{{ parent_task_id or '' }}">
+            <input type="hidden" id="add-task-created-id" value="">
+            {% if parent_task_id %}
+            <!-- Subtask mode: list is fixed to parent's list -->
+            <input type="hidden" id="add-task-list" value="{{ selected_list_id }}">
+            {% for list in task_lists %}
+            {% if list.list_id == selected_list_id %}
+            <div class="text-xs text-blackbook-400 mb-2">
+                Adding subtask to list: <span class="text-blackbook-200">{{ list.list_name }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+            {% else %}
             <div>
                 <label class="block text-xs text-blackbook-400 mb-1">List</label>
+                {% if task_lists %}
                 <select id="add-task-list"
                         class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
                     {% for list in task_lists %}
-                    <option value="{{ list.list_id }}" {% if loop.first %}selected{% endif %}>{{ list.list_name }}</option>
+                    <option value="{{ list.list_id }}" {% if selected_list_id == list.list_id %}selected{% elif loop.first and not selected_list_id %}selected{% endif %}>{{ list.list_name }}</option>
                     {% endfor %}
                 </select>
+                {% else %}
+                <div class="text-sm text-amber-400 bg-amber-900/20 border border-amber-700/50 rounded px-3 py-2">
+                    No task lists found. Please check your Google Tasks connection.
+                </div>
+                <select id="add-task-list" class="hidden"></select>
+                {% endif %}
             </div>
+            {% endif %}
             <div>
                 <label class="block text-xs text-blackbook-400 mb-1">Title <span class="text-red-400">*</span></label>
                 <input type="text" id="add-task-title" required autofocus
@@ -24,17 +74,36 @@
                           class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-300 focus:outline-none focus:border-blue-500"
                           placeholder="Add notes..."></textarea>
             </div>
+            <!-- Due Date & Time -->
             <div>
-                <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
-                <div class="flex gap-2">
-                    <input type="date" id="add-task-due-date"
-                           class="flex-1 px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
+                        <input type="date" id="add-task-due-date"
+                               class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="w-28">
+                        <label class="block text-xs text-blackbook-400 mb-1">Time <span class="text-blackbook-500">(opt)</span></label>
+                        <input type="time" id="add-task-due-time"
+                               class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-2">
                     <button type="button" onclick="setTaskQuickDate('add-task-due-date', 0)"
-                            class="px-2 py-2 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Today</button>
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Today</button>
                     <button type="button" onclick="setTaskQuickDate('add-task-due-date', 1)"
-                            class="px-2 py-2 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Tmrw</button>
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Tmrw</button>
                     <button type="button" onclick="setTaskQuickDate('add-task-due-date', 7)"
-                            class="px-2 py-2 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">+1Wk</button>
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">+1Wk</button>
+                    <span class="border-l border-blackbook-600 mx-1"></span>
+                    <button type="button" onclick="setTaskQuickTime('09:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">9am</button>
+                    <button type="button" onclick="setTaskQuickTime('14:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">2pm</button>
+                    <button type="button" onclick="setTaskQuickTime('17:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">5pm</button>
+                    <button type="button" onclick="clearTaskDateTime()"
+                            class="px-2 py-1 text-xs text-blackbook-400 hover:text-blackbook-200 border border-blackbook-600 rounded">Clear</button>
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
@@ -43,7 +112,7 @@
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
-                    Add Task
+                    {% if parent_task_id %}Add Subtask{% else %}Add Task{% endif %}
                 </button>
                 <button type="button" onclick="closeAddTaskModal()"
                         class="flex-1 px-4 py-2 text-sm bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600">
@@ -59,17 +128,98 @@
     const form = document.getElementById('add-task-form');
     const modal = document.getElementById('add-task-modal');
     const titleInput = document.getElementById('add-task-title');
+    const successDiv = document.getElementById('add-task-success');
+    const modalTitle = document.getElementById('add-task-modal-title');
 
     // Focus title input when modal opens
     setTimeout(() => titleInput?.focus(), 100);
+
+    function showSuccessState(taskTitle, taskId, listId, isSubtask) {
+        form.classList.add('hidden');
+        successDiv.classList.remove('hidden');
+        document.getElementById('success-message').textContent = isSubtask ? 'Subtask created!' : 'Task created!';
+        document.getElementById('success-task-title').textContent = `"${taskTitle}"`;
+        document.getElementById('add-task-created-id').value = taskId;
+
+        // Hide "Add Subtask" button if this was already a subtask
+        const subtaskBtn = document.getElementById('add-subtask-after-create');
+        if (isSubtask) {
+            subtaskBtn.classList.add('hidden');
+        } else {
+            subtaskBtn.classList.remove('hidden');
+        }
+
+        // Refresh views in background
+        refreshTaskViews();
+    }
+
+    function resetForm() {
+        form.classList.remove('hidden');
+        successDiv.classList.add('hidden');
+        titleInput.value = '';
+        document.getElementById('add-task-notes').value = '';
+        document.getElementById('add-task-due-date').value = '';
+        document.getElementById('add-task-due-time').value = '';
+        document.getElementById('add-task-parent-id').value = '';
+        document.getElementById('add-task-created-id').value = '';
+        modalTitle.textContent = 'Add New Task';
+        // Reset button text
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add Task';
+        }
+        setTimeout(() => titleInput?.focus(), 100);
+    }
+
+    function refreshTaskViews() {
+        const currentView = window.dashboardCurrentView || 'today';
+        htmx.ajax('GET', `/dashboard/tasks-panel?view=${currentView}`, '#tasks-panel-content');
+        const widgetContainer = document.getElementById('todays-tasks');
+        if (widgetContainer) {
+            htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+        }
+        const expandedContainer = document.getElementById('tasks-kanban-content');
+        if (expandedContainer) {
+            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+        }
+    }
+
+    // Add Subtask to the just-created task
+    document.getElementById('add-subtask-after-create')?.addEventListener('click', () => {
+        const createdTaskId = document.getElementById('add-task-created-id').value;
+        const listId = document.getElementById('add-task-list').value;
+        form.classList.remove('hidden');
+        successDiv.classList.add('hidden');
+        // Set up for subtask creation
+        document.getElementById('add-task-parent-id').value = createdTaskId;
+        titleInput.value = '';
+        document.getElementById('add-task-notes').value = '';
+        document.getElementById('add-task-due-date').value = '';
+        document.getElementById('add-task-due-time').value = '';
+        modalTitle.textContent = 'Add Subtask';
+        // Update button text
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add Subtask';
+        }
+        setTimeout(() => titleInput?.focus(), 100);
+    });
+
+    // Add Another Task (reset to new task mode)
+    document.getElementById('add-another-task')?.addEventListener('click', resetForm);
+
+    // Done - close modal
+    document.getElementById('done-adding-tasks')?.addEventListener('click', closeAddTaskModal);
 
     form?.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const listId = document.getElementById('add-task-list').value;
+        const parentId = document.getElementById('add-task-parent-id').value;
         const title = titleInput.value.trim();
         const notes = document.getElementById('add-task-notes').value.trim();
         const dueDate = document.getElementById('add-task-due-date').value;
+        const dueTime = document.getElementById('add-task-due-time').value;
 
         if (!title) {
             titleInput.focus();
@@ -89,15 +239,19 @@
                 body: JSON.stringify({
                     title,
                     notes: notes || null,
-                    due_date: dueDate || null
+                    due_date: dueDate || null,
+                    due_time: dueTime || null,
+                    parent_task_id: parentId || null
                 })
             });
 
             if (response.ok) {
-                closeAddTaskModal();
-                // Refresh tasks panel
-                const currentView = window.dashboardCurrentView || 'today';
-                htmx.ajax('GET', `/dashboard/tasks-panel?view=${currentView}`, '#tasks-panel-content');
+                const data = await response.json();
+                const createdTaskId = data.task?.id || '';
+                const isSubtask = !!parentId;
+
+                // Show success state with options
+                showSuccessState(title, createdTaskId, listId, isSubtask);
             } else {
                 const data = await response.json();
                 alert(data.error || 'Failed to create task');
@@ -121,5 +275,14 @@ function setTaskQuickDate(inputId, daysFromToday) {
     const date = new Date();
     date.setDate(date.getDate() + daysFromToday);
     document.getElementById(inputId).value = date.toISOString().split('T')[0];
+}
+
+function setTaskQuickTime(time) {
+    document.getElementById('add-task-due-time').value = time;
+}
+
+function clearTaskDateTime() {
+    document.getElementById('add-task-due-date').value = '';
+    document.getElementById('add-task-due-time').value = '';
 }
 </script>

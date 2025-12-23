@@ -59,7 +59,8 @@
                          data-task-id="{{ task.id }}"
                          data-title="{{ task.title|e }}"
                          data-notes="{{ task.notes|e }}"
-                         data-due-date="{{ task.due_date or '' }}">
+                         data-due-date="{{ task.due_date or '' }}"
+                         data-due-time="{{ task.due_time or '' }}">
                         <div class="flex items-start gap-2">
                             <!-- Drag handle -->
                             <div class="task-drag-handle flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing text-blackbook-500 hover:text-blackbook-300 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -90,7 +91,7 @@
                                     <svg class="w-3 h-3 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                     </svg>
-                                    {{ task.due_date_display }}
+                                    {{ task.due_date_display }}{% if task.due_time_display %} <span class="text-cyan-400">@ {{ task.due_time_display }}</span>{% endif %}
                                 </p>
                                 {% endif %}
                                 {% if task.notes %}
@@ -98,6 +99,15 @@
                                 {% endif %}
                             </div>
 
+                            <!-- Add subtask button (visible on hover) -->
+                            <button type="button" class="add-subtask-btn opacity-0 group-hover:opacity-100 p-1 text-blackbook-400 hover:text-cyan-400 transition-opacity"
+                                    data-list-id="{{ task_list.list_id }}"
+                                    data-parent-id="{{ task.id }}"
+                                    title="Add subtask">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                            </button>
                             <!-- Edit button (visible on hover) -->
                             <button type="button" class="task-edit-expanded opacity-0 group-hover:opacity-100 p-1 text-blackbook-400 hover:text-blackbook-200 transition-opacity">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -105,6 +115,36 @@
                                 </svg>
                             </button>
                         </div>
+                        <!-- Subtasks -->
+                        {% if task.subtasks %}
+                        <div class="ml-7 mt-2 border-l-2 border-blackbook-600 pl-3 space-y-1">
+                            {% for subtask in task.subtasks %}
+                            <div class="subtask-item flex items-start gap-2 py-1 group/subtask"
+                                 data-list-id="{{ task_list.list_id }}"
+                                 data-task-id="{{ subtask.id }}"
+                                 data-title="{{ subtask.title|e }}"
+                                 data-notes="{{ subtask.notes|e }}"
+                                 data-due-date="{{ subtask.due_date or '' }}"
+                                 data-due-time="{{ subtask.due_time or '' }}">
+                                <button type="button" class="subtask-toggle flex-shrink-0 mt-0.5 focus:outline-none">
+                                    {% if subtask.completed %}
+                                    <svg class="w-4 h-4 text-green-400 hover:text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                    {% else %}
+                                    <div class="w-4 h-4 rounded-full border-2 border-blackbook-500 hover:bg-blackbook-500/30 transition-colors"></div>
+                                    {% endif %}
+                                </button>
+                                <span class="text-xs text-blackbook-300 flex-1 {% if subtask.completed %}line-through text-blackbook-500{% endif %}">{{ subtask.title }}</span>
+                                <button type="button" class="subtask-edit opacity-0 group-hover/subtask:opacity-100 p-0.5 text-blackbook-400 hover:text-blackbook-200">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -123,7 +163,8 @@
                          data-task-id="{{ task.id }}"
                          data-title="{{ task.title|e }}"
                          data-notes="{{ task.notes|e }}"
-                         data-due-date="{{ task.due_date or '' }}">
+                         data-due-date="{{ task.due_date or '' }}"
+                         data-due-time="{{ task.due_time or '' }}">
                         <div class="flex items-start gap-2">
                             <!-- Drag handle -->
                             <div class="task-drag-handle flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing text-blackbook-500 hover:text-blackbook-300 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -154,6 +195,15 @@
                                 {% endif %}
                             </div>
 
+                            <!-- Add subtask button (visible on hover) -->
+                            <button type="button" class="add-subtask-btn opacity-0 group-hover:opacity-100 p-1 text-blackbook-400 hover:text-cyan-400 transition-opacity"
+                                    data-list-id="{{ task_list.list_id }}"
+                                    data-parent-id="{{ task.id }}"
+                                    title="Add subtask">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                            </button>
                             <!-- Edit button (visible on hover) -->
                             <button type="button" class="task-edit-expanded opacity-0 group-hover:opacity-100 p-1 text-blackbook-400 hover:text-blackbook-200 transition-opacity">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -161,6 +211,36 @@
                                 </svg>
                             </button>
                         </div>
+                        <!-- Subtasks -->
+                        {% if task.subtasks %}
+                        <div class="ml-7 mt-2 border-l-2 border-blackbook-600 pl-3 space-y-1">
+                            {% for subtask in task.subtasks %}
+                            <div class="subtask-item flex items-start gap-2 py-1 group/subtask"
+                                 data-list-id="{{ task_list.list_id }}"
+                                 data-task-id="{{ subtask.id }}"
+                                 data-title="{{ subtask.title|e }}"
+                                 data-notes="{{ subtask.notes|e }}"
+                                 data-due-date="{{ subtask.due_date or '' }}"
+                                 data-due-time="{{ subtask.due_time or '' }}">
+                                <button type="button" class="subtask-toggle flex-shrink-0 mt-0.5 focus:outline-none">
+                                    {% if subtask.completed %}
+                                    <svg class="w-4 h-4 text-green-400 hover:text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                    {% else %}
+                                    <div class="w-4 h-4 rounded-full border-2 border-blackbook-500 hover:bg-blackbook-500/30 transition-colors"></div>
+                                    {% endif %}
+                                </button>
+                                <span class="text-xs text-blackbook-300 flex-1 {% if subtask.completed %}line-through text-blackbook-500{% endif %}">{{ subtask.title }}</span>
+                                <button type="button" class="subtask-edit opacity-0 group-hover/subtask:opacity-100 p-0.5 text-blackbook-400 hover:text-blackbook-200">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -180,9 +260,10 @@
 <!-- Create Task Modal -->
 <div id="task-create-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
     <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-md mx-4 border border-blackbook-600">
-        <h3 class="text-lg font-semibold text-blackbook-100 mb-4">Add Task</h3>
+        <h3 id="create-modal-title" class="text-lg font-semibold text-blackbook-100 mb-4">Add Task</h3>
         <form id="task-create-form" class="space-y-3">
             <input type="hidden" id="create-list-id">
+            <input type="hidden" id="create-parent-id">
             <div>
                 <label class="block text-xs text-blackbook-400 mb-1">Title</label>
                 <input type="text" id="create-title" required
@@ -195,10 +276,33 @@
                           class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-300 focus:outline-none focus:border-blue-500"
                           placeholder="Add details..."></textarea>
             </div>
+            <!-- Due Date & Time -->
             <div>
-                <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
-                <input type="date" id="create-due-date"
-                       class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
+                        <input type="date" id="create-due-date"
+                               class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="w-28">
+                        <label class="block text-xs text-blackbook-400 mb-1">Time <span class="text-blackbook-500">(opt)</span></label>
+                        <input type="time" id="create-due-time"
+                               class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <button type="button" onclick="setExpandedCreateQuickDate(0)"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Today</button>
+                    <button type="button" onclick="setExpandedCreateQuickDate(1)"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Tmrw</button>
+                    <span class="border-l border-blackbook-600 mx-1"></span>
+                    <button type="button" onclick="setExpandedCreateQuickTime('09:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">9am</button>
+                    <button type="button" onclick="setExpandedCreateQuickTime('14:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">2pm</button>
+                    <button type="button" onclick="setExpandedCreateQuickTime('17:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">5pm</button>
+                </div>
             </div>
             <div class="flex gap-2 pt-2">
                 <button type="submit"
@@ -231,15 +335,34 @@
                 <textarea id="edit-notes-expanded" rows="3"
                           class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-300 focus:outline-none focus:border-blue-500"></textarea>
             </div>
+            <!-- Due Date & Time -->
             <div>
-                <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
-                <div class="flex gap-2">
-                    <input type="date" id="edit-due-date-expanded"
-                           class="flex-1 px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
+                        <input type="date" id="edit-due-date-expanded"
+                               class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="w-28">
+                        <label class="block text-xs text-blackbook-400 mb-1">Time <span class="text-blackbook-500">(opt)</span></label>
+                        <input type="time" id="edit-due-time-expanded"
+                               class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <button type="button" onclick="setExpandedEditQuickDate(0)"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Today</button>
+                    <button type="button" onclick="setExpandedEditQuickDate(1)"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Tmrw</button>
+                    <span class="border-l border-blackbook-600 mx-1"></span>
+                    <button type="button" onclick="setExpandedEditQuickTime('09:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">9am</button>
+                    <button type="button" onclick="setExpandedEditQuickTime('14:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">2pm</button>
+                    <button type="button" onclick="setExpandedEditQuickTime('17:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">5pm</button>
                     <button type="button" id="clear-due-date-expanded"
-                            class="px-3 py-2 text-sm text-blackbook-400 hover:text-blackbook-200 border border-blackbook-600 rounded">
-                        Clear
-                    </button>
+                            class="px-2 py-1 text-xs text-blackbook-400 hover:text-blackbook-200 border border-blackbook-600 rounded">Clear</button>
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
@@ -639,6 +762,7 @@
         document.getElementById('edit-title-expanded').value = taskItem.dataset.title;
         document.getElementById('edit-notes-expanded').value = taskItem.dataset.notes;
         document.getElementById('edit-due-date-expanded').value = taskItem.dataset.dueDate;
+        document.getElementById('edit-due-time-expanded').value = taskItem.dataset.dueTime || '';
         modal.classList.remove('hidden');
         document.getElementById('edit-title-expanded').focus();
     }
@@ -647,9 +771,21 @@
         modal.classList.add('hidden');
     }
 
+    // Quick date/time setters for edit modal - expose globally
+    window.setExpandedEditQuickDate = function(daysFromToday) {
+        const date = new Date();
+        date.setDate(date.getDate() + daysFromToday);
+        document.getElementById('edit-due-date-expanded').value = date.toISOString().split('T')[0];
+    };
+
+    window.setExpandedEditQuickTime = function(time) {
+        document.getElementById('edit-due-time-expanded').value = time;
+    };
+
     document.getElementById('cancel-edit-expanded')?.addEventListener('click', closeEditModal);
     document.getElementById('clear-due-date-expanded')?.addEventListener('click', () => {
         document.getElementById('edit-due-date-expanded').value = '';
+        document.getElementById('edit-due-time-expanded').value = '';
     });
 
     modal?.addEventListener('click', (e) => {
@@ -669,6 +805,7 @@
         const title = document.getElementById('edit-title-expanded').value;
         const notes = document.getElementById('edit-notes-expanded').value;
         const dueDate = document.getElementById('edit-due-date-expanded').value;
+        const dueTime = document.getElementById('edit-due-time-expanded').value;
 
         try {
             const response = await fetch(`/tasks/${listId}/${taskId}`, {
@@ -677,7 +814,8 @@
                 body: JSON.stringify({
                     title: title,
                     notes: notes,
-                    due_date: dueDate || null
+                    due_date: dueDate || null,
+                    due_time: dueTime || null
                 })
             });
             if (response.ok) {
@@ -707,11 +845,25 @@
         });
     });
 
-    function openCreateModal(listId) {
+    // Add subtask button click handlers
+    container.querySelectorAll('.add-subtask-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const listId = btn.dataset.listId;
+            const parentId = btn.dataset.parentId;
+            openCreateModal(listId, parentId);
+        });
+    });
+
+    function openCreateModal(listId, parentId = null) {
         document.getElementById('create-list-id').value = listId;
+        document.getElementById('create-parent-id').value = parentId || '';
         document.getElementById('create-title').value = '';
         document.getElementById('create-notes').value = '';
         document.getElementById('create-due-date').value = '';
+        document.getElementById('create-due-time').value = '';
+        // Update modal title based on whether it's a subtask
+        document.getElementById('create-modal-title').textContent = parentId ? 'Add Subtask' : 'Add Task';
         createModal.classList.remove('hidden');
         document.getElementById('create-title').focus();
     }
@@ -719,6 +871,17 @@
     function closeCreateModal() {
         createModal.classList.add('hidden');
     }
+
+    // Quick date/time setters for create modal - expose globally
+    window.setExpandedCreateQuickDate = function(daysFromToday) {
+        const date = new Date();
+        date.setDate(date.getDate() + daysFromToday);
+        document.getElementById('create-due-date').value = date.toISOString().split('T')[0];
+    };
+
+    window.setExpandedCreateQuickTime = function(time) {
+        document.getElementById('create-due-time').value = time;
+    };
 
     document.getElementById('cancel-create')?.addEventListener('click', closeCreateModal);
 
@@ -735,9 +898,11 @@
     createForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const listId = document.getElementById('create-list-id').value;
+        const parentId = document.getElementById('create-parent-id').value;
         const title = document.getElementById('create-title').value.trim();
         const notes = document.getElementById('create-notes').value.trim();
         const dueDate = document.getElementById('create-due-date').value;
+        const dueTime = document.getElementById('create-due-time').value;
 
         if (!title) {
             document.getElementById('create-title').focus();
@@ -756,7 +921,9 @@
                 body: JSON.stringify({
                     title: title,
                     notes: notes || null,
-                    due_date: dueDate || null
+                    due_date: dueDate || null,
+                    due_time: dueTime || null,
+                    parent_task_id: parentId || null
                 })
             });
             if (response.ok) {
@@ -778,6 +945,41 @@
             submitBtn.disabled = false;
             submitBtn.textContent = 'Add Task';
         }
+    });
+
+    // ========== SUBTASK HANDLERS ==========
+    // Subtask toggle (completion)
+    container.querySelectorAll('.subtask-toggle').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const subtaskItem = btn.closest('.subtask-item');
+            const listId = subtaskItem.dataset.listId;
+            const taskId = subtaskItem.dataset.taskId;
+
+            try {
+                const response = await fetch(`/tasks/${listId}/${taskId}/toggle`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+                    const compactContainer = document.getElementById('todays-tasks');
+                    if (compactContainer) {
+                        htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                    }
+                }
+            } catch (error) {
+                console.error('Error toggling subtask:', error);
+            }
+        });
+    });
+
+    // Subtask edit
+    container.querySelectorAll('.subtask-edit').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const subtaskItem = btn.closest('.subtask-item');
+            openEditModal(subtaskItem);
+        });
     });
 })();
 </script>

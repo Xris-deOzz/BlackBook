@@ -29,6 +29,26 @@ from app.models import (
 from app.services.google_auth import CALENDAR_SCOPES
 
 
+# Google Calendar colorId mapping (from Google Calendar API)
+# See: https://developers.google.com/calendar/api/v3/reference/colors
+GOOGLE_CALENDAR_COLORS = {
+    "tomato": "11",      # Red (#D50000)
+    "flamingo": "4",     # Pink (#E67C73)
+    "tangerine": "6",    # Orange (#F4511E)
+    "banana": "5",       # Yellow (#F6BF26)
+    "sage": "2",         # Light green (#33B679)
+    "basil": "10",       # Dark green (#0B8043)
+    "peacock": "7",      # Cyan (#039BE5)
+    "blueberry": "9",    # Blue (#3F51B5)
+    "lavender": "1",     # Light purple (#7986CB)
+    "grape": "3",        # Purple (#8E24AA)
+    "graphite": "8",     # Gray (#616161)
+}
+
+# Reverse mapping for syncing from Google to local
+GOOGLE_COLOR_ID_TO_NAME = {v: k for k, v in GOOGLE_CALENDAR_COLORS.items()}
+
+
 class CalendarServiceError(Exception):
     """Base exception for Calendar service errors."""
     pass
@@ -357,6 +377,7 @@ class CalendarService:
         timezone_str: str | None = None,
         recurrence: str | None = None,
         send_updates: str = "none",
+        color: str | None = None,
     ) -> str | None:
         """
         Create a new event in Google Calendar.
@@ -376,6 +397,7 @@ class CalendarService:
                           uses the datetime's timezone or defaults to "America/New_York"
             recurrence: RRULE string for recurring events (e.g., "RRULE:FREQ=WEEKLY")
             send_updates: Whether to send invite emails ("all", "externalOnly", "none")
+            color: Event color name (tomato, flamingo, tangerine, banana, sage, basil, peacock, blueberry, lavender, grape, graphite)
 
         Returns:
             Google Calendar event ID if successful, None otherwise
@@ -475,6 +497,10 @@ class CalendarService:
         if recurrence:
             event_body["recurrence"] = [recurrence]
 
+        # Add event color (using Google Calendar's colorId)
+        if color and color in GOOGLE_CALENDAR_COLORS:
+            event_body["colorId"] = GOOGLE_CALENDAR_COLORS[color]
+
         try:
             credentials = self._get_credentials(account)
             service = build("calendar", "v3", credentials=credentials)
@@ -550,6 +576,7 @@ class CalendarService:
         timezone_str: str | None = None,
         recurrence: str | None = None,
         send_updates: str = "none",
+        color: str | None = None,
     ) -> dict[str, Any] | None:
         """
         Update an existing event in Google Calendar.
@@ -567,6 +594,7 @@ class CalendarService:
             timezone_str: Timezone string (e.g., "America/New_York")
             recurrence: RRULE string for recurring events (optional)
             send_updates: Whether to send invite emails ("all", "externalOnly", "none")
+            color: Event color name (tomato, flamingo, tangerine, banana, sage, basil, peacock, blueberry, lavender, grape, graphite)
 
         Returns:
             Updated event data dict if successful, None otherwise
@@ -651,6 +679,14 @@ class CalendarService:
                 else:
                     # Clear recurrence
                     event_body.pop("recurrence", None)
+
+            # Update event color if provided
+            if color is not None:
+                if color and color in GOOGLE_CALENDAR_COLORS:
+                    event_body["colorId"] = GOOGLE_CALENDAR_COLORS[color]
+                else:
+                    # Clear color (use calendar default)
+                    event_body.pop("colorId", None)
 
             # Determine conference version
             conference_version = 1 if add_video_conferencing else 0
@@ -978,6 +1014,10 @@ class CalendarService:
         # Get the direct link to view in Google Calendar
         html_link = event_data.get("htmlLink")
 
+        # Get event color (convert Google's colorId to our color name)
+        color_id = event_data.get("colorId")
+        calendar_color = GOOGLE_COLOR_ID_TO_NAME.get(color_id) if color_id else None
+
         if existing:
             # Update existing event
             existing.summary = event_data.get("summary")
@@ -990,6 +1030,7 @@ class CalendarService:
             existing.recurring_event_id = recurring_event_id
             existing.organizer_email = organizer_email
             existing.html_link = html_link
+            existing.calendar_color = calendar_color
             return existing
         else:
             # Create new event
@@ -1006,6 +1047,7 @@ class CalendarService:
                 recurring_event_id=recurring_event_id,
                 organizer_email=organizer_email,
                 html_link=html_link,
+                calendar_color=calendar_color,
             )
             self.db.add(event)
             return event

@@ -33,7 +33,9 @@
              data-task-id="{{ task.id }}"
              data-title="{{ task.title|e }}"
              data-notes="{{ task.notes|e }}"
-             data-due-date="{{ task.due_date or '' }}">
+             data-due-date="{{ task.due_date or '' }}"
+             data-due-time="{{ task.due_time or '' }}"
+             data-list-name="{{ task.list_name|e }}">
             <!-- Checkbox -->
             <div class="flex-shrink-0 mt-0.5">
                 <button type="button" class="task-toggle w-6 h-6 rounded-full border-2 border-red-500 hover:bg-red-500 hover:border-red-500 transition-all flex items-center justify-center group/check"
@@ -51,7 +53,7 @@
                     <svg class="w-3 h-3 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
-                    {{ task.due_date_display }}
+                    {{ task.due_date_display }}{% if task.due_time_display %} <span class="text-cyan-400">@ {{ task.due_time_display }}</span>{% endif %}
                 </p>
                 {% if task.notes %}
                 <p class="text-xs text-blackbook-400 truncate mt-0.5">{{ task.notes }}</p>
@@ -87,7 +89,9 @@
              data-task-id="{{ task.id }}"
              data-title="{{ task.title|e }}"
              data-notes="{{ task.notes|e }}"
-             data-due-date="{{ task.due_date or '' }}">
+             data-due-date="{{ task.due_date or '' }}"
+             data-due-time="{{ task.due_time or '' }}"
+             data-list-name="{{ task.list_name|e }}">
             <!-- Checkbox -->
             <div class="flex-shrink-0 mt-0.5">
                 <button type="button" class="task-toggle w-6 h-6 rounded-full border-2 border-amber-500 hover:bg-amber-500 hover:border-amber-500 transition-all flex items-center justify-center group/check"
@@ -104,7 +108,9 @@
                 {% if task.notes %}
                 <p class="text-xs text-blackbook-400 truncate mt-0.5">{{ task.notes }}</p>
                 {% endif %}
-                <p class="text-xs text-blackbook-500 mt-1">{{ task.list_name }}</p>
+                <p class="text-xs text-blackbook-500 mt-1">
+                    {{ task.list_name }}{% if task.due_time_display %} <span class="text-cyan-400">@ {{ task.due_time_display }}</span>{% endif %}
+                </p>
             </div>
 
             <!-- Edit icon -->
@@ -124,7 +130,10 @@
 <!-- Edit Modal -->
 <div id="task-edit-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
     <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-md mx-4 border border-blackbook-600">
-        <h3 class="text-lg font-semibold text-blackbook-100 mb-4">Edit Task</h3>
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-blackbook-100">Edit Task</h3>
+            <span id="edit-list-name-display" class="text-xs text-blackbook-400 bg-blackbook-700 px-2 py-1 rounded"></span>
+        </div>
         <form id="task-edit-form" class="space-y-3">
             <input type="hidden" id="edit-list-id">
             <input type="hidden" id="edit-task-id">
@@ -138,15 +147,34 @@
                 <textarea id="edit-notes" rows="3"
                           class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-300 focus:outline-none focus:border-blue-500"></textarea>
             </div>
+            <!-- Due Date & Time -->
             <div>
-                <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
-                <div class="flex gap-2">
-                    <input type="date" id="edit-due-date"
-                           class="flex-1 px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
+                        <input type="date" id="edit-due-date"
+                               class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="w-28">
+                        <label class="block text-xs text-blackbook-400 mb-1">Time <span class="text-blackbook-500">(opt)</span></label>
+                        <input type="time" id="edit-due-time"
+                               class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <button type="button" onclick="setWidgetQuickDate(0)"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Today</button>
+                    <button type="button" onclick="setWidgetQuickDate(1)"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Tmrw</button>
+                    <span class="border-l border-blackbook-600 mx-1"></span>
+                    <button type="button" onclick="setWidgetQuickTime('09:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">9am</button>
+                    <button type="button" onclick="setWidgetQuickTime('14:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">2pm</button>
+                    <button type="button" onclick="setWidgetQuickTime('17:00')"
+                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">5pm</button>
                     <button type="button" id="clear-due-date"
-                            class="px-3 py-2 text-sm text-blackbook-400 hover:text-blackbook-200 border border-blackbook-600 rounded">
-                        Clear
-                    </button>
+                            class="px-2 py-1 text-xs text-blackbook-400 hover:text-blackbook-200 border border-blackbook-600 rounded">Clear</button>
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
@@ -157,6 +185,16 @@
                 <button type="button" id="cancel-edit"
                         class="flex-1 px-4 py-2 text-sm bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600">
                     Cancel
+                </button>
+            </div>
+            <!-- Add subtask button -->
+            <div class="border-t border-blackbook-600 pt-3 mt-3">
+                <button type="button" id="add-subtask-from-edit"
+                        class="w-full px-4 py-2 text-sm bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Subtask
                 </button>
             </div>
         </form>
@@ -248,6 +286,8 @@
         document.getElementById('edit-title').value = taskItem.dataset.title;
         document.getElementById('edit-notes').value = taskItem.dataset.notes;
         document.getElementById('edit-due-date').value = taskItem.dataset.dueDate;
+        document.getElementById('edit-due-time').value = taskItem.dataset.dueTime || '';
+        document.getElementById('edit-list-name-display').textContent = taskItem.dataset.listName || '';
         modal.classList.remove('hidden');
         document.getElementById('edit-title').focus();
     }
@@ -256,9 +296,30 @@
         modal.classList.add('hidden');
     }
 
+    // Add subtask button - opens the add task modal with parent ID
+    document.getElementById('add-subtask-from-edit')?.addEventListener('click', () => {
+        const listId = document.getElementById('edit-list-id').value;
+        const parentId = document.getElementById('edit-task-id').value;
+        closeEditModal();
+        // Load the add task modal with parent ID
+        htmx.ajax('GET', `/dashboard/add-task-modal?parent_task_id=${parentId}&list_id=${listId}`, '#add-task-modal-container');
+    });
+
+    // Quick date/time setters - expose globally
+    window.setWidgetQuickDate = function(daysFromToday) {
+        const date = new Date();
+        date.setDate(date.getDate() + daysFromToday);
+        document.getElementById('edit-due-date').value = date.toISOString().split('T')[0];
+    };
+
+    window.setWidgetQuickTime = function(time) {
+        document.getElementById('edit-due-time').value = time;
+    };
+
     document.getElementById('cancel-edit')?.addEventListener('click', closeEditModal);
     document.getElementById('clear-due-date')?.addEventListener('click', () => {
         document.getElementById('edit-due-date').value = '';
+        document.getElementById('edit-due-time').value = '';
     });
 
     modal?.addEventListener('click', (e) => {
@@ -278,6 +339,7 @@
         const title = document.getElementById('edit-title').value;
         const notes = document.getElementById('edit-notes').value;
         const dueDate = document.getElementById('edit-due-date').value;
+        const dueTime = document.getElementById('edit-due-time').value;
 
         try {
             const response = await fetch(`/tasks/${listId}/${taskId}`, {
@@ -286,7 +348,8 @@
                 body: JSON.stringify({
                     title: title,
                     notes: notes,
-                    due_date: dueDate || null
+                    due_date: dueDate || null,
+                    due_time: dueTime || null
                 })
             });
             if (response.ok) {

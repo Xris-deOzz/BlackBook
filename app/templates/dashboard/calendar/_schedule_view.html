@@ -11,25 +11,20 @@
                 <div class="text-xs text-blackbook-500 uppercase">
                     {{ day.day_name }}, {{ day.month }}
                 </div>
-                {% if day.pending_tasks_count > 0 %}
-                <div class="mt-1">
-                    <span class="text-xs text-cyan-400">
-                        ○ {{ day.pending_tasks_count }} pending tasks
-                    </span>
-                </div>
-                {% endif %}
             </div>
 
-            <!-- Events column -->
+            <!-- Events and Tasks column -->
             <div class="flex-1 space-y-2">
+                <!-- Events -->
+                {% set color_map = {'tomato': '#D50000', 'flamingo': '#E67C73', 'tangerine': '#F4511E', 'banana': '#F6BF26', 'sage': '#33B679', 'basil': '#0B8043', 'peacock': '#039BE5', 'blueberry': '#3F51B5', 'lavender': '#7986CB', 'grape': '#8E24AA', 'graphite': '#616161'} %}
                 {% for event in day.events %}
                 <div class="flex items-start gap-3 py-1.5 px-3 rounded hover:bg-blackbook-700/50 cursor-pointer group"
                      hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
                      hx-target="#event-detail-modal-container"
                      hx-swap="innerHTML">
                     <!-- Color dot -->
-                    <div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0
-                                {% if event.calendar_color %}bg-{{ event.calendar_color }}-500{% elif event.is_all_day %}bg-green-500{% else %}bg-blackbook-500{% endif %}">
+                    <div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                         style="background-color: {{ color_map.get(event.calendar_color, '#16a34a' if event.is_all_day else '#6b7280') }};">
                     </div>
 
                     <!-- Time -->
@@ -55,9 +50,41 @@
                 </div>
                 {% endfor %}
 
-                {% if not day.events %}
+                <!-- Tasks -->
+                {% for task in day.tasks %}
+                <div class="flex items-start gap-3 py-1.5 px-3 rounded hover:bg-cyan-900/30 cursor-pointer group"
+                     hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
+                     hx-swap="none"
+                     hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')">
+                    <!-- Checkbox circle -->
+                    <div class="w-3 h-3 rounded-full border-2 border-cyan-400 mt-1 flex-shrink-0 group-hover:bg-cyan-400/30"></div>
+
+                    <!-- Time -->
+                    <div class="w-24 flex-shrink-0 text-sm text-cyan-400">
+                        {% if task.due_time_display %}
+                            {{ task.due_time_display }}
+                        {% else %}
+                            Task
+                        {% endif %}
+                    </div>
+
+                    <!-- Task title -->
+                    <div class="flex-1">
+                        <div class="text-sm text-cyan-200 group-hover:text-cyan-100">
+                            {{ task.title }}
+                        </div>
+                        {% if task.list_name %}
+                        <div class="text-xs text-cyan-500 truncate">
+                            {{ task.list_name }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if not day.events and not day.tasks %}
                 <div class="text-sm text-blackbook-500 py-2 px-3">
-                    No events
+                    No events or tasks
                 </div>
                 {% endif %}
             </div>
@@ -69,7 +96,7 @@
             <svg class="w-12 h-12 mx-auto mb-3 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
-            <p>No events scheduled in this period</p>
+            <p>No events or tasks scheduled in this period</p>
         </div>
         {% endif %}
     </div>

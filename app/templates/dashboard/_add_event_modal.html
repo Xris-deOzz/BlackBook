@@ -53,6 +53,95 @@
                        placeholder="Event title...">
             </div>
 
+            <!-- Event Color (Google Calendar palette) -->
+            <div x-data="{ selectedColor: '{{ event.calendar_color if event and event.calendar_color else 'peacock' }}', showColorPicker: false }">
+                <label class="block text-xs text-blackbook-400 mb-1">Color</label>
+                <div class="relative">
+                    <!-- Selected color indicator + dropdown trigger -->
+                    <button type="button"
+                            @click="showColorPicker = !showColorPicker"
+                            class="flex items-center gap-2 px-3 py-2 bg-blackbook-700 border border-blackbook-600 rounded hover:bg-blackbook-600 transition-colors">
+                        <span class="w-4 h-4 rounded-full"
+                              :style="'background-color: ' + getColorHex(selectedColor)"></span>
+                        <span class="text-sm text-blackbook-300 capitalize" x-text="selectedColor || 'Select color'"></span>
+                        <svg class="w-4 h-4 text-blackbook-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <!-- Color picker dropdown -->
+                    <div x-show="showColorPicker"
+                         @click.outside="showColorPicker = false"
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="opacity-100 scale-100"
+                         x-transition:leave-end="opacity-0 scale-95"
+                         class="absolute z-50 mt-1 p-2 bg-blackbook-700 border border-blackbook-600 rounded shadow-lg">
+                        <div class="grid grid-cols-4 gap-1.5">
+                            <!-- Tomato (Red) -->
+                            <button type="button" @click="selectedColor = 'tomato'; showColorPicker = false"
+                                    class="w-7 h-7 rounded-full hover:scale-110 transition-transform ring-offset-blackbook-700"
+                                    :class="{'ring-2 ring-white ring-offset-2': selectedColor === 'tomato'}"
+                                    style="background-color: #D50000" title="Tomato"></button>
+                            <!-- Flamingo (Pink) -->
+                            <button type="button" @click="selectedColor = 'flamingo'; showColorPicker = false"
+                                    class="w-7 h-7 rounded-full hover:scale-110 transition-transform ring-offset-blackbook-700"
+                                    :class="{'ring-2 ring-white ring-offset-2': selectedColor === 'flamingo'}"
+                                    style="background-color: #E67C73" title="Flamingo"></button>
+                            <!-- Tangerine (Orange) -->
+                            <button type="button" @click="selectedColor = 'tangerine'; showColorPicker = false"
+                                    class="w-7 h-7 rounded-full hover:scale-110 transition-transform ring-offset-blackbook-700"
+                                    :class="{'ring-2 ring-white ring-offset-2': selectedColor === 'tangerine'}"
+                                    style="background-color: #F4511E" title="Tangerine"></button>
+                            <!-- Banana (Yellow) -->
+                            <button type="button" @click="selectedColor = 'banana'; showColorPicker = false"
+                                    class="w-7 h-7 rounded-full hover:scale-110 transition-transform ring-offset-blackbook-700"
+                                    :class="{'ring-2 ring-white ring-offset-2': selectedColor === 'banana'}"
+                                    style="background-color: #F6BF26" title="Banana"></button>
+                            <!-- Sage (Light Green) -->
+                            <button type="button" @click="selectedColor = 'sage'; showColorPicker = false"
+                                    class="w-7 h-7 rounded-full hover:scale-110 transition-transform ring-offset-blackbook-700"
+                                    :class="{'ring-2 ring-white ring-offset-2': selectedColor === 'sage'}"
+                                    style="background-color: #33B679" title="Sage"></button>
+                            <!-- Basil (Dark Green) -->
+                            <button type="button" @click="selectedColor = 'basil'; showColorPicker = false"
+                                    class="w-7 h-7 rounded-full hover:scale-110 transition-transform ring-offset-blackbook-700"
+                                    :class="{'ring-2 ring-white ring-offset-2': selectedColor === 'basil'}"
+                                    style="background-color: #0B8043" title="Basil"></button>
+                            <!-- Peacock (Cyan) -->
+                            <button type="button" @click="selectedColor = 'peacock'; showColorPicker = false"
+                                    class="w-7 h-7 rounded-full hover:scale-110 transition-transform ring-offset-blackbook-700"
+                                    :class="{'ring-2 ring-white ring-offset-2': selectedColor === 'peacock'}"
+                                    style="background-color: #039BE5" title="Peacock"></button>
+                            <!-- Blueberry (Blue) -->
+                            <button type="button" @click="selectedColor = 'blueberry'; showColorPicker = false"
+                                    class="w-7 h-7 rounded-full hover:scale-110 transition-transform ring-offset-blackbook-700"
+                                    :class="{'ring-2 ring-white ring-offset-2': selectedColor === 'blueberry'}"
+                                    style="background-color: #3F51B5" title="Blueberry"></button>
+                            <!-- Lavender (Light Purple) -->
+                            <button type="button" @click="selectedColor = 'lavender'; showColorPicker = false"
+                                    class="w-7 h-7 rounded-full hover:scale-110 transition-transform ring-offset-blackbook-700"
+                                    :class="{'ring-2 ring-white ring-offset-2': selectedColor === 'lavender'}"
+                                    style="background-color: #7986CB" title="Lavender"></button>
+                            <!-- Grape (Purple) -->
+                            <button type="button" @click="selectedColor = 'grape'; showColorPicker = false"
+                                    class="w-7 h-7 rounded-full hover:scale-110 transition-transform ring-offset-blackbook-700"
+                                    :class="{'ring-2 ring-white ring-offset-2': selectedColor === 'grape'}"
+                                    style="background-color: #8E24AA" title="Grape"></button>
+                            <!-- Graphite (Gray) -->
+                            <button type="button" @click="selectedColor = 'graphite'; showColorPicker = false"
+                                    class="w-7 h-7 rounded-full hover:scale-110 transition-transform ring-offset-blackbook-700"
+                                    :class="{'ring-2 ring-white ring-offset-2': selectedColor === 'graphite'}"
+                                    style="background-color: #616161" title="Graphite"></button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Hidden input for form submission -->
+                <input type="hidden" id="add-event-color" :value="selectedColor">
+            </div>
+
             <!-- Guests (right after Title) -->
             <div x-data="guestTypeahead({{ event.attendees|tojson if event and event.attendees else '[]' }})" class="relative">
                 <label class="block text-xs text-blackbook-400 mb-1">Guests</label>
@@ -293,6 +382,24 @@
 </style>
 
 <script>
+// Google Calendar color palette - maps color names to hex values
+function getColorHex(colorName) {
+    const colors = {
+        'tomato': '#D50000',
+        'flamingo': '#E67C73',
+        'tangerine': '#F4511E',
+        'banana': '#F6BF26',
+        'sage': '#33B679',
+        'basil': '#0B8043',
+        'peacock': '#039BE5',
+        'blueberry': '#3F51B5',
+        'lavender': '#7986CB',
+        'grape': '#8E24AA',
+        'graphite': '#616161'
+    };
+    return colors[colorName] || '#039BE5'; // Default to peacock
+}
+
 // Guest typeahead Alpine component
 function guestTypeahead(initialGuests = []) {
     return {
@@ -520,6 +627,10 @@ function handleDescriptionKeydown(event) {
             const recurrenceSelect = document.getElementById('add-event-recurrence');
             const recurrence = recurrenceSelect ? recurrenceSelect.value : null;
 
+            // Get selected color
+            const colorInput = document.getElementById('add-event-color');
+            const eventColor = colorInput ? colorInput.value : 'peacock';
+
             const payload = {
                 title,
                 date: eventDate,
@@ -531,7 +642,8 @@ function handleDescriptionKeydown(event) {
                 guests,
                 add_video_conferencing: videoOption === 'meet',
                 account_id: accountId,
-                recurrence: recurrence || null
+                recurrence: recurrence || null,
+                color: eventColor
             };
 
             // Use different endpoint for edit vs create

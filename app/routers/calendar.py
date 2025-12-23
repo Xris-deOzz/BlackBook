@@ -40,6 +40,7 @@ class EventCreate(BaseModel):
     notification_minutes: Optional[int] = None  # Reminder in minutes before event
     account_id: Optional[str] = None  # Google account UUID
     recurrence: Optional[str] = None  # RRULE string for recurring events
+    color: Optional[str] = None  # Event color (tomato, flamingo, tangerine, banana, sage, basil, peacock, blueberry, lavender, grape, graphite)
 
 
 class EventUpdate(BaseModel):
@@ -55,6 +56,15 @@ class EventUpdate(BaseModel):
     add_video_conferencing: bool = False  # Add Google Meet if not present
     recurrence: Optional[str] = None  # RRULE string for recurring events
     account_id: str  # Required: Google account UUID that owns this event
+    color: Optional[str] = None  # Event color (tomato, flamingo, tangerine, banana, sage, basil, peacock, blueberry, lavender, grape, graphite)
+
+
+class EventMove(BaseModel):
+    """Request model for moving/rescheduling an event via drag-drop."""
+    account_id: str  # Required: Google account UUID
+    date: str  # Format: YYYY-MM-DD
+    start_time: str  # Format: HH:MM (24-hour)
+    end_time: str  # Format: HH:MM (24-hour)
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 templates = Jinja2Templates(directory="app/templates")
@@ -475,6 +485,7 @@ async def create_calendar_event(
             account_id=account_id,
             timezone_str=event_timezone,
             recurrence=event_create.recurrence,
+            color=event_create.color,
         )
 
         if event_id:
@@ -572,6 +583,7 @@ async def update_calendar_event(
             add_video_conferencing=event_update.add_video_conferencing,
             timezone_str=event_timezone,
             recurrence=event_update.recurrence,
+            color=event_update.color,
         )
 
         if updated:
@@ -586,6 +598,93 @@ async def update_calendar_event(
         else:
             return JSONResponse(
                 content={"success": False, "error": "Failed to update event"},
+                status_code=400,
+            )
+
+    except CalendarServiceError as e:
+        return JSONResponse(
+            content={"success": False, "error": str(e)},
+            status_code=400,
+        )
+    except Exception as e:
+        return JSONResponse(
+            content={"success": False, "error": str(e)},
+            status_code=500,
+        )
+
+
+@router.post("/event/{google_event_id}/move")
+async def move_calendar_event(
+    google_event_id: str,
+    event_move: EventMove,
+    db: Session = Depends(get_db),
+):
+    """
+    Move/reschedule an event via drag-drop in the calendar.
+
+    This is a simplified endpoint for calendar drag-drop operations.
+
+    Args:
+        google_event_id: The Google Calendar event ID to move
+        event_move: New date, start time, and end time
+
+    Returns:
+        JSON response with success status
+    """
+    try:
+        calendar_service = get_calendar_service(db)
+
+        # Parse account_id
+        try:
+            account_id = UUID(event_move.account_id)
+        except ValueError:
+            return JSONResponse(
+                content={"success": False, "error": "Invalid account ID"},
+                status_code=400,
+            )
+
+        # Use user's timezone from settings
+        event_timezone = CalendarSettings.get_timezone(db)
+
+        # Parse date and times
+        event_date = datetime.strptime(event_move.date, "%Y-%m-%d").date()
+        start_hour, start_minute = map(int, event_move.start_time.split(":"))
+        end_hour, end_minute = map(int, event_move.end_time.split(":"))
+
+        start_datetime = datetime(
+            event_date.year, event_date.month, event_date.day,
+            start_hour, start_minute
+        )
+        end_datetime = datetime(
+            event_date.year, event_date.month, event_date.day,
+            end_hour, end_minute
+        )
+
+        # Handle case where end time is on the next day
+        if end_datetime <= start_datetime:
+            end_datetime = end_datetime + timedelta(days=1)
+
+        # Update the event
+        updated = calendar_service.update_event(
+            google_event_id=google_event_id,
+            account_id=account_id,
+            start_datetime=start_datetime,
+            end_datetime=end_datetime,
+            timezone_str=event_timezone,
+        )
+
+        if updated:
+            return JSONResponse(
+                content={
+                    "success": True,
+                    "event_id": google_event_id,
+                    "message": "Event moved successfully",
+                },
+                status_code=200,
+            )
+        else:
+            return JSONResponse(
+                content={"success": False, "error": "Failed to move event"},
                 status_code=400,
             )
 

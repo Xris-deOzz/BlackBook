@@ -792,6 +792,8 @@ async def get_tasks_panel(
 @router.get("/add-task-modal", response_class=HTMLResponse)
 async def get_add_task_modal(
     request: Request,
+    parent_task_id: Optional[str] = None,
+    list_id: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     """
@@ -799,6 +801,10 @@ async def get_add_task_modal(
 
     Returns the modal HTML with a dropdown populated with task lists
     from Google Tasks.
+
+    Args:
+        parent_task_id: Optional parent task ID for creating subtasks
+        list_id: Optional list ID to pre-select in the dropdown
     """
     task_lists = []
 
@@ -806,20 +812,22 @@ async def get_add_task_modal(
         from app.services.tasks_service import get_tasks_service
 
         tasks_service = get_tasks_service(db)
-        all_lists = tasks_service.get_tasks_by_list()
-
-        # Extract just list info for the dropdown
-        task_lists = [
-            {"list_id": tl["list_id"], "list_name": tl["list_name"]}
-            for tl in all_lists
-        ]
-    except Exception:
-        pass
+        # Use get_all_task_lists to include empty lists
+        task_lists = tasks_service.get_all_task_lists()
+        print(f"[DEBUG] Add task modal: found {len(task_lists)} task lists: {task_lists}")
+    except Exception as e:
+        import traceback
+        print(f"[DEBUG] Add task modal error: {e}")
+        traceback.print_exc()
 
     return templates.TemplateResponse(
         request,
         "dashboard/_add_task_modal.html",
-        {"task_lists": task_lists},
+        {
+            "task_lists": task_lists,
+            "parent_task_id": parent_task_id,
+            "selected_list_id": list_id,
+        },
     )
 
 
@@ -1276,6 +1284,59 @@ async def delete_event(
 
 
 # =============================================================================
+# Calendar Tasks Helper Function
+# =============================================================================
+
+def get_tasks_for_date_range(
+    db: Session,
+    start_date: date,
+    end_date: date,
+    account_id: UUID | None = None,
+) -> dict[date, list[dict]]:
+    """
+    Fetch tasks for a date range, grouped by due date.
+
+    Args:
+        db: Database session
+        start_date: Start of date range
+        end_date: End of date range (inclusive)
+        account_id: Optional UUID to filter tasks to a specific Google account
+
+    Returns:
+        Dict mapping date -> list of tasks for that date
+    """
+    # Initialize dict with all dates in range
+    tasks_by_date = {
+        start_date + timedelta(days=i): []
+        for i in range((end_date - start_date).days + 1)
+    }
+
+    try:
+        from app.services.tasks_service import get_tasks_service
+        tasks_service = get_tasks_service(db)
+        task_lists = tasks_service.get_tasks_by_list(account_id=account_id)
+
+        for task_list in task_lists:
+            all_tasks = task_list.get("priority_tasks", []) + task_list.get("other_tasks", [])
+            for task in all_tasks:
+                if task.get("due_date") and not task.get("completed"):
+                    try:
+                        task_due = datetime.strptime(task["due_date"], "%Y-%m-%d").date()
+                        if start_date <= task_due <= end_date:
+                            # Add list info to task
+                            task["list_name"] = task_list["list_name"]
+                            task["list_id"] = task_list["list_id"]
+                            if task_due in tasks_by_date:
+                                tasks_by_date[task_due].append(task)
+                    except ValueError:
+                        pass
+    except Exception as e:
+        print(f"Error fetching tasks for calendar: {e}")
+
+    return tasks_by_date
+
+
+# =============================================================================
 # Calendar Full View Endpoints (Day/Week/Month/Schedule)
 # =============================================================================
 
@@ -1344,22 +1405,24 @@ async def get_calendar_day_view(
     except Exception:
         pass
 
-    # Get pending tasks count for this day
-    pending_tasks_count = 0
+    # Get tasks for this day
+    timed_tasks = []
+    untimed_tasks = []
     try:
-        from app.services.tasks_service import get_tasks_service
-        tasks_service = get_tasks_service(db)
-        task_lists = tasks_service.get_tasks_by_list(account_id=selected_account_id)
+        tasks_by_date = get_tasks_for_date_range(
+            db, view_date, view_date, account_id=selected_account_id
+        )
+        day_tasks = tasks_by_date.get(view_date, [])
 
-        for task_list in task_lists:
-            for task in task_list.get("priority_tasks", []):
-                if task.get("due_date"):
-                    try:
-                        due_date = datetime.strptime(task["due_date"], "%Y-%m-%d").date()
-                        if due_date == view_date or task.get("is_overdue"):
-                            pending_tasks_count += 1
-                    except ValueError:
-                        pass
+        # Separate tasks by whether they have a time
+        for task in day_tasks:
+            if task.get("due_time"):
+                timed_tasks.append(task)
+            else:
+                untimed_tasks.append(task)
+
+        # Sort timed tasks by time
+        timed_tasks.sort(key=lambda x: x.get("due_time", ""))
     except Exception:
         pass
 
@@ -1371,7 +1434,9 @@ async def get_calendar_day_view(
             "is_today": is_today,
             "hours": list(range(24)),
             "events": events,
-            "pending_tasks_count": pending_tasks_count if is_today else 0,
+            "timed_tasks": timed_tasks,
+            "untimed_tasks": untimed_tasks,
+            "pending_tasks_count": len(timed_tasks) + len(untimed_tasks),
             "current_hour": now_local.hour,
             "current_minute": now_local.minute,
         },
@@ -1416,6 +1481,7 @@ async def get_calendar_week_view(
             pass
 
     # Build 7 days
+    sunday = monday + timedelta(days=6)
     days = []
     today = now_local.date()
     for i in range(7):
@@ -1425,6 +1491,8 @@ async def get_calendar_week_view(
             "day_name": day_date.strftime("%a").upper(),
             "day_num": day_date.day,
             "is_today": day_date == today,
+            "timed_tasks": [],
+            "untimed_tasks": [],
         })
 
     # Get events for the week
@@ -1444,7 +1512,6 @@ async def get_calendar_week_view(
             account_id=selected_account_id,
         )
 
-        sunday = monday + timedelta(days=6)
         for event in week_events:
             if event.start_time:
                 event.start_time_local = event.start_time.astimezone(local_tz)
@@ -1458,19 +1525,30 @@ async def get_calendar_week_view(
     except Exception:
         pass
 
-    # Get pending tasks count for today
-    pending_tasks_count = 0
+    # Get tasks for the week
     try:
-        from app.services.tasks_service import get_tasks_service
-        tasks_service = get_tasks_service(db)
-        task_lists = tasks_service.get_tasks_by_list(account_id=selected_account_id)
-
-        for task_list in task_lists:
-            for task in task_list.get("priority_tasks", []):
-                if task.get("is_overdue") or task.get("is_priority"):
-                    pending_tasks_count += 1
+        tasks_by_date = get_tasks_for_date_range(
+            db, monday, sunday, account_id=selected_account_id
+        )
+        # Assign tasks to days
+        for day in days:
+            day_tasks = tasks_by_date.get(day["date"], [])
+            for task in day_tasks:
+                if task.get("due_time"):
+                    day["timed_tasks"].append(task)
+                else:
+                    day["untimed_tasks"].append(task)
+            # Sort timed tasks
+            day["timed_tasks"].sort(key=lambda x: x.get("due_time", ""))
     except Exception:
         pass
+
+    # Count pending tasks for today
+    pending_tasks_count = 0
+    for day in days:
+        if day["is_today"]:
+            pending_tasks_count = len(day["timed_tasks"]) + len(day["untimed_tasks"])
+            break
 
     # Check if current week includes today
     show_current_time = monday <= today <= sunday
@@ -1535,6 +1613,7 @@ async def get_calendar_month_view(
     # Build 6 weeks (42 days) for the grid
     weeks = []
     current_day = start_day
+    end_day = start_day + timedelta(days=41)  # Last day of grid (inclusive)
     for week_num in range(6):
         week = []
         for day_num in range(7):
@@ -1544,19 +1623,19 @@ async def get_calendar_month_view(
                 "is_today": current_day == today,
                 "is_current_month": current_day.month == view_date.month,
                 "events": [],
+                "tasks": [],
             })
             current_day += timedelta(days=1)
         weeks.append(week)
 
     # Get events for the visible range (42 days)
-    end_day = start_day + timedelta(days=42)
     try:
         from app.services.calendar_service import get_calendar_service
         calendar_service = get_calendar_service(db)
 
         # Get events for the month grid using precise date range
         grid_start = datetime.combine(start_day, datetime.min.time()).replace(tzinfo=local_tz)
-        grid_end = datetime.combine(end_day, datetime.min.time()).replace(tzinfo=local_tz)
+        grid_end = datetime.combine(end_day + timedelta(days=1), datetime.min.time()).replace(tzinfo=local_tz)
 
         month_events = calendar_service.get_events_for_range(
             start_date=grid_start,
@@ -1568,7 +1647,7 @@ async def get_calendar_month_view(
         for event in month_events:
             if event.start_time:
                 event_date = event.start_time.astimezone(local_tz).date()
-                if start_day <= event_date < end_day:
+                if start_day <= event_date <= end_day:
                     event.start_time_local = event.start_time.astimezone(local_tz)
                     event.end_time_local = event.end_time.astimezone(local_tz) if event.end_time else None
                     # is_all_day is already a property on CalendarEvent model
@@ -1579,6 +1658,18 @@ async def get_calendar_month_view(
                             if day["date"] == event_date:
                                 day["events"].append(event)
                                 break
+    except Exception:
+        pass
+
+    # Get tasks for the visible range
+    try:
+        tasks_by_date = get_tasks_for_date_range(
+            db, start_day, end_day, account_id=selected_account_id
+        )
+        # Assign tasks to days
+        for week in weeks:
+            for day in week:
+                day["tasks"] = tasks_by_date.get(day["date"], [])
     except Exception:
         pass
 
@@ -1630,14 +1721,19 @@ async def get_calendar_schedule_view(
         except ValueError:
             pass
 
-    # Get events for next 14 days
+    # Get events and tasks for next 14 days
+    end_date = view_date + timedelta(days=13)  # 14 days inclusive
+
+    # Initialize days dict
+    days_dict = {}
+
+    # Get events
     try:
         from app.services.calendar_service import get_calendar_service
         calendar_service = get_calendar_service(db)
 
-        # Get events for 14 days from the view date
         schedule_start = datetime.combine(view_date, datetime.min.time()).replace(tzinfo=local_tz)
-        schedule_end = schedule_start + timedelta(days=14)
+        schedule_end = datetime.combine(end_date + timedelta(days=1), datetime.min.time()).replace(tzinfo=local_tz)
 
         events = calendar_service.get_events_for_range(
             start_date=schedule_start,
@@ -1645,32 +1741,11 @@ async def get_calendar_schedule_view(
             account_id=selected_account_id,
         )
 
-        # Get pending tasks per day
-        pending_by_date = {}
-        try:
-            from app.services.tasks_service import get_tasks_service
-            tasks_service = get_tasks_service(db)
-            task_lists = tasks_service.get_tasks_by_list(account_id=selected_account_id)
-
-            for task_list in task_lists:
-                for task in task_list.get("priority_tasks", []):
-                    if task.get("due_date"):
-                        try:
-                            due_date = datetime.strptime(task["due_date"], "%Y-%m-%d").date()
-                            if due_date not in pending_by_date:
-                                pending_by_date[due_date] = 0
-                            pending_by_date[due_date] += 1
-                        except ValueError:
-                            pass
-        except Exception:
-            pass
-
         # Group events by day
-        days_dict = {}
         for event in events:
             if event.start_time:
                 event_date = event.start_time.astimezone(local_tz).date()
-                if event_date >= view_date:
+                if view_date <= event_date <= end_date:
                     if event_date not in days_dict:
                         days_dict[event_date] = {
                             "date": event_date,
@@ -1679,20 +1754,40 @@ async def get_calendar_schedule_view(
                             "day_num": event_date.day,
                             "is_today": event_date == today,
                             "events": [],
-                            "pending_tasks_count": pending_by_date.get(event_date, 0),
+                            "tasks": [],
                         }
 
                     event.start_time_local = event.start_time.astimezone(local_tz)
                     event.end_time_local = event.end_time.astimezone(local_tz) if event.end_time else None
-                    # is_all_day is already a property on CalendarEvent model
 
                     days_dict[event_date]["events"].append(event)
-
-        # Sort by date
-        sorted_days = sorted(days_dict.values(), key=lambda d: d["date"])
-
     except Exception:
-        sorted_days = []
+        pass
+
+    # Get tasks for the schedule range
+    try:
+        tasks_by_date = get_tasks_for_date_range(
+            db, view_date, end_date, account_id=selected_account_id
+        )
+
+        for task_date, tasks in tasks_by_date.items():
+            if tasks:
+                if task_date not in days_dict:
+                    days_dict[task_date] = {
+                        "date": task_date,
+                        "day_name": task_date.strftime("%a").upper(),
+                        "month": task_date.strftime("%b").upper(),
+                        "day_num": task_date.day,
+                        "is_today": task_date == today,
+                        "events": [],
+                        "tasks": [],
+                    }
+                days_dict[task_date]["tasks"] = tasks
+    except Exception:
+        pass
+
+    # Sort by date
+    sorted_days = sorted(days_dict.values(), key=lambda d: d["date"])
 
     return templates.TemplateResponse(
         request,

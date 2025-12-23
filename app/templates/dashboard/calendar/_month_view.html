@@ -31,15 +31,17 @@
                     </span>
                 </div>
 
-                <!-- Events -->
+                <!-- Events and Tasks -->
                 <div class="flex-1 overflow-hidden space-y-0.5">
-                    {% for event in day.events[:3] %}
+                    {% set total_items = day.events|length + day.tasks|length %}
+                    {% set shown_count = 0 %}
+
+                    {% set color_map = {'tomato': '#D50000', 'flamingo': '#E67C73', 'tangerine': '#F4511E', 'banana': '#F6BF26', 'sage': '#33B679', 'basil': '#0B8043', 'peacock': '#039BE5', 'blueberry': '#3F51B5', 'lavender': '#7986CB', 'grape': '#8E24AA', 'graphite': '#616161'} %}
+                    {% for event in day.events %}
+                    {% if shown_count < 3 %}
                     <div class="text-xs truncate rounded px-1 py-0.5 cursor-pointer hover:opacity-90
-                                {% if event.is_all_day %}
-                                    {% if event.calendar_color %}bg-{{ event.calendar_color }}-600 text-white{% else %}bg-green-600 text-white{% endif %}
-                                {% else %}
-                                    text-blackbook-300 hover:bg-blackbook-600
-                                {% endif %}"
+                                {% if event.is_all_day %}text-white{% else %}text-blackbook-300 hover:bg-blackbook-600{% endif %}"
+                         {% if event.is_all_day %}style="background-color: {{ color_map.get(event.calendar_color, '#16a34a') }};"{% endif %}
                          hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
                          hx-target="#event-detail-modal-container"
                          hx-swap="innerHTML"
@@ -51,9 +53,29 @@
                             {{ event.summary or '(No title)' }}
                         {% endif %}
                     </div>
+                    {% set shown_count = shown_count + 1 %}
+                    {% endif %}
                     {% endfor %}
-                    {% if day.events|length > 3 %}
-                    <div class="text-xs text-blackbook-500 px-1">+{{ day.events|length - 3 }} more</div>
+
+                    {% for task in day.tasks %}
+                    {% if shown_count < 3 %}
+                    <div class="flex items-center gap-1 text-xs bg-cyan-900/20 text-cyan-200 rounded px-1 py-0.5 truncate cursor-pointer hover:bg-cyan-900/40 border-l-2 border-cyan-500 group"
+                         hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
+                         hx-swap="none"
+                         hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')"
+                         @click.stop>
+                        <span class="w-2 h-2 rounded-full border border-cyan-400 flex-shrink-0 group-hover:bg-cyan-400/30"></span>
+                        {% if task.due_time_display %}
+                        <span class="text-cyan-400">{{ task.due_time_display }}</span>
+                        {% endif %}
+                        <span class="truncate">{{ task.title }}</span>
+                    </div>
+                    {% set shown_count = shown_count + 1 %}
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if total_items > 3 %}
+                    <div class="text-xs text-blackbook-500 px-1">+{{ total_items - 3 }} more</div>
                     {% endif %}
                 </div>
             </div>

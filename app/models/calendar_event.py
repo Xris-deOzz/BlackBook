@@ -102,6 +102,10 @@ class CalendarEvent(Base):
         String(500),
         comment="Direct link to view event in Google Calendar",
     )
+    calendar_color: Mapped[str | None] = mapped_column(
+        String(32),
+        comment="Event color (tomato, flamingo, tangerine, banana, sage, basil, peacock, blueberry, lavender, grape, graphite)",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

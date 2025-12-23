@@ -8,6 +8,7 @@ import logging
 from datetime import date, datetime, timezone
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -62,6 +63,44 @@ class TasksService:
         )
 
         return credentials
+
+    def get_all_task_lists(self) -> list[dict[str, Any]]:
+        """
+        Get all task lists from connected accounts (including empty lists).
+
+        Returns:
+            List of task list dictionaries, each containing:
+            - list_id: Task list ID
+            - list_name: Task list name
+        """
+        all_lists = []
+        accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+        print(f"[DEBUG] get_all_task_lists: found {len(accounts)} active accounts")
+
+        for account in accounts:
+            try:
+                print(f"[DEBUG] Processing account {account.id} ({account.email})")
+                credentials = self._get_credentials(account)
+                service = build("tasks", "v1", credentials=credentials)
+
+                task_lists_result = service.tasklists().list().execute()
+                task_lists = task_lists_result.get("items", [])
+                print(f"[DEBUG] Account {account.email} has {len(task_lists)} task lists")
+
+                for task_list in task_lists:
+                    all_lists.append({
+                        "list_id": task_list.get("id"),
+                        "list_name": task_list.get("title", "Untitled"),
+                    })
+
+            except Exception as e:
+                logger.error(f"Error getting task lists for account {account.id}: {e}")
+                continue
+
+        logger.info(f"get_all_task_lists found {len(all_lists)} lists from {len(accounts)} accounts")
+        # Sort by name
+        all_lists.sort(key=lambda x: x["list_name"].lower())
+        return all_lists
 
     def get_tasks_by_list(self, account_id: UUID | None = None) -> list[dict[str, Any]]:
         """
@@ -138,6 +177,11 @@ class TasksService:
                             "is_overdue": False,
                             "due_date": None,
                             "due_date_display": None,
+                            "due_time": None,
+                            "due_time_display": None,
+                            "parent_id": task.get("parent"),  # Parent task ID for subtasks
+                            "is_subtask": bool(task.get("parent")),
+                            "subtasks": [],  # Will be populated after processing all tasks
                         }
 
                         # Parse due date if present
@@ -145,9 +189,18 @@ class TasksService:
                         if due:
                             try:
                                 # Google Tasks uses RFC 3339 format
-                                due_date = datetime.fromisoformat(due.replace("Z", "+00:00")).date()
+                                due_dt = datetime.fromisoformat(due.replace("Z", "+00:00"))
+                                local_tz = ZoneInfo("America/New_York")
+                                due_local = due_dt.astimezone(local_tz)
+                                due_date = due_local.date()
+
                                 task_data["due_date"] = due_date.strftime("%Y-%m-%d")
                                 task_data["due_date_display"] = due_date.strftime("%b %d, %Y")
+
+                                # Check if time is set (not midnight UTC means time was specified)
+                                if due_dt.hour != 0 or due_dt.minute != 0:
+                                    task_data["due_time"] = due_local.strftime("%H:%M")
+                                    task_data["due_time_display"] = due_local.strftime("%I:%M %p").lstrip("0")
 
                                 # Check if overdue or due today
                                 if due_date < today:
@@ -163,7 +216,27 @@ class TasksService:
 
                         list_data["tasks"].append(task_data)
 
-                        # Separate into priority and other
+                    # Build hierarchical structure: nest subtasks under parents
+                    tasks_by_id = {t["id"]: t for t in list_data["tasks"]}
+                    top_level_tasks = []
+
+                    for task_data in list_data["tasks"]:
+                        if task_data["is_subtask"] and task_data["parent_id"] in tasks_by_id:
+                            # Add as subtask of parent
+                            parent = tasks_by_id[task_data["parent_id"]]
+                            parent["subtasks"].append(task_data)
+                        else:
+                            # Top-level task (or orphaned subtask)
+                            top_level_tasks.append(task_data)
+
+                    # Sort subtasks within each parent by position (Google's default order)
+                    for task_data in top_level_tasks:
+                        if task_data["subtasks"]:
+                            # Keep original order from API
+                            pass
+
+                    # Separate into priority and other (only top-level tasks)
+                    for task_data in top_level_tasks:
                         if task_data["due_date"]:
                             list_data["priority_tasks"].append(task_data)
                         else:
@@ -271,9 +344,9 @@ class TasksService:
             }
 
 
-    def update_task(self, list_id: str, task_id: str, title: str | None = None, notes: str | None = None, due_date: str | None = None) -> dict[str, Any]:
+    def update_task(self, list_id: str, task_id: str, title: str | None = None, notes: str | None = None, due_date: str | None = None, due_time: str | None = None) -> dict[str, Any]:
         """
-        Update a task's title, notes, and/or due date.
+        Update a task's title, notes, and/or due date/time.
 
         Args:
             list_id: The task list ID
@@ -281,6 +354,7 @@ class TasksService:
             title: New title (optional)
             notes: New notes (optional)
             due_date: New due date in YYYY-MM-DD format, or empty string to clear (optional)
+            due_time: New due time in HH:MM format (24h), or empty string to clear (optional)
 
         Returns:
             Dictionary with success status and updated task data
@@ -299,14 +373,22 @@ class TasksService:
                 if notes is not None:
                     body["notes"] = notes
 
-                # Handle due date - Google Tasks expects RFC 3339 format
+                # Handle due date/time - Google Tasks expects RFC 3339 format
                 if due_date is not None:
                     if due_date == "" or due_date is None:
                         # Clear the due date
                         body["due"] = None
                     else:
-                        # Convert YYYY-MM-DD to RFC 3339 format (midnight UTC)
-                        body["due"] = f"{due_date}T00:00:00.000Z"
+                        # Check if time is provided
+                        if due_time and due_time.strip():
+                            # Combine date and time, convert from local to UTC
+                            local_tz = ZoneInfo("America/New_York")
+                            due_dt = datetime.strptime(f"{due_date} {due_time}", "%Y-%m-%d %H:%M")
+                            due_dt = due_dt.replace(tzinfo=local_tz)
+                            body["due"] = due_dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+                        else:
+                            # Date only (midnight UTC - Google interprets as all-day)
+                            body["due"] = f"{due_date}T00:00:00.000Z"
 
                 if not body:
                     return {"success": False, "error": "No updates provided"}
@@ -383,7 +465,7 @@ class TasksService:
 
         return {"success": False, "error": "Task not found"}
 
-    def create_task(self, list_id: str, title: str, notes: str | None = None, due_date: str | None = None) -> dict[str, Any]:
+    def create_task(self, list_id: str, title: str, notes: str | None = None, due_date: str | None = None, due_time: str | None = None, parent_task_id: str | None = None) -> dict[str, Any]:
         """
         Create a new task in the specified list.
 
@@ -392,6 +474,8 @@ class TasksService:
             title: Task title
             notes: Task notes/description (optional)
             due_date: Due date in YYYY-MM-DD format (optional)
+            due_time: Due time in HH:MM format (24h, optional)
+            parent_task_id: Parent task ID to create as subtask (optional)
 
         Returns:
             Dictionary with success status and created task data
@@ -416,13 +500,24 @@ class TasksService:
                 if notes:
                     body["notes"] = notes
                 if due_date:
-                    body["due"] = f"{due_date}T00:00:00.000Z"
+                    if due_time and due_time.strip():
+                        # Combine date and time, convert from local to UTC
+                        local_tz = ZoneInfo("America/New_York")
+                        due_dt = datetime.strptime(f"{due_date} {due_time}", "%Y-%m-%d %H:%M")
+                        due_dt = due_dt.replace(tzinfo=local_tz)
+                        body["due"] = due_dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+                    else:
+                        body["due"] = f"{due_date}T00:00:00.000Z"
 
-                # Create the task
-                result = service.tasks().insert(
-                    tasklist=list_id,
-                    body=body
-                ).execute()
+                # Create the task (with optional parent for subtasks)
+                insert_kwargs = {
+                    "tasklist": list_id,
+                    "body": body,
+                }
+                if parent_task_id:
+                    insert_kwargs["parent"] = parent_task_id
+
+                result = service.tasks().insert(**insert_kwargs).execute()
 
                 return {
                     "success": True,
