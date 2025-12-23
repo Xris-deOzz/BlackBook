@@ -343,6 +343,77 @@ class TasksService:
                 "error": str(e),
             }
 
+    def get_task(self, list_id: str, task_id: str) -> dict[str, Any] | None:
+        """
+        Get a single task by list ID and task ID.
+
+        Args:
+            list_id: The task list ID
+            task_id: The task ID
+
+        Returns:
+            Dictionary with task data or None if not found
+        """
+        accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+        local_tz = ZoneInfo("America/New_York")
+
+        for account in accounts:
+            try:
+                credentials = self._get_credentials(account)
+                service = build("tasks", "v1", credentials=credentials)
+
+                # Get the task
+                task = service.tasks().get(
+                    tasklist=list_id,
+                    task=task_id
+                ).execute()
+
+                # Get the list name
+                try:
+                    task_list = service.tasklists().get(tasklist=list_id).execute()
+                    list_name = task_list.get("title", "Unknown List")
+                except Exception:
+                    list_name = "Unknown List"
+
+                # Parse due date/time
+                due_date = None
+                due_time = None
+                if task.get("due"):
+                    due_str = task["due"]
+                    try:
+                        # Parse RFC 3339 format
+                        due_dt = datetime.fromisoformat(due_str.replace("Z", "+00:00"))
+                        due_date = due_dt.strftime("%Y-%m-%d")
+
+                        # Check if it has a specific time (not midnight UTC)
+                        due_local = due_dt.astimezone(local_tz)
+                        if due_dt.hour != 0 or due_dt.minute != 0:
+                            due_time = due_local.strftime("%H:%M")
+                    except Exception:
+                        pass
+
+                return {
+                    "id": task.get("id"),
+                    "list_id": list_id,
+                    "list_name": list_name,
+                    "title": task.get("title", ""),
+                    "notes": task.get("notes", ""),
+                    "due_date": due_date,
+                    "due_time": due_time,
+                    "status": task.get("status"),
+                    "completed": task.get("status") == "completed",
+                }
+
+            except HttpError as e:
+                if e.resp.status == 404:
+                    continue  # Task not found in this account, try next
+                logger.error(f"Error getting task: {e}")
+                continue
+            except Exception as e:
+                logger.error(f"Error getting task: {e}")
+                continue
+
+        return None
 
     def update_task(self, list_id: str, task_id: str, title: str | None = None, notes: str | None = None, due_date: str | None = None, due_time: str | None = None) -> dict[str, Any]:
         """

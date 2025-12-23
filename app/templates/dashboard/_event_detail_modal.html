@@ -1,12 +1,12 @@
-<!-- Event Detail Modal -->
-<div id="event-detail-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+<!-- Event Detail Modal - Full screen on mobile -->
+<div id="event-detail-modal" class="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
      @keydown.escape.window="closeEventDetailModal()"
      onclick="if(event.target === this) closeEventDetailModal()">
-    <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-lg mx-4 border border-blackbook-600 max-h-[90vh] overflow-y-auto">
+    <div class="bg-blackbook-800 rounded-t-xl sm:rounded-lg p-4 w-full sm:max-w-lg sm:mx-4 border border-blackbook-600 h-[85vh] sm:h-auto sm:max-h-[90vh] overflow-y-auto flex flex-col">
         <!-- Header -->
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-blackbook-100 flex-1 pr-4">{{ event.summary or 'Untitled Event' }}</h3>
-            <button onclick="closeEventDetailModal()" class="text-blackbook-400 hover:text-white p-1">
+            <button onclick="closeEventDetailModal()" class="text-blackbook-400 hover:text-white p-2 -mr-2 min-w-[44px] min-h-[44px] flex items-center justify-center">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -127,13 +127,13 @@
             {% endif %}
         </div>
 
-        <!-- Actions -->
-        <div class="flex flex-wrap gap-2 mt-6 pt-4 border-t border-blackbook-700">
+        <!-- Actions - grid layout on mobile for better touch targets -->
+        <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 mt-6 pt-4 border-t border-blackbook-700">
             <!-- Edit Button -->
             <button hx-get="/dashboard/add-event-form?event_id={{ event.google_event_id }}&account_id={{ event.google_account_id }}"
                     hx-target="#add-event-modal-container"
                     hx-swap="innerHTML"
-                    class="flex-1 min-w-[100px] px-4 py-2 text-sm bg-blue-600/20 text-blue-400 rounded hover:bg-blue-600/30 flex items-center justify-center gap-2">
+                    class="min-h-[44px] sm:flex-1 sm:min-w-[100px] px-4 py-3 sm:py-2 text-sm bg-blue-600/20 text-blue-400 rounded hover:bg-blue-600/30 flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
@@ -144,17 +144,17 @@
             {% if known_attendee_count > 0 %}
             <button onclick="logEventInteraction('{{ event.id }}')"
                     id="log-interaction-btn"
-                    class="flex-1 min-w-[120px] px-4 py-2 text-sm bg-green-600/20 text-green-400 rounded hover:bg-green-600/30 flex items-center justify-center gap-2">
+                    class="min-h-[44px] sm:flex-1 sm:min-w-[120px] px-4 py-3 sm:py-2 text-sm bg-green-600/20 text-green-400 rounded hover:bg-green-600/30 flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                Log Interaction
+Log
             </button>
             {% endif %}
 
             <!-- Delete Button -->
             <button onclick="confirmDeleteEvent('{{ event.google_event_id }}', '{{ event.google_account_id }}')"
-                    class="px-4 py-2 text-sm bg-red-600/20 text-red-400 rounded hover:bg-red-600/30 flex items-center justify-center gap-2">
+                    class="min-h-[44px] px-4 py-3 sm:py-2 text-sm bg-red-600/20 text-red-400 rounded hover:bg-red-600/30 flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
@@ -163,11 +163,11 @@
 
             <!-- Open in Google Calendar -->
             <a href="{{ event.google_calendar_url }}" target="_blank"
-               class="px-4 py-2 text-sm bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 flex items-center justify-center gap-2">
+               class="min-h-[44px] px-4 py-3 sm:py-2 text-sm bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                 </svg>
-                Open in Calendar
+                <span class="sm:hidden">Open</span><span class="hidden sm:inline">Open in Calendar</span>
             </a>
         </div>
     </div>
@@ -234,8 +234,16 @@ async function deleteEvent(googleEventId, accountId) {
 
         if (data.success) {
             closeEventDetailModal();
-            // Refresh schedule widget
-            htmx.ajax('GET', '/dashboard/schedule-widget', '#schedule-content');
+            // Refresh schedule widget (only if element exists)
+            const scheduleContent = document.getElementById('schedule-content');
+            if (scheduleContent) {
+                htmx.ajax('GET', '/dashboard/schedule-widget', {target: '#schedule-content', swap: 'innerHTML'});
+            }
+            // Refresh calendar view if it's open
+            const calendarViewContent = document.getElementById('calendar-view-content');
+            if (calendarViewContent) {
+                htmx.trigger(calendarViewContent, 'refresh');
+            }
             // Show success message
             const statusEl = document.getElementById('sync-status');
             if (statusEl) {

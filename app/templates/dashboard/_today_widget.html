@@ -637,11 +637,11 @@
             if (data.success) {
                 closeModal();
                 // Refresh today's widget
-                htmx.ajax('GET', '/dashboard/today-widget', '#todays-calendar-content');
+                htmx.ajax('GET', '/dashboard/today-widget', {target: '#todays-calendar-content', swap: 'innerHTML'});
                 // Also refresh the upcoming events if visible
                 const upcomingContent = document.getElementById('upcoming-events-content');
                 if (upcomingContent) {
-                    htmx.ajax('GET', '/calendar/week-view?days=5', '#upcoming-events-content');
+                    htmx.ajax('GET', '/calendar/week-view?days=5', {target: '#upcoming-events-content', swap: 'innerHTML'});
                 }
             } else {
                 errorDiv.textContent = data.error || 'Failed to create event.';

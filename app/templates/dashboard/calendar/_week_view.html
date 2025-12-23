@@ -1,17 +1,17 @@
 <!-- Week View - 7-day hourly grid -->
 <div class="flex flex-col flex-1 min-h-0 overflow-hidden">
-    <!-- Week Header with day columns -->
-    <div class="flex-shrink-0 border-b border-blackbook-700">
-        <div class="flex pr-[17px]"><!-- pr-[17px] compensates for scrollbar width -->
+    <!-- Week Header with day columns - horizontal scroll on mobile -->
+    <div class="flex-shrink-0 border-b border-blackbook-700 overflow-x-auto lg:overflow-x-visible" id="week-header-scroll">
+        <div class="flex pr-[17px] min-w-[800px] lg:min-w-0"><!-- pr-[17px] compensates for scrollbar width -->
             <!-- Timezone label -->
-            <div class="w-16 flex-shrink-0 text-xs text-blackbook-500 text-right pr-2 py-2">
-                GMT-05<br>NYC
+            <div class="w-12 sm:w-16 flex-shrink-0 text-xs text-blackbook-500 text-right pr-2 py-2">
+                <span class="hidden sm:inline">GMT-05<br></span>NYC
             </div>
             <!-- Day headers -->
             {% for day in days %}
-            <div class="flex-1 text-center py-2 border-l border-blackbook-700/50 {% if day.is_today %}bg-blackbook-700/30{% endif %}">
-                <div class="text-xs text-blackbook-500">{{ day.day_name }}</div>
-                <div class="w-8 h-8 rounded-full mx-auto flex items-center justify-center text-sm font-medium
+            <div class="flex-1 min-w-[90px] sm:min-w-[100px] text-center py-2 border-l border-blackbook-700/50 {% if day.is_today %}bg-blackbook-700/30{% endif %}">
+                <div class="text-xs text-blackbook-500">{{ day.day_name[:3] }}<span class="hidden sm:inline">{{ day.day_name[3:] }}</span></div>
+                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full mx-auto flex items-center justify-center text-sm font-medium
                             {% if day.is_today %}bg-cyan-600 text-white{% else %}text-blackbook-200{% endif %}">
                     {{ day.day_num }}
                 </div>
@@ -22,10 +22,10 @@
         <!-- All-day events and untimed tasks row -->
         {% set has_all_day_content = all_day_events or days|selectattr('untimed_tasks')|list %}
         {% if has_all_day_content %}
-        <div class="flex border-t border-blackbook-700/50 pr-[17px]">
-            <div class="w-16 flex-shrink-0"></div>
+        <div class="flex border-t border-blackbook-700/50 pr-[17px] min-w-[800px] lg:min-w-0">
+            <div class="w-12 sm:w-16 flex-shrink-0"></div>
             {% for day in days %}
-            <div class="flex-1 border-l border-blackbook-700/50 p-1 space-y-0.5 min-h-[28px] max-h-20 overflow-y-auto">
+            <div class="flex-1 min-w-[90px] sm:min-w-[100px] border-l border-blackbook-700/50 p-1 space-y-0.5 min-h-[28px] max-h-20 overflow-y-auto">
                 <!-- All-day events -->
                 {% set color_map = {'tomato': '#D50000', 'flamingo': '#E67C73', 'tangerine': '#F4511E', 'banana': '#F6BF26', 'sage': '#33B679', 'basil': '#0B8043', 'peacock': '#039BE5', 'blueberry': '#3F51B5', 'lavender': '#7986CB', 'grape': '#8E24AA', 'graphite': '#616161'} %}
                 {% for event in all_day_events %}
@@ -41,17 +41,21 @@
                 {% endfor %}
                 <!-- Untimed tasks -->
                 {% for task in day.untimed_tasks %}
-                <div class="flex items-center gap-1 text-xs bg-cyan-900/20 text-cyan-200 rounded px-1 py-0.5 cursor-move hover:bg-cyan-900/40 border-l-2 border-cyan-500 group calendar-task"
+                <div class="flex items-center gap-1 text-xs bg-cyan-900/20 text-cyan-200 rounded px-1 py-0.5 border-l-2 border-cyan-500 group calendar-task"
                      draggable="true"
                      data-task-id="{{ task.id }}"
                      data-list-id="{{ task.list_id }}"
                      data-task-title="{{ task.title }}"
-                     data-has-time="false"
-                     hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
-                     hx-swap="none"
-                     hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')">
-                    <span class="w-2 h-2 rounded-full border border-cyan-400 flex-shrink-0 group-hover:bg-cyan-400/30"></span>
-                    <span class="truncate">{{ task.title }}</span>
+                     data-has-time="false">
+                    <button type="button" class="task-toggle-btn w-2 h-2 rounded-full border border-cyan-400 flex-shrink-0 hover:bg-cyan-400/30 transition-colors"
+                            hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
+                            hx-swap="none"
+                            hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')"
+                            onclick="event.stopPropagation()"></button>
+                    <span class="truncate cursor-pointer hover:text-white"
+                          hx-get="/dashboard/task-detail/{{ task.list_id }}/{{ task.id }}"
+                          hx-target="#task-detail-modal-container"
+                          hx-swap="innerHTML">{{ task.title }}</span>
                 </div>
                 {% endfor %}
             </div>
@@ -60,11 +64,11 @@
         {% endif %}
     </div>
 
-    <!-- Scrollable time grid -->
-    <div class="flex-1 min-h-0 overflow-y-auto" id="week-view-scroll">
-        <div class="flex relative">
+    <!-- Scrollable time grid - horizontal scroll on mobile -->
+    <div class="flex-1 min-h-0 overflow-auto" id="week-view-scroll">
+        <div class="flex relative min-w-[800px] lg:min-w-0">
             <!-- Time labels column -->
-            <div class="w-16 flex-shrink-0">
+            <div class="w-12 sm:w-16 flex-shrink-0 sticky left-0 bg-blackbook-800 z-10">
                 {% for hour in hours %}
                 <div class="h-16 text-xs text-blackbook-500 text-right pr-2 -mt-2">
                     {{ '%02d:00' % hour }}
@@ -74,7 +78,7 @@
 
             <!-- Day columns -->
             {% for day in days %}
-            <div class="flex-1 border-l border-blackbook-700/50 relative {% if day.is_today %}bg-blackbook-700/10{% endif %} day-column"
+            <div class="flex-1 min-w-[90px] sm:min-w-[100px] border-l border-blackbook-700/50 relative {% if day.is_today %}bg-blackbook-700/10{% endif %} day-column"
                  data-date="{{ day.date.isoformat() }}">
                 <!-- Hour grid lines (drop zones) -->
                 {% for hour in hours %}
@@ -125,12 +129,16 @@
                      data-task-id="{{ task.id }}"
                      data-list-id="{{ task.list_id }}"
                      data-task-title="{{ task.title }}"
-                     data-has-time="true"
-                     hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
-                     hx-swap="none"
-                     hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')">
-                    <span class="w-2 h-2 rounded-full border border-cyan-400 flex-shrink-0 group-hover:bg-cyan-400/30"></span>
-                    <span class="text-cyan-200 truncate">{{ task.title }}</span>
+                     data-has-time="true">
+                    <button type="button" class="task-toggle-btn w-2 h-2 rounded-full border border-cyan-400 flex-shrink-0 hover:bg-cyan-400/30 transition-colors"
+                            hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
+                            hx-swap="none"
+                            hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')"
+                            onclick="event.stopPropagation()"></button>
+                    <span class="text-cyan-200 truncate cursor-pointer hover:text-white"
+                          hx-get="/dashboard/task-detail/{{ task.list_id }}/{{ task.id }}"
+                          hx-target="#task-detail-modal-container"
+                          hx-swap="innerHTML">{{ task.title }}</span>
                 </div>
                 {% endfor %}
             </div>
@@ -138,9 +146,10 @@
 
             <!-- Current time line (spans all columns) -->
             {% if show_current_time %}
-            <div class="absolute left-16 right-0 border-t-2 border-red-500 z-20 pointer-events-none"
+            <div id="current-time-line" class="absolute left-12 sm:left-16 right-0 z-20 pointer-events-none flex items-center"
                  style="top: {{ (current_hour * 64) + (current_minute * 64 / 60) }}px;">
-                <div class="w-3 h-3 bg-red-500 rounded-full -mt-1.5 -ml-1.5"></div>
+                <div class="w-3 h-3 bg-red-500 rounded-full -ml-1.5 flex-shrink-0"></div>
+                <div class="flex-1 h-0.5 bg-red-500"></div>
             </div>
             {% endif %}
         </div>
@@ -148,16 +157,41 @@
 </div>
 
 <script>
-// Scroll to current time or 8am
+// Scroll to current time or 8am and sync horizontal scrolling
 document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('week-view-scroll');
+    const header = document.getElementById('week-header-scroll');
+
     if (container) {
         const scrollHour = {{ current_hour if show_current_time else 8 }};
         container.scrollTop = Math.max(0, (scrollHour - 1) * 64);
+
+        // Sync horizontal scroll between header and grid
+        if (header) {
+            container.addEventListener('scroll', function() {
+                header.scrollLeft = container.scrollLeft;
+            });
+            header.addEventListener('scroll', function() {
+                container.scrollLeft = header.scrollLeft;
+            });
+        }
     }
 
     // Initialize drag-and-drop
     initWeekDragDrop();
+
+    // Update current time line every minute
+    {% if show_current_time %}
+    function updateTimeLine() {
+        const timeLine = document.getElementById('current-time-line');
+        if (timeLine) {
+            const now = new Date();
+            const position = (now.getHours() * 64) + (now.getMinutes() / 60 * 64);
+            timeLine.style.top = position + 'px';
+        }
+    }
+    setInterval(updateTimeLine, 60000);
+    {% endif %}
 });
 
 function initWeekDragDrop() {

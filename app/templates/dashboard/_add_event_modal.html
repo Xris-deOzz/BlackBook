@@ -1,13 +1,13 @@
-<!-- Add/Edit Event Modal -->
-<div id="add-event-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" @keydown.escape.window="closeAddEventModal()"
+<!-- Add/Edit Event Modal - Full screen on mobile -->
+<div id="add-event-modal" class="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center" @keydown.escape.window="closeAddEventModal()"
      data-edit-mode="{{ 'true' if edit_mode else 'false' }}"
      data-event-id="{{ event.google_event_id if event else '' }}"
      data-account-id="{{ selected_account_id or '' }}">
-    <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-lg mx-4 border border-blackbook-600 max-h-[90vh] overflow-y-auto" @click.outside="closeAddEventModal()">
+    <div class="bg-blackbook-800 rounded-t-xl sm:rounded-lg p-4 w-full sm:max-w-lg sm:mx-4 border border-blackbook-600 h-[90vh] sm:h-auto sm:max-h-[90vh] overflow-y-auto flex flex-col" @click.outside="closeAddEventModal()">
         <h3 class="text-lg font-semibold text-blackbook-100 mb-4">
             {% if edit_mode %}Edit Event{% else %}Add New Event{% endif %}
         </h3>
-        <form id="add-event-form" class="space-y-3">
+        <form id="add-event-form" class="space-y-3" onsubmit="return false;">
             <!-- Calendar & Timezone Row -->
             <div class="grid grid-cols-2 gap-3">
                 {% if google_accounts %}
@@ -54,7 +54,26 @@
             </div>
 
             <!-- Event Color (Google Calendar palette) -->
-            <div x-data="{ selectedColor: '{{ event.calendar_color if event and event.calendar_color else 'peacock' }}', showColorPicker: false }">
+            <div x-data="{
+                selectedColor: '{{ event.calendar_color if event and event.calendar_color else 'peacock' }}',
+                showColorPicker: false,
+                colorHex(name) {
+                    const colors = {
+                        'tomato': '#D50000',
+                        'flamingo': '#E67C73',
+                        'tangerine': '#F4511E',
+                        'banana': '#F6BF26',
+                        'sage': '#33B679',
+                        'basil': '#0B8043',
+                        'peacock': '#039BE5',
+                        'blueberry': '#3F51B5',
+                        'lavender': '#7986CB',
+                        'grape': '#8E24AA',
+                        'graphite': '#616161'
+                    };
+                    return colors[name] || '#039BE5';
+                }
+            }">
                 <label class="block text-xs text-blackbook-400 mb-1">Color</label>
                 <div class="relative">
                     <!-- Selected color indicator + dropdown trigger -->
@@ -62,7 +81,7 @@
                             @click="showColorPicker = !showColorPicker"
                             class="flex items-center gap-2 px-3 py-2 bg-blackbook-700 border border-blackbook-600 rounded hover:bg-blackbook-600 transition-colors">
                         <span class="w-4 h-4 rounded-full"
-                              :style="'background-color: ' + getColorHex(selectedColor)"></span>
+                              :style="'background-color: ' + colorHex(selectedColor)"></span>
                         <span class="text-sm text-blackbook-300 capitalize" x-text="selectedColor || 'Select color'"></span>
                         <svg class="w-4 h-4 text-blackbook-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -661,7 +680,15 @@ function handleDescriptionKeydown(event) {
             if (response.ok && data.success) {
                 closeAddEventModal();
                 // Refresh schedule widget
-                htmx.ajax('GET', '/dashboard/schedule-widget', '#schedule-content');
+                const scheduleContent = document.getElementById('schedule-content');
+                if (scheduleContent) {
+                    htmx.ajax('GET', '/dashboard/schedule-widget', {target: '#schedule-content', swap: 'innerHTML'});
+                }
+                // Refresh calendar view if it's open
+                const calendarViewContent = document.getElementById('calendar-view-content');
+                if (calendarViewContent) {
+                    htmx.trigger(calendarViewContent, 'refresh');
+                }
                 // Close event detail modal if open
                 const detailContainer = document.getElementById('event-detail-modal-container');
                 if (detailContainer) detailContainer.innerHTML = '';

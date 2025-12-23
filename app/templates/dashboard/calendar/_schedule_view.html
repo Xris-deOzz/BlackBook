@@ -52,12 +52,12 @@
 
                 <!-- Tasks -->
                 {% for task in day.tasks %}
-                <div class="flex items-start gap-3 py-1.5 px-3 rounded hover:bg-cyan-900/30 cursor-pointer group"
-                     hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
-                     hx-swap="none"
-                     hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')">
-                    <!-- Checkbox circle -->
-                    <div class="w-3 h-3 rounded-full border-2 border-cyan-400 mt-1 flex-shrink-0 group-hover:bg-cyan-400/30"></div>
+                <div class="flex items-start gap-3 py-1.5 px-3 rounded hover:bg-cyan-900/30 group">
+                    <!-- Checkbox circle (toggle) -->
+                    <button type="button" class="task-toggle-btn w-3 h-3 rounded-full border-2 border-cyan-400 mt-1 flex-shrink-0 hover:bg-cyan-400/30 transition-colors"
+                            hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
+                            hx-swap="none"
+                            hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')"></button>
 
                     <!-- Time -->
                     <div class="w-24 flex-shrink-0 text-sm text-cyan-400">
@@ -68,8 +68,11 @@
                         {% endif %}
                     </div>
 
-                    <!-- Task title -->
-                    <div class="flex-1">
+                    <!-- Task title (click to edit) -->
+                    <div class="flex-1 cursor-pointer"
+                         hx-get="/dashboard/task-detail/{{ task.list_id }}/{{ task.id }}"
+                         hx-target="#task-detail-modal-container"
+                         hx-swap="innerHTML">
                         <div class="text-sm text-cyan-200 group-hover:text-cyan-100">
                             {{ task.title }}
                         </div>

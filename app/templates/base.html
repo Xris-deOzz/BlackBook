@@ -24,6 +24,10 @@
 
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        // Ensure HTMX executes scripts in dynamically loaded content
+        htmx.config.allowScriptTags = true;
+    </script>
 
     <!-- Alpine.js - for interactive UI components -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
@@ -567,6 +571,11 @@
 
             if (personTable) initResizableTable('person-table', 'person-table-widths');
             if (orgTable) initResizableTable('org-table', 'org-table-widths');
+
+            // Re-initialize Alpine.js components in dynamically loaded content
+            if (typeof Alpine !== 'undefined' && evt.detail.target) {
+                Alpine.initTree(evt.detail.target);
+            }
         });
     </script>
 

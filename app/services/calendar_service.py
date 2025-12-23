@@ -5,12 +5,15 @@ Handles fetching events, matching attendees to persons, and syncing calendar dat
 Supports timezone-aware date calculations for accurate "today" queries.
 """
 
+import logging
 from datetime import datetime, timezone, timedelta
 from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from google.oauth2.credentials import Credentials
+
+logger = logging.getLogger(__name__)
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from sqlalchemy.orm import Session
@@ -514,6 +517,13 @@ class CalendarService:
                 sendUpdates=send_updates,
                 conferenceDataVersion=conference_version,
             ).execute()
+
+            # Cache the newly created event locally so it shows up immediately with color
+            try:
+                self._cache_event(account, created_event)
+                self.db.commit()
+            except Exception as cache_error:
+                logger.warning(f"Failed to cache new event: {cache_error}")
 
             return created_event.get("id")
 

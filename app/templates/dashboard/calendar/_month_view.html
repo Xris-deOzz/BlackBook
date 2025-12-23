@@ -3,9 +3,10 @@
     <!-- Day headers -->
     <div class="flex-shrink-0 grid grid-cols-7 border-b border-blackbook-700">
         {% for day_name in day_headers %}
-        <div class="text-xs text-blackbook-500 text-center py-2 font-medium
+        <div class="text-xs text-blackbook-500 text-center py-1 sm:py-2 font-medium
                     {% if loop.index > 5 %}text-blackbook-600{% endif %}">
-            {{ day_name }}
+            <span class="sm:hidden">{{ day_name[:1] }}</span>
+            <span class="hidden sm:inline">{{ day_name }}</span>
         </div>
         {% endfor %}
     </div>
@@ -15,15 +16,15 @@
         {% for week in weeks %}
         <div class="grid grid-cols-7 border-b border-blackbook-700/50 min-h-0">
             {% for day in week %}
-            <div class="border-r border-blackbook-700/50 p-1 overflow-hidden flex flex-col
+            <div class="border-r border-blackbook-700/50 p-0.5 sm:p-1 overflow-hidden flex flex-col min-h-[50px] sm:min-h-[80px] lg:min-h-[100px]
                         {% if not day.is_current_month %}bg-blackbook-900/50{% endif %}
                         {% if day.is_today %}bg-blackbook-700/30{% endif %}
                         hover:bg-blackbook-700/20 cursor-pointer"
                  @click="calendarDate = new Date('{{ day.date.isoformat() }}'); calendarView = 'day'; loadCalendarView()">
 
                 <!-- Day number -->
-                <div class="flex-shrink-0 mb-1">
-                    <span class="inline-flex items-center justify-center w-7 h-7 text-sm
+                <div class="flex-shrink-0 mb-0.5 sm:mb-1">
+                    <span class="inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 text-xs sm:text-sm
                                 {% if day.is_today %}rounded-full bg-cyan-600 text-white font-medium
                                 {% elif day.is_current_month %}text-blackbook-200
                                 {% else %}text-blackbook-600{% endif %}">
@@ -31,52 +32,72 @@
                     </span>
                 </div>
 
-                <!-- Events and Tasks -->
+                <!-- Events and Tasks - Full display on desktop, dots on mobile -->
                 <div class="flex-1 overflow-hidden space-y-0.5">
                     {% set total_items = day.events|length + day.tasks|length %}
                     {% set shown_count = 0 %}
 
-                    {% set color_map = {'tomato': '#D50000', 'flamingo': '#E67C73', 'tangerine': '#F4511E', 'banana': '#F6BF26', 'sage': '#33B679', 'basil': '#0B8043', 'peacock': '#039BE5', 'blueberry': '#3F51B5', 'lavender': '#7986CB', 'grape': '#8E24AA', 'graphite': '#616161'} %}
-                    {% for event in day.events %}
-                    {% if shown_count < 3 %}
-                    <div class="text-xs truncate rounded px-1 py-0.5 cursor-pointer hover:opacity-90
-                                {% if event.is_all_day %}text-white{% else %}text-blackbook-300 hover:bg-blackbook-600{% endif %}"
-                         {% if event.is_all_day %}style="background-color: {{ color_map.get(event.calendar_color, '#16a34a') }};"{% endif %}
-                         hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
-                         hx-target="#event-detail-modal-container"
-                         hx-swap="innerHTML"
-                         @click.stop>
-                        {% if event.is_all_day %}
-                            {{ event.summary or '(No title)' }}
-                        {% else %}
-                            <span class="text-blackbook-500">{{ event.start_time_local.strftime('%H:%M') }}</span>
-                            {{ event.summary or '(No title)' }}
+                    <!-- Desktop view: Show event/task pills -->
+                    <div class="hidden sm:block">
+                        {% set color_map = {'tomato': '#D50000', 'flamingo': '#E67C73', 'tangerine': '#F4511E', 'banana': '#F6BF26', 'sage': '#33B679', 'basil': '#0B8043', 'peacock': '#039BE5', 'blueberry': '#3F51B5', 'lavender': '#7986CB', 'grape': '#8E24AA', 'graphite': '#616161'} %}
+                        {% for event in day.events %}
+                        {% if shown_count < 3 %}
+                        <div class="text-xs truncate rounded px-1 py-0.5 cursor-pointer hover:opacity-90
+                                    {% if event.is_all_day %}text-white{% else %}text-blackbook-300 hover:bg-blackbook-600{% endif %}"
+                             {% if event.is_all_day %}style="background-color: {{ color_map.get(event.calendar_color, '#16a34a') }};"{% endif %}
+                             hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
+                             hx-target="#event-detail-modal-container"
+                             hx-swap="innerHTML"
+                             @click.stop>
+                            {% if event.is_all_day %}
+                                {{ event.summary or '(No title)' }}
+                            {% else %}
+                                <span class="text-blackbook-500">{{ event.start_time_local.strftime('%H:%M') }}</span>
+                                {{ event.summary or '(No title)' }}
+                            {% endif %}
+                        </div>
+                        {% set shown_count = shown_count + 1 %}
+                        {% endif %}
+                        {% endfor %}
+
+                        {% for task in day.tasks %}
+                        {% if shown_count < 3 %}
+                        <div class="flex items-center gap-1 text-xs bg-cyan-900/20 text-cyan-200 rounded px-1 py-0.5 truncate border-l-2 border-cyan-500 group"
+                             @click.stop>
+                            <button type="button" class="task-toggle-btn w-2 h-2 rounded-full border border-cyan-400 flex-shrink-0 hover:bg-cyan-400/30 transition-colors"
+                                    hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
+                                    hx-swap="none"
+                                    hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')"
+                                    onclick="event.stopPropagation()"></button>
+                            {% if task.due_time_display %}
+                            <span class="text-cyan-400">{{ task.due_time_display }}</span>
+                            {% endif %}
+                            <span class="truncate cursor-pointer hover:text-white"
+                                  hx-get="/dashboard/task-detail/{{ task.list_id }}/{{ task.id }}"
+                                  hx-target="#task-detail-modal-container"
+                                  hx-swap="innerHTML">{{ task.title }}</span>
+                        </div>
+                        {% set shown_count = shown_count + 1 %}
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if total_items > 3 %}
+                        <div class="text-xs text-blackbook-500 px-1">+{{ total_items - 3 }} more</div>
                         {% endif %}
                     </div>
-                    {% set shown_count = shown_count + 1 %}
-                    {% endif %}
-                    {% endfor %}
 
-                    {% for task in day.tasks %}
-                    {% if shown_count < 3 %}
-                    <div class="flex items-center gap-1 text-xs bg-cyan-900/20 text-cyan-200 rounded px-1 py-0.5 truncate cursor-pointer hover:bg-cyan-900/40 border-l-2 border-cyan-500 group"
-                         hx-post="/tasks/{{ task.list_id }}/{{ task.id }}/toggle"
-                         hx-swap="none"
-                         hx-on::after-request="htmx.trigger('#calendar-view-content', 'refresh')"
-                         @click.stop>
-                        <span class="w-2 h-2 rounded-full border border-cyan-400 flex-shrink-0 group-hover:bg-cyan-400/30"></span>
-                        {% if task.due_time_display %}
-                        <span class="text-cyan-400">{{ task.due_time_display }}</span>
+                    <!-- Mobile view: Dot indicators only -->
+                    <div class="sm:hidden flex flex-wrap gap-0.5 mt-0.5 justify-center">
+                        {% if day.events|length > 0 %}
+                        <div class="w-1.5 h-1.5 rounded-full bg-green-500" title="{{ day.events|length }} event(s)"></div>
                         {% endif %}
-                        <span class="truncate">{{ task.title }}</span>
+                        {% if day.tasks|length > 0 %}
+                        <div class="w-1.5 h-1.5 rounded-full bg-cyan-500" title="{{ day.tasks|length }} task(s)"></div>
+                        {% endif %}
+                        {% if total_items > 2 %}
+                        <span class="text-[10px] text-blackbook-500">+{{ total_items }}</span>
+                        {% endif %}
                     </div>
-                    {% set shown_count = shown_count + 1 %}
-                    {% endif %}
-                    {% endfor %}
-
-                    {% if total_items > 3 %}
-                    <div class="text-xs text-blackbook-500 px-1">+{{ total_items - 3 }} more</div>
-                    {% endif %}
                 </div>
             </div>
             {% endfor %}

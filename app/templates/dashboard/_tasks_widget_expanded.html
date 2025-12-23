@@ -16,11 +16,11 @@
     <p class="mt-2 text-sm">{{ error }}</p>
 </div>
 {% elif task_lists %}
-<!-- Multi-column task board layout like Google Tasks -->
-<div class="overflow-x-auto h-full" id="tasks-expanded-container">
-    <div class="flex gap-4 pb-4 min-w-max h-full" id="task-lists-container">
+<!-- Multi-column task board layout like Google Tasks - snap on mobile -->
+<div class="overflow-x-auto h-full snap-x snap-mandatory lg:snap-none -mx-2 px-2 sm:mx-0 sm:px-0" id="tasks-expanded-container">
+    <div class="flex gap-3 sm:gap-4 pb-4 min-w-max h-full" id="task-lists-container">
         {% for task_list in task_lists %}
-        <div class="task-list-column bg-blackbook-800 rounded-lg w-72 flex-shrink-0 flex flex-col transition-transform"
+        <div class="task-list-column bg-blackbook-800 rounded-lg w-[75vw] sm:w-[50vw] lg:w-72 min-w-[220px] flex-shrink-0 flex flex-col transition-transform snap-start"
              data-list-id="{{ task_list.list_id }}">
             <!-- List Header (drag handle) -->
             <div class="column-drag-handle px-4 py-3 border-b border-blackbook-700 flex items-center justify-between cursor-grab active:cursor-grabbing select-none">
@@ -257,9 +257,9 @@
     </div>
 </div>
 
-<!-- Create Task Modal -->
-<div id="task-create-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
-    <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-md mx-4 border border-blackbook-600">
+<!-- Create Task Modal - Full screen on mobile -->
+<div id="task-create-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end sm:items-center justify-center">
+    <div class="bg-blackbook-800 rounded-t-xl sm:rounded-lg p-4 w-full sm:max-w-md sm:mx-4 border border-blackbook-600 max-h-[90vh] overflow-y-auto">
         <h3 id="create-modal-title" class="text-lg font-semibold text-blackbook-100 mb-4">Add Task</h3>
         <form id="task-create-form" class="space-y-3">
             <input type="hidden" id="create-list-id">
@@ -318,9 +318,9 @@
     </div>
 </div>
 
-<!-- Edit Modal (same as compact view) -->
-<div id="task-edit-modal-expanded" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
-    <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-md mx-4 border border-blackbook-600">
+<!-- Edit Modal (same as compact view) - Full screen on mobile -->
+<div id="task-edit-modal-expanded" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end sm:items-center justify-center">
+    <div class="bg-blackbook-800 rounded-t-xl sm:rounded-lg p-4 w-full sm:max-w-md sm:mx-4 border border-blackbook-600 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-semibold text-blackbook-100 mb-4">Edit Task</h3>
         <form id="task-edit-form-expanded" class="space-y-3">
             <input type="hidden" id="edit-list-id-expanded">
@@ -700,15 +700,15 @@
 
             if (response.ok) {
                 // Refresh to get proper state from server
-                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', {target: '#tasks-kanban-content', swap: 'innerHTML'});
             } else {
                 console.error('Failed to move task');
                 // Refresh to restore proper state
-                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', {target: '#tasks-kanban-content', swap: 'innerHTML'});
             }
         } catch (error) {
             console.error('Error moving task:', error);
-            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', {target: '#tasks-kanban-content', swap: 'innerHTML'});
         }
 
         draggedTask = null;
@@ -731,11 +731,11 @@
                     method: 'POST'
                 });
                 if (response.ok) {
-                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', {target: '#tasks-kanban-content', swap: 'innerHTML'});
                     // Also refresh compact view if visible
                     const compactContainer = document.getElementById('todays-tasks');
                     if (compactContainer) {
-                        htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                        htmx.ajax('GET', '/dashboard/tasks-widget', {target: '#todays-tasks', swap: 'innerHTML'});
                     }
                 }
             } catch (error) {
@@ -820,11 +820,11 @@
             });
             if (response.ok) {
                 closeEditModal();
-                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', {target: '#tasks-kanban-content', swap: 'innerHTML'});
                 // Also refresh compact view if visible
                 const compactContainer = document.getElementById('todays-tasks');
                 if (compactContainer) {
-                    htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                    htmx.ajax('GET', '/dashboard/tasks-widget', {target: '#todays-tasks', swap: 'innerHTML'});
                 }
             }
         } catch (error) {
@@ -928,11 +928,11 @@
             });
             if (response.ok) {
                 closeCreateModal();
-                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', {target: '#tasks-kanban-content', swap: 'innerHTML'});
                 // Also refresh compact view if visible
                 const compactContainer = document.getElementById('todays-tasks');
                 if (compactContainer) {
-                    htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                    htmx.ajax('GET', '/dashboard/tasks-widget', {target: '#todays-tasks', swap: 'innerHTML'});
                 }
             } else {
                 const data = await response.json();
@@ -961,10 +961,10 @@
                     method: 'POST'
                 });
                 if (response.ok) {
-                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', {target: '#tasks-kanban-content', swap: 'innerHTML'});
                     const compactContainer = document.getElementById('todays-tasks');
                     if (compactContainer) {
-                        htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                        htmx.ajax('GET', '/dashboard/tasks-widget', {target: '#todays-tasks', swap: 'innerHTML'});
                     }
                 }
             } catch (error) {

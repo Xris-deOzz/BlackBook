@@ -1217,6 +1217,50 @@ async def get_event_detail(
     )
 
 
+@router.get("/task-detail/{list_id}/{task_id}", response_class=HTMLResponse)
+async def get_task_detail(
+    request: Request,
+    list_id: str,
+    task_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Get task detail modal for viewing/editing.
+
+    Args:
+        list_id: Google Tasks list ID
+        task_id: Google Task ID
+
+    Returns:
+        HTML modal with task details and edit form
+    """
+    try:
+        from app.services.tasks_service import get_tasks_service
+
+        tasks_service = get_tasks_service(db)
+        task_data = tasks_service.get_task(list_id=list_id, task_id=task_id)
+
+        if not task_data:
+            return HTMLResponse(
+                content='<div class="text-red-400 p-4">Task not found</div>',
+                status_code=404
+            )
+
+        return templates.TemplateResponse(
+            request,
+            "dashboard/_task_detail_modal.html",
+            {
+                "task": task_data,
+            },
+        )
+
+    except Exception as e:
+        return HTMLResponse(
+            content=f'<div class="text-red-400 p-4">Error loading task: {str(e)}</div>',
+            status_code=500
+        )
+
+
 @router.delete("/event/{google_event_id}")
 async def delete_event(
     google_event_id: str,

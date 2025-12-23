@@ -245,11 +245,11 @@
 
                     // Refresh the widget after a brief delay
                     setTimeout(() => {
-                        htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                        htmx.ajax('GET', '/dashboard/tasks-widget', {target: '#todays-tasks', swap: 'innerHTML'});
                         // Also refresh expanded view if visible
                         const expandedContainer = document.getElementById('tasks-kanban-content');
                         if (expandedContainer) {
-                            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+                            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', {target: '#tasks-kanban-content', swap: 'innerHTML'});
                         }
                     }, 300);
                 } else {
@@ -302,7 +302,7 @@
         const parentId = document.getElementById('edit-task-id').value;
         closeEditModal();
         // Load the add task modal with parent ID
-        htmx.ajax('GET', `/dashboard/add-task-modal?parent_task_id=${parentId}&list_id=${listId}`, '#add-task-modal-container');
+        htmx.ajax('GET', `/dashboard/add-task-modal?parent_task_id=${parentId}&list_id=${listId}`, {target: '#add-task-modal-container', swap: 'innerHTML'});
     });
 
     // Quick date/time setters - expose globally
@@ -354,11 +354,11 @@
             });
             if (response.ok) {
                 closeEditModal();
-                htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                htmx.ajax('GET', '/dashboard/tasks-widget', {target: '#todays-tasks', swap: 'innerHTML'});
                 // Also refresh expanded view if visible
                 const expandedContainer = document.getElementById('tasks-kanban-content');
                 if (expandedContainer) {
-                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', {target: '#tasks-kanban-content', swap: 'innerHTML'});
                 }
             }
         } catch (error) {

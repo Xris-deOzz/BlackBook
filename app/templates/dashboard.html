@@ -73,70 +73,95 @@
 
 {% block content %}
 <div x-data="dashboardState()" x-init="init()" class="flex flex-col h-full max-w-screen-2xl mx-auto w-full">
-    <!-- Top Navigation Bar -->
-    <div class="flex-shrink-0 flex items-center justify-between mb-4 min-h-[48px] bg-blackbook-800/50 rounded-lg px-3 py-2">
+    <!-- Mobile Sidebar Toggle Button (FAB) - shown only in tasks view on mobile -->
+    <button @click="mobileSidebarOpen = !mobileSidebarOpen"
+            x-show="mainTab === 'tasks'"
+            class="lg:hidden fixed bottom-20 left-4 z-50 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-full shadow-lg transition-colors">
+        <svg x-show="!mobileSidebarOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+        <svg x-show="mobileSidebarOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+    </button>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div x-show="mobileSidebarOpen"
+         x-transition:enter="transition-opacity duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="mobileSidebarOpen = false"
+         class="lg:hidden fixed inset-0 bg-black/50 z-40"></div>
+
+    <!-- Top Navigation Bar - stacks on mobile -->
+    <div class="flex-shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 min-h-[48px] bg-blackbook-800/50 rounded-lg px-3 py-2">
         <!-- Left: Main Tabs -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1 sm:gap-2">
             <button @click="mainTab = 'calendar'; $nextTick(() => { enforceCalendarHeight(); loadCalendarView(); })"
                     :class="mainTab === 'calendar' ? 'bg-blackbook-700 text-white' : 'text-blackbook-400 hover:text-white hover:bg-blackbook-700/50'"
-                    class="px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2">
+                    class="flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
-                Calendar
+                <span class="hidden xs:inline sm:inline">Calendar</span>
             </button>
             <button @click="mainTab = 'tasks'"
                     :class="mainTab === 'tasks' ? 'bg-blackbook-700 text-white' : 'text-blackbook-400 hover:text-white hover:bg-blackbook-700/50'"
-                    class="px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2">
+                    class="flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                 </svg>
-                Tasks
+                <span class="hidden xs:inline sm:inline">Tasks</span>
             </button>
             <!-- Task sub-tabs (shown when mainTab === 'tasks') -->
             <template x-if="mainTab === 'tasks'">
                 <div class="flex items-center gap-1 ml-2 pl-2 border-l border-blackbook-700">
-                    <button @click="taskTab = 'week'; loadTasks('week')"
+                    <button type="button"
+                            @click="taskTab = 'week'; loadTasks('week')"
                             :class="taskTab === 'week' ? 'bg-blackbook-600 text-white' : 'text-blackbook-400 hover:text-white'"
-                            class="px-3 py-1.5 text-sm rounded transition-colors">
-                        This Week
+                            class="px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded transition-colors">
+                        <span class="hidden sm:inline">This </span>Week
                     </button>
-                    <button @click="taskTab = 'lists'; $nextTick(() => loadTasksKanban())"
+                    <button type="button"
+                            @click="taskTab = 'lists'; $nextTick(() => loadTasksKanban())"
                             :class="taskTab === 'lists' ? 'bg-blackbook-600 text-white' : 'text-blackbook-400 hover:text-white'"
-                            class="px-3 py-1.5 text-sm rounded transition-colors">
-                        All Lists
+                            class="px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded transition-colors">
+                        <span class="hidden sm:inline">All </span>Lists
                     </button>
                 </div>
             </template>
         </div>
 
         <!-- Right: Account Filter (always visible) -->
-        <div class="flex items-center gap-3">
-            <span class="text-xs text-blackbook-400">Show calendar:</span>
+        <div class="flex items-center gap-2 sm:gap-3">
+            <span class="text-xs text-blackbook-400 hidden sm:inline">Show calendar:</span>
             <select x-model="selectedAccountId"
                     @change="onAccountFilterChange()"
-                    class="text-sm bg-blackbook-700 border border-blackbook-600 rounded px-3 py-1.5 text-blackbook-200 focus:outline-none focus:border-blue-500">
+                    class="flex-1 sm:flex-none text-sm bg-blackbook-700 border border-blackbook-600 rounded px-2 sm:px-3 py-1.5 text-blackbook-200 focus:outline-none focus:border-blue-500">
                 <option value="">All Accounts</option>
                 <template x-for="account in googleAccounts" :key="account.id">
                     <option :value="account.id" x-text="account.email"></option>
                 </template>
             </select>
-            <span class="text-xs text-blackbook-500" x-show="googleAccounts.length > 0" x-text="googleAccounts.length + ' connected'"></span>
+            <span class="text-xs text-blackbook-500 hidden sm:inline" x-show="googleAccounts.length > 0" x-text="googleAccounts.length + ' connected'"></span>
         </div>
     </div>
 
     <!-- Calendar Tab Content - Full Width Calendar Views -->
     <template x-if="mainTab === 'calendar'">
         <div class="bg-blackbook-800 rounded-lg overflow-hidden flex flex-col" id="calendar-container">
-            <!-- Calendar Header - fixed height -->
-            <div class="flex-shrink-0 px-4 py-3 border-b border-blackbook-700 flex items-center justify-between">
-                <!-- Left: Today button + Navigation + Date display -->
-                <div class="flex items-center gap-3">
-                    <button @click="goToToday()"
-                            class="px-3 py-1.5 bg-blackbook-700 hover:bg-blackbook-600 rounded text-sm font-medium text-blackbook-200 transition-colors">
-                        Today
-                    </button>
-                    <div class="flex items-center gap-1">
+            <!-- Calendar Header - two rows on mobile -->
+            <div class="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-b border-blackbook-700">
+                <!-- Row 1: Navigation controls -->
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <button @click="goToToday()"
+                                class="px-2 sm:px-3 py-1.5 bg-blackbook-700 hover:bg-blackbook-600 rounded text-sm font-medium text-blackbook-200 transition-colors">
+                            Today
+                        </button>
                         <button @click="navigateCalendar(-1)" class="p-1.5 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -148,35 +173,39 @@
                             </svg>
                         </button>
                     </div>
-                    <span class="text-lg font-medium text-blackbook-100" x-text="calendarDateDisplay"></span>
-                    <span class="text-sm text-blackbook-500" x-show="calendarView === 'week'" x-text="'Week ' + currentWeekNumber"></span>
+
+                    <!-- Right: Actions + View Selector -->
+                    <div class="flex items-center gap-1 sm:gap-3">
+                        <button class="hidden sm:block p-2 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors" title="Search">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </button>
+                        <button @click="showAddEvent()" class="p-2 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors" title="Add Event">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                        </button>
+                        <button class="hidden sm:block p-2 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors" title="Settings">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </button>
+                        <select x-model="calendarView" @change="loadCalendarView()"
+                                class="view-dropdown text-sm">
+                            <option value="day">Day</option>
+                            <option value="week">Week</option>
+                            <option value="month">Month</option>
+                            <option value="schedule">Schedule</option>
+                        </select>
+                    </div>
                 </div>
 
-                <!-- Right: Actions + View Selector -->
-                <div class="flex items-center gap-3">
-                    <button class="p-2 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors" title="Search">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                        </svg>
-                    </button>
-                    <button @click="showAddEvent()" class="p-2 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors" title="Add Event">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                    </button>
-                    <button class="p-2 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors" title="Settings">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                    </button>
-                    <select x-model="calendarView" @change="loadCalendarView()"
-                            class="view-dropdown">
-                        <option value="day">Day</option>
-                        <option value="week">Week</option>
-                        <option value="month">Month</option>
-                        <option value="schedule">Schedule</option>
-                    </select>
+                <!-- Row 2: Date display -->
+                <div class="mt-1 text-center sm:text-left">
+                    <span class="text-base sm:text-lg font-medium text-blackbook-100" x-text="calendarDateDisplay"></span>
+                    <span class="text-sm text-blackbook-500 ml-2" x-show="calendarView === 'week'" x-text="'Week ' + currentWeekNumber"></span>
                 </div>
             </div>
 
@@ -194,12 +223,22 @@
 
     <!-- Tasks Tab Content - Two Panel Layout -->
     <template x-if="mainTab === 'tasks'">
-        <div class="flex-1 flex flex-col lg:flex-row pb-16">
-            <!-- LEFT PANEL (Calendar, Schedule, Birthdays) -->
-            <div class="relative w-full lg:flex-shrink-0 space-y-4 transition-all duration-200"
-                 :style="sidebarCollapsed ? 'width: 0; overflow: hidden; padding: 0;' : 'width: ' + sidebarWidth + 'px;'"
-                 :class="{ 'lg:mr-4': !sidebarCollapsed }"
-                 x-show="!sidebarCollapsed || window.innerWidth < 1024">
+        <div class="flex-1 flex flex-col lg:flex-row pb-16 lg:pb-16">
+            <!-- LEFT PANEL (Calendar, Schedule, Birthdays) - Slide-in on mobile -->
+            <div class="fixed lg:relative inset-y-0 left-0 z-40 w-72 lg:w-auto lg:flex-shrink-0 space-y-4 transition-all duration-200 bg-blackbook-900 lg:bg-transparent overflow-y-auto lg:overflow-visible pt-4 lg:pt-0 px-4 lg:px-0"
+                 :class="{
+                     'translate-x-0': mobileSidebarOpen,
+                     '-translate-x-full lg:translate-x-0': !mobileSidebarOpen,
+                     'lg:mr-4': !sidebarCollapsed
+                 }"
+                 :style="window.innerWidth >= 1024 ? (sidebarCollapsed ? 'width: 0; overflow: hidden; padding: 0;' : 'width: ' + sidebarWidth + 'px;') : ''"
+                 x-show="mobileSidebarOpen || (!sidebarCollapsed && window.innerWidth >= 1024)"
+                 x-transition:enter="transition-transform duration-200"
+                 x-transition:enter-start="-translate-x-full"
+                 x-transition:enter-end="translate-x-0"
+                 x-transition:leave="transition-transform duration-200"
+                 x-transition:leave-start="translate-x-0"
+                 x-transition:leave-end="-translate-x-full">
                 <!-- Collapse button (desktop only) -->
                 <button @click="toggleSidebar()"
                         class="hidden lg:flex sidebar-collapse-btn"
@@ -430,9 +469,88 @@
     <div id="add-event-modal-container"></div>
     <div id="add-task-modal-container"></div>
     <div id="event-detail-modal-container"></div>
+    <div id="task-detail-modal-container"></div>
 </div>
 
 <script>
+// Guest typeahead Alpine component - must be defined globally before modal loads
+function guestTypeahead(initialGuests = []) {
+    return {
+        searchQuery: '',
+        results: [],
+        selectedGuests: initialGuests.map(g => ({ email: g.email, name: g.name || null, person_id: null })),
+        showResults: false,
+        selectedIndex: 0,
+        isSearching: false,
+
+        async searchContacts() {
+            if (this.searchQuery.length < 2) {
+                this.results = [];
+                this.showResults = false;
+                return;
+            }
+
+            this.isSearching = true;
+
+            try {
+                const response = await fetch(`/dashboard/people-search?q=${encodeURIComponent(this.searchQuery)}`);
+                const data = await response.json();
+                this.results = data.results || [];
+                this.selectedIndex = 0;
+                this.showResults = this.results.length > 0;
+            } catch (e) {
+                console.error('Search failed:', e);
+                this.results = [];
+            } finally {
+                this.isSearching = false;
+            }
+        },
+
+        addGuest(person) {
+            const email = person.emails[0]?.email;
+            if (email && !this.selectedGuests.find(g => g.email === email)) {
+                this.selectedGuests.push({
+                    name: person.name,
+                    email: email,
+                    person_id: person.id
+                });
+            }
+            this.searchQuery = '';
+            this.showResults = false;
+            this.results = [];
+        },
+
+        addRawEmail() {
+            if (this.showResults && this.results.length > 0 && this.selectedIndex >= 0) {
+                this.addGuest(this.results[this.selectedIndex]);
+                return;
+            }
+            const email = this.searchQuery.trim();
+            if (email && email.includes('@') && !this.selectedGuests.find(g => g.email === email)) {
+                this.selectedGuests.push({ email: email, name: null, person_id: null });
+            }
+            this.searchQuery = '';
+            this.showResults = false;
+        },
+
+        removeGuest(index) {
+            this.selectedGuests.splice(index, 1);
+        },
+
+        navigateDown() {
+            if (this.results.length > 0) {
+                this.selectedIndex = Math.min(this.selectedIndex + 1, this.results.length - 1);
+            }
+        },
+
+        navigateUp() {
+            if (this.results.length > 0) {
+                this.selectedIndex = Math.max(this.selectedIndex - 1, 0);
+            }
+        }
+    };
+}
+
 function dashboardState() {
     return {
         mainTab: 'tasks',           // 'calendar' or 'tasks' - default to tasks
@@ -444,9 +562,10 @@ function dashboardState() {
         selectedTaskIndex: -1,
         selectedAccountId: '',      // '' = All Accounts
         googleAccounts: [],         // Populated on init
-        // Sidebar resizing state
+        // Sidebar state
         sidebarWidth: 300,          // Default width in pixels
-        sidebarCollapsed: false,    // Whether sidebar is fully hidden
+        sidebarCollapsed: false,    // Whether sidebar is fully hidden (desktop)
+        mobileSidebarOpen: false,   // Whether mobile sidebar is open
         isResizing: false,          // Whether user is currently dragging resizer
         minSidebarWidth: 200,       // Minimum sidebar width
         maxSidebarWidth: 500,       // Maximum sidebar width
@@ -576,7 +695,10 @@ function dashboardState() {
         loadCalendarView() {
             const dateStr = this.calendarDate.toISOString().split('T')[0];
             const accountParam = this.selectedAccountId ? `&account_id=${this.selectedAccountId}` : '';
-            htmx.ajax('GET', `/dashboard/calendar-view/${this.calendarView}?date=${dateStr}${accountParam}`, '#calendar-view-content');
+            const target = document.getElementById('calendar-view-content');
+            if (target) {
+                htmx.ajax('GET', `/dashboard/calendar-view/${this.calendarView}?date=${dateStr}${accountParam}`, {target: '#calendar-view-content', swap: 'innerHTML'});
+            }
         },
 
         enforceCalendarHeight() {
@@ -605,7 +727,7 @@ function dashboardState() {
         },
 
         showAddEvent() {
-            htmx.ajax('GET', '/dashboard/add-event-form', '#add-event-modal-container');
+            htmx.ajax('GET', '/dashboard/add-event-form', {target: '#add-event-modal-container', swap: 'innerHTML'});
         },
 
         // Mini calendar methods (for left panel)
@@ -630,7 +752,10 @@ function dashboardState() {
         },
 
         loadMiniCalendar() {
-            htmx.ajax('GET', `/dashboard/mini-calendar?month=${this.calendarMonth + 1}&year=${this.calendarYear}`, '#mini-calendar-content');
+            const target = document.getElementById('mini-calendar-content');
+            if (target) {
+                htmx.ajax('GET', `/dashboard/mini-calendar?month=${this.calendarMonth + 1}&year=${this.calendarYear}`, {target: '#mini-calendar-content', swap: 'innerHTML'});
+            }
         },
 
         // Sidebar resize methods
@@ -711,7 +836,10 @@ function dashboardState() {
 
         refreshSchedule() {
             const accountParam = this.selectedAccountId ? `&account_id=${this.selectedAccountId}` : '';
-            htmx.ajax('GET', `/dashboard/schedule-widget?${accountParam}`, '#schedule-content');
+            const target = document.getElementById('schedule-content');
+            if (target) {
+                htmx.ajax('GET', `/dashboard/schedule-widget?${accountParam}`, {target: '#schedule-content', swap: 'innerHTML'});
+            }
         },
 
         updateDateDisplay() {
@@ -743,12 +871,18 @@ function dashboardState() {
             this.taskTab = view;
             window.dashboardCurrentView = view;
             const accountParam = this.selectedAccountId ? `&account_id=${this.selectedAccountId}` : '';
-            htmx.ajax('GET', `/dashboard/tasks-panel?view=${view}${accountParam}`, '#tasks-panel-content');
+            const target = document.getElementById('tasks-panel-content');
+            if (target) {
+                htmx.ajax('GET', `/dashboard/tasks-panel?view=${view}${accountParam}`, {target: '#tasks-panel-content', swap: 'innerHTML'});
+            }
         },
 
         loadTasksKanban() {
             const accountParam = this.selectedAccountId ? `?account_id=${this.selectedAccountId}` : '';
-            htmx.ajax('GET', `/dashboard/tasks-widget-expanded${accountParam}`, '#tasks-kanban-content');
+            const target = document.getElementById('tasks-kanban-content');
+            if (target) {
+                htmx.ajax('GET', `/dashboard/tasks-widget-expanded${accountParam}`, {target: '#tasks-kanban-content', swap: 'innerHTML'});
+            }
         },
 
         getTaskItems() {
