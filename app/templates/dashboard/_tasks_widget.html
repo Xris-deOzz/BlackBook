@@ -209,9 +209,9 @@
                     setTimeout(() => {
                         htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
                         // Also refresh expanded view if visible
-                        const expandedContainer = document.getElementById('tasks-expanded-content');
+                        const expandedContainer = document.getElementById('tasks-kanban-content');
                         if (expandedContainer) {
-                            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-expanded-content');
+                            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
                         }
                     }, 300);
                 } else {
@@ -293,9 +293,9 @@
                 closeEditModal();
                 htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
                 // Also refresh expanded view if visible
-                const expandedContainer = document.getElementById('tasks-expanded-content');
+                const expandedContainer = document.getElementById('tasks-kanban-content');
                 if (expandedContainer) {
-                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-expanded-content');
+                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
                 }
             }
         } catch (error) {

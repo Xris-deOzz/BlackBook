@@ -39,6 +39,22 @@ class EventCreate(BaseModel):
     add_video_conferencing: bool = False  # Add Google Meet
     notification_minutes: Optional[int] = None  # Reminder in minutes before event
     account_id: Optional[str] = None  # Google account UUID
+    recurrence: Optional[str] = None  # RRULE string for recurring events
+
+
+class EventUpdate(BaseModel):
+    """Request model for updating an existing calendar event."""
+    title: Optional[str] = None
+    date: Optional[str] = None  # Format: YYYY-MM-DD
+    start_time: Optional[str] = None  # Format: HH:MM (24-hour)
+    end_time: Optional[str] = None  # Format: HH:MM (24-hour)
+    timezone: Optional[str] = None  # IANA timezone
+    description: Optional[str] = None
+    location: Optional[str] = None
+    guests: Optional[list[str]] = None  # List of email addresses (replaces existing)
+    add_video_conferencing: bool = False  # Add Google Meet if not present
+    recurrence: Optional[str] = None  # RRULE string for recurring events
+    account_id: str  # Required: Google account UUID that owns this event
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 templates = Jinja2Templates(directory="app/templates")
@@ -458,6 +474,7 @@ async def create_calendar_event(
             notification_minutes=event_create.notification_minutes,
             account_id=account_id,
             timezone_str=event_timezone,
+            recurrence=event_create.recurrence,
         )
 
         if event_id:
@@ -472,6 +489,103 @@ async def create_calendar_event(
         else:
             return JSONResponse(
                 content={"success": False, "error": "Failed to create event"},
+                status_code=400,
+            )
+
+    except CalendarServiceError as e:
+        return JSONResponse(
+            content={"success": False, "error": str(e)},
+            status_code=400,
+        )
+    except Exception as e:
+        return JSONResponse(
+            content={"success": False, "error": str(e)},
+            status_code=500,
+        )
+
+
+@router.put("/update/{google_event_id}")
+async def update_calendar_event(
+    google_event_id: str,
+    event_update: EventUpdate,
+    db: Session = Depends(get_db),
+):
+    """
+    Update an existing event in Google Calendar.
+
+    Args:
+        google_event_id: The Google Calendar event ID to update
+        event_update: Event update data
+
+    Returns:
+        JSON response with success status
+    """
+    try:
+        calendar_service = get_calendar_service(db)
+
+        # Parse account_id (required for update)
+        try:
+            account_id = UUID(event_update.account_id)
+        except ValueError:
+            return JSONResponse(
+                content={"success": False, "error": "Invalid account ID"},
+                status_code=400,
+            )
+
+        # Use provided timezone or fall back to user's settings
+        event_timezone = event_update.timezone or CalendarSettings.get_timezone(db)
+
+        # Parse date and times if provided
+        start_datetime = None
+        end_datetime = None
+
+        if event_update.date and event_update.start_time:
+            event_date = datetime.strptime(event_update.date, "%Y-%m-%d").date()
+            start_hour, start_minute = map(int, event_update.start_time.split(":"))
+            start_datetime = datetime(
+                event_date.year, event_date.month, event_date.day,
+                start_hour, start_minute
+            )
+
+            if event_update.end_time:
+                end_hour, end_minute = map(int, event_update.end_time.split(":"))
+                end_datetime = datetime(
+                    event_date.year, event_date.month, event_date.day,
+                    end_hour, end_minute
+                )
+                # Handle case where end time is on the next day
+                if end_datetime <= start_datetime:
+                    end_datetime = end_datetime + timedelta(days=1)
+            else:
+                end_datetime = start_datetime + timedelta(hours=1)
+
+        # Update the event
+        updated = calendar_service.update_event(
+            google_event_id=google_event_id,
+            account_id=account_id,
+            summary=event_update.title,
+            start_datetime=start_datetime,
+            end_datetime=end_datetime,
+            description=event_update.description,
+            location=event_update.location,
+            attendee_emails=event_update.guests,
+            add_video_conferencing=event_update.add_video_conferencing,
+            timezone_str=event_timezone,
+            recurrence=event_update.recurrence,
+        )
+
+        if updated:
+            return JSONResponse(
+                content={
+                    "success": True,
+                    "event_id": google_event_id,
+                    "message": "Event updated successfully",
+                },
+                status_code=200,
+            )
+        else:
+            return JSONResponse(
+                content={"success": False, "error": "Failed to update event"},
                 status_code=400,
             )
 

@@ -7,6 +7,7 @@ Provides integration with Google Tasks API for task management.
 import logging
 from datetime import date, datetime, timezone
 from typing import Any
+from uuid import UUID
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -62,9 +63,13 @@ class TasksService:
 
         return credentials
 
-    def get_tasks_by_list(self) -> list[dict[str, Any]]:
+    def get_tasks_by_list(self, account_id: UUID | None = None) -> list[dict[str, Any]]:
         """
-        Get all tasks grouped by task list from all connected accounts.
+        Get all tasks grouped by task list from connected accounts.
+
+        Args:
+            account_id: Optional UUID to filter tasks to a specific Google account.
+                       If None, returns tasks from all active accounts.
 
         Returns:
             List of task list dictionaries, each containing:
@@ -82,8 +87,13 @@ class TasksService:
         all_task_lists = []
         today = date.today()
 
-        accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
-        print(f"Tasks: Found {len(accounts)} active Google accounts")
+        # Get accounts based on filter
+        if account_id:
+            account = self.db.query(GoogleAccount).filter_by(id=account_id, is_active=True).first()
+            accounts = [account] if account else []
+        else:
+            accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+        print(f"Tasks: Found {len(accounts)} active Google accounts (filter: {account_id})")
 
         for account in accounts:
             try:
@@ -183,17 +193,18 @@ class TasksService:
 
         return all_task_lists
 
-    def get_tasks_by_list_ordered(self, order: list[str] | None = None) -> list[dict[str, Any]]:
+    def get_tasks_by_list_ordered(self, order: list[str] | None = None, account_id: UUID | None = None) -> list[dict[str, Any]]:
         """
         Get all tasks grouped by task list, with optional custom ordering.
 
         Args:
             order: Optional list of task list IDs specifying the desired order
+            account_id: Optional UUID to filter tasks to a specific Google account.
 
         Returns:
             List of task list dictionaries, ordered according to the order parameter
         """
-        task_lists = self.get_tasks_by_list()
+        task_lists = self.get_tasks_by_list(account_id=account_id)
 
         if order:
             # Create a mapping from list_id to list data
@@ -429,6 +440,91 @@ class TasksService:
                 continue
 
         return {"success": False, "error": "Could not create task - no valid account found"}
+
+    def move_task(
+        self,
+        source_list_id: str,
+        task_id: str,
+        target_list_id: str,
+        previous_task_id: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Move a task to a different list.
+
+        Google Tasks API doesn't support moving between lists directly,
+        so we need to: get the task, create it in target, delete from source.
+
+        Args:
+            source_list_id: The source task list ID
+            task_id: The task ID to move
+            target_list_id: The target task list ID
+            previous_task_id: Insert after this task ID (optional, for ordering)
+
+        Returns:
+            Dictionary with success status
+        """
+        accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+
+        for account in accounts:
+            try:
+                credentials = self._get_credentials(account)
+                service = build("tasks", "v1", credentials=credentials)
+
+                # Get the task from source list
+                try:
+                    task = service.tasks().get(
+                        tasklist=source_list_id,
+                        task=task_id
+                    ).execute()
+                except HttpError as e:
+                    if e.resp.status == 404:
+                        continue  # Not found in this account
+                    raise
+
+                # If moving to the same list, just reorder
+                if source_list_id == target_list_id:
+                    # Use move API for reordering within same list
+                    result = service.tasks().move(
+                        tasklist=source_list_id,
+                        task=task_id,
+                        previous=previous_task_id if previous_task_id else None,
+                    ).execute()
+                    return {"success": True, "task_id": result.get("id")}
+
+                # Moving to different list: create in target, delete from source
+                # Build new task body (preserve all fields except id)
+                new_task = {
+                    "title": task.get("title", ""),
+                    "notes": task.get("notes"),
+                    "due": task.get("due"),
+                    "status": task.get("status", "needsAction"),
+                }
+
+                # Create in target list
+                created = service.tasks().insert(
+                    tasklist=target_list_id,
+                    body=new_task,
+                    previous=previous_task_id if previous_task_id else None,
+                ).execute()
+
+                # Delete from source list
+                service.tasks().delete(
+                    tasklist=source_list_id,
+                    task=task_id
+                ).execute()
+
+                return {
+                    "success": True,
+                    "task_id": created.get("id"),
+                    "moved_to": target_list_id,
+                }
+
+            except HttpError as e:
+                return {"success": False, "error": str(e)}
+            except Exception as e:
+                continue
+
+        return {"success": False, "error": "Task not found"}
 
 
 def get_tasks_service(db: Session) -> TasksService:

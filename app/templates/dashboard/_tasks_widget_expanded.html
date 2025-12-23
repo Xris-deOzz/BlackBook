@@ -17,10 +17,10 @@
 </div>
 {% elif task_lists %}
 <!-- Multi-column task board layout like Google Tasks -->
-<div class="overflow-x-auto" id="tasks-expanded-container">
-    <div class="flex gap-4 pb-4 min-w-max" id="task-lists-container">
+<div class="overflow-x-auto h-full" id="tasks-expanded-container">
+    <div class="flex gap-4 pb-4 min-w-max h-full" id="task-lists-container">
         {% for task_list in task_lists %}
-        <div class="task-list-column bg-blackbook-800 rounded-lg w-72 flex-shrink-0 flex flex-col max-h-[600px] transition-transform"
+        <div class="task-list-column bg-blackbook-800 rounded-lg w-72 flex-shrink-0 flex flex-col transition-transform"
              data-list-id="{{ task_list.list_id }}">
             <!-- List Header (drag handle) -->
             <div class="column-drag-handle px-4 py-3 border-b border-blackbook-700 flex items-center justify-between cursor-grab active:cursor-grabbing select-none">
@@ -54,12 +54,21 @@
                     {% for task in task_list.priority_tasks %}
                     <div class="task-item-expanded rounded-lg p-3 hover:bg-blackbook-700/50 cursor-pointer transition-colors group
                                 {% if task.is_overdue %}bg-red-900/20{% elif task.is_priority %}bg-amber-900/20{% endif %}"
+                         draggable="true"
                          data-list-id="{{ task_list.list_id }}"
                          data-task-id="{{ task.id }}"
                          data-title="{{ task.title|e }}"
                          data-notes="{{ task.notes|e }}"
                          data-due-date="{{ task.due_date or '' }}">
-                        <div class="flex items-start gap-3">
+                        <div class="flex items-start gap-2">
+                            <!-- Drag handle -->
+                            <div class="task-drag-handle flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing text-blackbook-500 hover:text-blackbook-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                                    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                                    <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                                </svg>
+                            </div>
                             <!-- Checkbox -->
                             <button type="button" class="task-toggle-expanded flex-shrink-0 mt-0.5 focus:outline-none">
                                 {% if task.completed %}
@@ -109,12 +118,21 @@
                     {% endif %}
                     {% for task in task_list.other_tasks %}
                     <div class="task-item-expanded rounded-lg p-3 hover:bg-blackbook-700/50 cursor-pointer transition-colors group"
+                         draggable="true"
                          data-list-id="{{ task_list.list_id }}"
                          data-task-id="{{ task.id }}"
                          data-title="{{ task.title|e }}"
                          data-notes="{{ task.notes|e }}"
                          data-due-date="{{ task.due_date or '' }}">
-                        <div class="flex items-start gap-3">
+                        <div class="flex items-start gap-2">
+                            <!-- Drag handle -->
+                            <div class="task-drag-handle flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing text-blackbook-500 hover:text-blackbook-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                                    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                                    <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                                </svg>
+                            </div>
                             <!-- Checkbox -->
                             <button type="button" class="task-toggle-expanded flex-shrink-0 mt-0.5 focus:outline-none">
                                 {% if task.completed %}
@@ -393,6 +411,190 @@
     // Initialize column drag
     initColumnDrag();
 
+    // ========== TASK DRAG AND DROP ==========
+    let draggedTask = null;
+    let taskPlaceholder = null;
+
+    function initTaskDrag() {
+        const taskItems = container.querySelectorAll('.task-item-expanded');
+
+        taskItems.forEach(task => {
+            task.addEventListener('dragstart', onTaskDragStart);
+            task.addEventListener('dragend', onTaskDragEnd);
+        });
+
+        // Add drop zones to task containers
+        const taskContainers = container.querySelectorAll('.task-list-column .overflow-y-auto');
+        taskContainers.forEach(zone => {
+            zone.addEventListener('dragover', onTaskDragOver);
+            zone.addEventListener('drop', onTaskDrop);
+            zone.addEventListener('dragleave', onTaskDragLeave);
+        });
+    }
+
+    function onTaskDragStart(e) {
+        draggedTask = e.target.closest('.task-item-expanded');
+        if (!draggedTask) return;
+
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', JSON.stringify({
+            listId: draggedTask.dataset.listId,
+            taskId: draggedTask.dataset.taskId
+        }));
+
+        // Create placeholder
+        taskPlaceholder = document.createElement('div');
+        taskPlaceholder.className = 'task-placeholder border-2 border-dashed border-cyan-500/50 rounded-lg h-16 my-1 bg-cyan-500/10';
+
+        // Style dragged task
+        setTimeout(() => {
+            if (draggedTask) {
+                draggedTask.style.opacity = '0.5';
+                draggedTask.classList.add('scale-105');
+            }
+        }, 0);
+    }
+
+    function onTaskDragEnd(e) {
+        if (draggedTask) {
+            draggedTask.style.opacity = '';
+            draggedTask.classList.remove('scale-105');
+        }
+        if (taskPlaceholder && taskPlaceholder.parentNode) {
+            taskPlaceholder.remove();
+        }
+
+        // Remove drop highlights
+        container.querySelectorAll('.task-list-column').forEach(col => {
+            col.classList.remove('ring-2', 'ring-cyan-500/50');
+        });
+
+        draggedTask = null;
+        taskPlaceholder = null;
+    }
+
+    function onTaskDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        if (!draggedTask || !taskPlaceholder) return;
+
+        const dropZone = e.target.closest('.overflow-y-auto');
+        if (!dropZone) return;
+
+        const column = dropZone.closest('.task-list-column');
+        if (column) {
+            // Highlight the column
+            container.querySelectorAll('.task-list-column').forEach(col => {
+                col.classList.remove('ring-2', 'ring-cyan-500/50');
+            });
+            column.classList.add('ring-2', 'ring-cyan-500/50');
+        }
+
+        // Find insert position
+        const taskItems = Array.from(dropZone.querySelectorAll('.task-item-expanded:not([style*="opacity"])'));
+        let insertBefore = null;
+
+        for (const item of taskItems) {
+            const rect = item.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            if (e.clientY < midY) {
+                insertBefore = item;
+                break;
+            }
+        }
+
+        // Move placeholder
+        if (insertBefore) {
+            if (taskPlaceholder.nextSibling !== insertBefore) {
+                insertBefore.parentNode.insertBefore(taskPlaceholder, insertBefore);
+            }
+        } else {
+            if (taskPlaceholder.parentNode !== dropZone) {
+                dropZone.appendChild(taskPlaceholder);
+            }
+        }
+    }
+
+    function onTaskDragLeave(e) {
+        // Only remove highlight if leaving the column entirely
+        const relatedTarget = e.relatedTarget;
+        if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+            const column = e.currentTarget.closest('.task-list-column');
+            if (column) {
+                column.classList.remove('ring-2', 'ring-cyan-500/50');
+            }
+        }
+    }
+
+    async function onTaskDrop(e) {
+        e.preventDefault();
+
+        if (!draggedTask || !taskPlaceholder) return;
+
+        const dropZone = e.target.closest('.overflow-y-auto');
+        if (!dropZone) return;
+
+        const targetColumn = dropZone.closest('.task-list-column');
+        if (!targetColumn) return;
+
+        const sourceListId = draggedTask.dataset.listId;
+        const taskId = draggedTask.dataset.taskId;
+        const targetListId = targetColumn.dataset.listId;
+
+        // Find the task to insert after (for ordering)
+        let previousTaskId = null;
+        if (taskPlaceholder.previousElementSibling) {
+            const prevTask = taskPlaceholder.previousElementSibling.closest('.task-item-expanded');
+            if (prevTask) {
+                previousTaskId = prevTask.dataset.taskId;
+            }
+        }
+
+        // Move in UI immediately for responsiveness
+        if (taskPlaceholder.parentNode) {
+            taskPlaceholder.parentNode.insertBefore(draggedTask, taskPlaceholder);
+            taskPlaceholder.remove();
+        }
+
+        // Reset drag state
+        draggedTask.style.opacity = '';
+        draggedTask.classList.remove('scale-105');
+        container.querySelectorAll('.task-list-column').forEach(col => {
+            col.classList.remove('ring-2', 'ring-cyan-500/50');
+        });
+
+        // Call API to persist the move
+        try {
+            const response = await fetch(`/tasks/${sourceListId}/${taskId}/move`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    target_list_id: targetListId,
+                    previous_task_id: previousTaskId
+                })
+            });
+
+            if (response.ok) {
+                // Refresh to get proper state from server
+                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+            } else {
+                console.error('Failed to move task');
+                // Refresh to restore proper state
+                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+            }
+        } catch (error) {
+            console.error('Error moving task:', error);
+            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+        }
+
+        draggedTask = null;
+        taskPlaceholder = null;
+    }
+
+    // Initialize task drag
+    initTaskDrag();
+
     // ========== TASK TOGGLE ==========
     container.querySelectorAll('.task-toggle-expanded').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -406,7 +608,7 @@
                     method: 'POST'
                 });
                 if (response.ok) {
-                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-expanded-content');
+                    htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
                     // Also refresh compact view if visible
                     const compactContainer = document.getElementById('todays-tasks');
                     if (compactContainer) {
@@ -480,7 +682,7 @@
             });
             if (response.ok) {
                 closeEditModal();
-                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-expanded-content');
+                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
                 // Also refresh compact view if visible
                 const compactContainer = document.getElementById('todays-tasks');
                 if (compactContainer) {
@@ -559,7 +761,7 @@
             });
             if (response.ok) {
                 closeCreateModal();
-                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-expanded-content');
+                htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
                 // Also refresh compact view if visible
                 const compactContainer = document.getElementById('todays-tasks');
                 if (compactContainer) {

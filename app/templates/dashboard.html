@@ -1,599 +1,883 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Perun's BlackBook{% endblock %}
+{% block title %}Dashboard - BlackBook{% endblock %}
+
+{% block head %}
+<style>
+    /* Dashboard-specific styles */
+    .dashboard-section-header {
+        @apply flex items-center justify-between px-3 py-2 text-xs font-medium uppercase tracking-wider text-blackbook-400 cursor-pointer hover:bg-blackbook-700/50 rounded-t transition-colors;
+    }
+    .dashboard-section-content {
+        @apply px-3 pb-3;
+    }
+    /* Mini calendar styles */
+    .mini-calendar {
+        font-size: 0.75rem;
+    }
+    .mini-calendar th {
+        @apply text-blackbook-500 font-medium py-1;
+    }
+    .mini-calendar td {
+        @apply text-center py-1 cursor-pointer rounded;
+    }
+    .mini-calendar td:hover:not(.empty):not(.today) {
+        @apply bg-blackbook-700;
+    }
+    .mini-calendar td.today {
+        @apply bg-blue-600 text-white font-semibold rounded;
+    }
+    .mini-calendar td.has-event {
+        @apply text-cyan-400 font-medium;
+    }
+    .mini-calendar td.empty {
+        @apply text-blackbook-700;
+    }
+    /* Task urgent styling */
+    .task-urgent {
+        @apply bg-red-900/40 border-l-4 border-red-500;
+    }
+    .task-scheduled {
+        @apply bg-blackbook-700/50 hover:bg-blackbook-700;
+    }
+    /* Keyboard nav footer - hidden on mobile, shown on lg+ */
+    .keyboard-footer {
+        @apply fixed bottom-0 left-0 right-0 bg-blackbook-800 border-t border-blackbook-700 px-4 py-2 hidden lg:flex items-center justify-between text-xs text-blackbook-400;
+    }
+    .keyboard-footer kbd {
+        @apply px-1.5 py-0.5 bg-blackbook-700 rounded text-blackbook-300 font-mono text-xs mr-1;
+    }
+    /* Task selection styling */
+    .task-selected {
+        @apply ring-2 ring-blue-500 ring-offset-1 ring-offset-blackbook-800;
+    }
+    /* View dropdown styling */
+    .view-dropdown {
+        @apply bg-cyan-600 text-white px-3 py-1.5 rounded text-sm font-medium cursor-pointer border-none outline-none;
+    }
+    .view-dropdown option {
+        @apply bg-blackbook-800 text-white;
+    }
+    /* Resizable sidebar styles */
+    .sidebar-resizer {
+        @apply w-1 bg-transparent hover:bg-cyan-500/50 cursor-col-resize transition-colors flex-shrink-0;
+    }
+    .sidebar-resizer:hover, .sidebar-resizer.dragging {
+        @apply bg-cyan-500;
+    }
+    .sidebar-collapse-btn {
+        @apply absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-blackbook-700 hover:bg-blackbook-600 rounded-r flex items-center justify-center text-blackbook-400 hover:text-white transition-colors z-10 cursor-pointer;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div x-data="dashboardLayout()" x-init="init()" class="space-y-4">
-    <!-- Layout Controls -->
-    <div class="flex justify-end gap-2">
-        <button @click="toggleEditMode()"
-                :class="editMode ? 'bg-blue-600 text-white' : 'bg-blackbook-700 text-blackbook-300 hover:bg-blackbook-600'"
-                class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
-            </svg>
-            <span x-text="editMode ? 'Done Editing' : 'Edit Layout'"></span>
-        </button>
+<div x-data="dashboardState()" x-init="init()" class="flex flex-col h-full max-w-screen-2xl mx-auto w-full">
+    <!-- Top Navigation Bar -->
+    <div class="flex-shrink-0 flex items-center justify-between mb-4 min-h-[48px] bg-blackbook-800/50 rounded-lg px-3 py-2">
+        <!-- Left: Main Tabs -->
+        <div class="flex items-center gap-2">
+            <button @click="mainTab = 'calendar'; $nextTick(() => { enforceCalendarHeight(); loadCalendarView(); })"
+                    :class="mainTab === 'calendar' ? 'bg-blackbook-700 text-white' : 'text-blackbook-400 hover:text-white hover:bg-blackbook-700/50'"
+                    class="px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Calendar
+            </button>
+            <button @click="mainTab = 'tasks'"
+                    :class="mainTab === 'tasks' ? 'bg-blackbook-700 text-white' : 'text-blackbook-400 hover:text-white hover:bg-blackbook-700/50'"
+                    class="px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                </svg>
+                Tasks
+            </button>
+            <!-- Task sub-tabs (shown when mainTab === 'tasks') -->
+            <template x-if="mainTab === 'tasks'">
+                <div class="flex items-center gap-1 ml-2 pl-2 border-l border-blackbook-700">
+                    <button @click="taskTab = 'week'; loadTasks('week')"
+                            :class="taskTab === 'week' ? 'bg-blackbook-600 text-white' : 'text-blackbook-400 hover:text-white'"
+                            class="px-3 py-1.5 text-sm rounded transition-colors">
+                        This Week
+                    </button>
+                    <button @click="taskTab = 'lists'; $nextTick(() => loadTasksKanban())"
+                            :class="taskTab === 'lists' ? 'bg-blackbook-600 text-white' : 'text-blackbook-400 hover:text-white'"
+                            class="px-3 py-1.5 text-sm rounded transition-colors">
+                        All Lists
+                    </button>
+                </div>
+            </template>
+        </div>
+
+        <!-- Right: Account Filter (always visible) -->
+        <div class="flex items-center gap-3">
+            <span class="text-xs text-blackbook-400">Show calendar:</span>
+            <select x-model="selectedAccountId"
+                    @change="onAccountFilterChange()"
+                    class="text-sm bg-blackbook-700 border border-blackbook-600 rounded px-3 py-1.5 text-blackbook-200 focus:outline-none focus:border-blue-500">
+                <option value="">All Accounts</option>
+                <template x-for="account in googleAccounts" :key="account.id">
+                    <option :value="account.id" x-text="account.email"></option>
+                </template>
+            </select>
+            <span class="text-xs text-blackbook-500" x-show="googleAccounts.length > 0" x-text="googleAccounts.length + ' connected'"></span>
+        </div>
     </div>
 
-    <!-- Dashboard Widgets Container -->
-    <div id="dashboard-widgets" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        <!-- Widget: Today's Calendar -->
-        <div class="dashboard-widget" data-widget-id="todays-calendar"
-             :class="{ 'ring-2 ring-blue-500': editMode }">
-            <div class="bg-white rounded-lg shadow-md overflow-hidden" x-data="{ open: true }">
-                <!-- Drag handle (always visible in header when edit mode) -->
-                <div class="px-4 py-3 border-b border-blackbook-200 flex items-center justify-between"
-                     :class="{ 'cursor-grab active:cursor-grabbing': $root.editMode }">
-                    <div class="flex items-center gap-2 flex-1 cursor-pointer" @click="if(!$root.editMode) open = !open">
-                        <template x-if="$root.editMode">
-                            <div class="widget-drag-handle p-1 hover:bg-blackbook-100 rounded cursor-grab">
-                                <svg class="w-4 h-4 text-blackbook-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
-                                </svg>
-                            </div>
-                        </template>
-                        <button type="button" class="p-0.5 hover:bg-blackbook-100 rounded transition-colors" x-show="!$root.editMode">
-                            <svg class="w-4 h-4 text-blackbook-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+    <!-- Calendar Tab Content - Full Width Calendar Views -->
+    <template x-if="mainTab === 'calendar'">
+        <div class="bg-blackbook-800 rounded-lg overflow-hidden flex flex-col" id="calendar-container">
+            <!-- Calendar Header - fixed height -->
+            <div class="flex-shrink-0 px-4 py-3 border-b border-blackbook-700 flex items-center justify-between">
+                <!-- Left: Today button + Navigation + Date display -->
+                <div class="flex items-center gap-3">
+                    <button @click="goToToday()"
+                            class="px-3 py-1.5 bg-blackbook-700 hover:bg-blackbook-600 rounded text-sm font-medium text-blackbook-200 transition-colors">
+                        Today
+                    </button>
+                    <div class="flex items-center gap-1">
+                        <button @click="navigateCalendar(-1)" class="p-1.5 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                             </svg>
                         </button>
-                        <div class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        <button @click="navigateCalendar(1)" class="p-1.5 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
-                            <div id="datetime-display" class="text-base font-semibold text-blackbook-900"></div>
-                        </div>
+                        </button>
                     </div>
-                    <button type="button"
-                            @click.stop="document.querySelector('[data-widget-id=upcoming-events]').scrollIntoView({behavior: 'smooth', block: 'start'})"
-                            class="text-sm text-blue-600 hover:text-blue-800">View Calendar</button>
+                    <span class="text-lg font-medium text-blackbook-100" x-text="calendarDateDisplay"></span>
+                    <span class="text-sm text-blackbook-500" x-show="calendarView === 'week'" x-text="'Week ' + currentWeekNumber"></span>
                 </div>
-                <div x-show="open" x-collapse class="p-4" id="todays-calendar-content"
-                     hx-get="/dashboard/today-widget"
-                     hx-trigger="load"
-                     hx-swap="innerHTML">
-                    <div class="flex justify-center py-8">
-                        <svg class="animate-spin h-6 w-6 text-blackbook-400" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+
+                <!-- Right: Actions + View Selector -->
+                <div class="flex items-center gap-3">
+                    <button class="p-2 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors" title="Search">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
-                    </div>
+                    </button>
+                    <button @click="showAddEvent()" class="p-2 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors" title="Add Event">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </button>
+                    <button class="p-2 hover:bg-blackbook-700 rounded text-blackbook-400 hover:text-white transition-colors" title="Settings">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </button>
+                    <select x-model="calendarView" @change="loadCalendarView()"
+                            class="view-dropdown">
+                        <option value="day">Day</option>
+                        <option value="week">Week</option>
+                        <option value="month">Month</option>
+                        <option value="schedule">Schedule</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Calendar Content - Flex grow to fill remaining space -->
+            <div class="flex-1 min-h-0 overflow-hidden flex flex-col" id="calendar-view-content">
+                <div class="flex justify-center items-center h-full">
+                    <svg class="animate-spin h-8 w-8 text-blackbook-500" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
                 </div>
             </div>
         </div>
+    </template>
 
-        <!-- Widget: Today's Tasks -->
-        <div class="dashboard-widget" data-widget-id="todays-tasks"
-             :class="{ 'ring-2 ring-blue-500': editMode }">
-            <div class="bg-white rounded-lg shadow-md overflow-hidden" x-data="{ open: true }">
-                <div class="px-4 py-3 border-b border-blackbook-200 flex items-center justify-between"
-                     :class="{ 'cursor-grab active:cursor-grabbing': $root.editMode }">
-                    <div class="flex items-center gap-2 flex-1 cursor-pointer" @click="if(!$root.editMode) open = !open">
-                        <template x-if="$root.editMode">
-                            <div class="widget-drag-handle p-1 hover:bg-blackbook-100 rounded cursor-grab">
-                                <svg class="w-4 h-4 text-blackbook-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
-                                </svg>
-                            </div>
-                        </template>
-                        <button type="button" class="p-0.5 hover:bg-blackbook-100 rounded transition-colors" x-show="!$root.editMode">
-                            <svg class="w-4 h-4 text-blackbook-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Tasks Tab Content - Two Panel Layout -->
+    <template x-if="mainTab === 'tasks'">
+        <div class="flex-1 flex flex-col lg:flex-row pb-16">
+            <!-- LEFT PANEL (Calendar, Schedule, Birthdays) -->
+            <div class="relative w-full lg:flex-shrink-0 space-y-4 transition-all duration-200"
+                 :style="sidebarCollapsed ? 'width: 0; overflow: hidden; padding: 0;' : 'width: ' + sidebarWidth + 'px;'"
+                 :class="{ 'lg:mr-4': !sidebarCollapsed }"
+                 x-show="!sidebarCollapsed || window.innerWidth < 1024">
+                <!-- Collapse button (desktop only) -->
+                <button @click="toggleSidebar()"
+                        class="hidden lg:flex sidebar-collapse-btn"
+                        title="Hide sidebar">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <!-- CALENDAR Section -->
+                <div class="bg-blackbook-800 rounded-lg overflow-hidden" x-data="{ open: true }">
+                    <div class="dashboard-section-header" @click="open = !open">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blackbook-500 transition-transform" :class="{ '-rotate-90': !open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
-                        </button>
-                        <h2 class="text-base font-semibold text-blackbook-900 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            Today's Tasks
-                        </h2>
-                    </div>
-                    <div class="flex items-center gap-2" @click.stop>
-                        <button hx-post="/tasks/sync"
-                                hx-target="#sync-tasks-status"
-                                hx-swap="innerHTML"
-                                class="text-sm text-blue-600 hover:text-blue-800">
-                            Sync Tasks
-                        </button>
-                        <span id="sync-tasks-status" class="text-xs text-blackbook-500"></span>
-                    </div>
-                </div>
-                <div x-show="open" x-collapse class="p-4" id="todays-tasks"
-                     hx-get="/dashboard/tasks-widget"
-                     hx-trigger="load"
-                     hx-swap="innerHTML">
-                    <div class="flex justify-center py-8">
-                        <svg class="animate-spin h-6 w-6 text-blackbook-400" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Widget: All Tasks (Expanded) -->
-        <div class="dashboard-widget lg:col-span-2" data-widget-id="all-tasks"
-             :class="{ 'ring-2 ring-blue-500': editMode }">
-            <div class="bg-white rounded-lg shadow-md overflow-hidden" x-data="{ open: localStorage.getItem('allTasksOpen') !== 'false' }"
-                 x-init="$watch('open', val => localStorage.setItem('allTasksOpen', val))">
-                <div class="px-4 py-3 border-b border-blackbook-200 flex items-center justify-between"
-                     :class="{ 'cursor-grab active:cursor-grabbing': $root.editMode }">
-                    <div class="flex items-center gap-2 flex-1" @click="if(!$root.editMode) open = !open">
-                        <template x-if="$root.editMode">
-                            <div class="widget-drag-handle p-1 hover:bg-blackbook-100 rounded cursor-grab">
-                                <svg class="w-4 h-4 text-blackbook-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
-                                </svg>
-                            </div>
-                        </template>
-                        <button type="button" class="p-0.5 hover:bg-blackbook-100 rounded transition-colors" x-show="!$root.editMode">
-                            <svg class="w-4 h-4 text-blackbook-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
-                        <h2 class="text-base font-semibold text-blackbook-900 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                            </svg>
-                            All Tasks
-                        </h2>
-                    </div>
-                    <div class="flex items-center gap-2" @click.stop>
-                        <button hx-post="/tasks/sync"
-                                hx-target="#sync-tasks-expanded-status"
-                                hx-swap="innerHTML"
-                                class="text-sm text-blue-600 hover:text-blue-800">
-                            Sync Tasks
-                        </button>
-                        <span id="sync-tasks-expanded-status" class="text-xs text-blackbook-500"></span>
-                    </div>
-                </div>
-                <div x-show="open" x-collapse class="p-4" id="tasks-expanded-content"
-                     hx-get="/dashboard/tasks-widget-expanded"
-                     hx-trigger="load"
-                     hx-swap="innerHTML">
-                    <div class="flex justify-center py-8">
-                        <svg class="animate-spin h-6 w-6 text-blackbook-400" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Widget: Upcoming Events -->
-        <div class="dashboard-widget lg:col-span-2" data-widget-id="upcoming-events" id="upcoming-events"
-             :class="{ 'ring-2 ring-blue-500': editMode }">
-            <div class="bg-white rounded-lg shadow-md overflow-hidden" x-data="{ open: true, activeTab: 'week' }">
-                <div class="px-4 py-3 border-b border-blackbook-200"
-                     :class="{ 'cursor-grab active:cursor-grabbing': $root.editMode }">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2 flex-1" @click="if(!$root.editMode) open = !open">
-                            <template x-if="$root.editMode">
-                                <div class="widget-drag-handle p-1 hover:bg-blackbook-100 rounded cursor-grab">
-                                    <svg class="w-4 h-4 text-blackbook-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
-                                    </svg>
-                                </div>
-                            </template>
-                            <button type="button" class="p-0.5 hover:bg-blackbook-100 rounded transition-colors" x-show="!$root.editMode">
-                                <svg class="w-4 h-4 text-blackbook-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
-                            <h2 class="text-base font-semibold text-blackbook-900 flex items-center gap-2">
-                                <svg class="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                </svg>
-                                Upcoming Events
-                            </h2>
-                        </div>
-                        <div class="flex items-center gap-2" @click.stop>
-                            <button hx-post="/calendar/sync?days=30"
-                                    hx-target="#sync-calendar-status"
-                                    hx-swap="innerHTML"
-                                    class="text-sm text-blue-600 hover:text-blue-800">
-                                Sync Calendar
-                            </button>
-                            <span id="sync-calendar-status" class="text-xs text-blackbook-500"></span>
-                        </div>
-                    </div>
-                    <!-- View Tabs -->
-                    <div x-show="open" x-collapse class="flex flex-wrap gap-2 mt-3">
-                        <div class="flex items-center bg-blackbook-700 rounded-md p-0.5">
-                            <button @click.stop="activeTab = 'week'; htmx.ajax('GET', '/calendar/week-view?days=5', '#upcoming-events-content')"
-                                    :class="activeTab === 'week' ? 'bg-blue-600 text-white' : 'text-blackbook-300 hover:text-white'"
-                                    class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1">
+                            CALENDAR
+                        </span>
+                        <div class="flex items-center gap-1 text-blackbook-500">
+                            <button @click.stop="prevMonth()" class="p-1 hover:text-white rounded hover:bg-blackbook-600">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                                 </svg>
-                                Next 5 Days
                             </button>
-                            <button @click.stop="activeTab = 'month'; htmx.ajax('GET', '/calendar/month-view', '#upcoming-events-content')"
-                                    :class="activeTab === 'month' ? 'bg-blue-600 text-white' : 'text-blackbook-300 hover:text-white'"
-                                    class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1">
+                            <button @click.stop="nextMonth()" class="p-1 hover:text-white rounded hover:bg-blackbook-600">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                 </svg>
-                                Month
                             </button>
                         </div>
                     </div>
+                    <div x-show="open" x-collapse class="dashboard-section-content">
+                        <!-- Month/Year Display -->
+                        <div class="text-sm font-medium text-blackbook-200 mb-3" x-text="calendarMonthYear"></div>
+
+                        <!-- Mini Calendar Grid -->
+                        <div id="mini-calendar-content"
+                             hx-get="/dashboard/mini-calendar"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            <div class="flex justify-center py-4">
+                                <svg class="animate-spin h-5 w-5 text-blackbook-500" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div x-show="open" x-collapse class="p-4" id="upcoming-events-content"
-                     hx-get="/calendar/week-view?days=5"
-                     hx-trigger="load"
-                     hx-swap="innerHTML">
-                    <div class="flex justify-center py-8">
-                        <svg class="animate-spin h-6 w-6 text-blackbook-400" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+
+                <!-- SCHEDULE Section -->
+                <div class="bg-blackbook-800 rounded-lg overflow-hidden" x-data="{ open: true }">
+                    <div class="dashboard-section-header" @click="open = !open">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blackbook-500 transition-transform" :class="{ '-rotate-90': !open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                            SCHEDULE
+                            <span class="text-blackbook-500 font-normal normal-case" id="schedule-count"></span>
+                        </span>
+                        <button @click.stop class="text-blue-400 hover:text-blue-300 flex items-center gap-1 normal-case font-normal"
+                                hx-get="/dashboard/add-event-form"
+                                hx-target="#add-event-modal-container"
+                                hx-swap="innerHTML">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Add
+                        </button>
+                    </div>
+                    <div x-show="open" x-collapse class="dashboard-section-content">
+                        <div id="schedule-content"
+                             hx-get="/dashboard/schedule-widget"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            <div class="flex justify-center py-4">
+                                <svg class="animate-spin h-5 w-5 text-blackbook-500" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BIRTHDAYS Section -->
+                <div class="bg-blackbook-800 rounded-lg overflow-hidden" x-data="{ open: true }">
+                    <div class="dashboard-section-header" @click="open = !open">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blackbook-500 transition-transform" :class="{ '-rotate-90': !open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                            BIRTHDAYS
+                            <span class="text-blackbook-500 font-normal normal-case" id="birthdays-count"></span>
+                        </span>
+                    </div>
+                    <div x-show="open" x-collapse class="dashboard-section-content">
+                        <div id="birthdays-compact-content"
+                             hx-get="/dashboard/birthdays-compact"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            <div class="flex justify-center py-4">
+                                <svg class="animate-spin h-5 w-5 text-blackbook-500" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Widget: Upcoming Birthdays -->
-        <div class="dashboard-widget lg:col-span-2" data-widget-id="upcoming-birthdays"
-             :class="{ 'ring-2 ring-blue-500': editMode }">
-            <div class="bg-white rounded-lg shadow-md overflow-hidden" x-data="{ open: true, view: 'list' }">
-                <div class="px-4 py-3 border-b border-blackbook-200"
-                     :class="{ 'cursor-grab active:cursor-grabbing': $root.editMode }">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2 flex-1" @click="if(!$root.editMode) open = !open">
-                            <template x-if="$root.editMode">
-                                <div class="widget-drag-handle p-1 hover:bg-blackbook-100 rounded cursor-grab">
-                                    <svg class="w-4 h-4 text-blackbook-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+            <!-- Resizable Divider (desktop only) -->
+            <div class="hidden lg:flex items-center flex-shrink-0"
+                 x-show="!sidebarCollapsed">
+                <div class="sidebar-resizer h-full min-h-[200px]"
+                     @mousedown="startResize($event)"
+                     :class="{ 'dragging': isResizing }">
+                </div>
+            </div>
+
+            <!-- Expand button when sidebar is collapsed -->
+            <div class="hidden lg:flex items-start flex-shrink-0 pt-2"
+                 x-show="sidebarCollapsed">
+                <button @click="toggleSidebar()"
+                        class="w-8 h-16 bg-blackbook-700 hover:bg-blackbook-600 rounded-r flex items-center justify-center text-blackbook-400 hover:text-white transition-colors"
+                        title="Show sidebar">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- RIGHT PANEL (Tasks) -->
+            <div class="flex-1 min-w-0 lg:ml-4"
+                 :class="{ 'lg:ml-0': sidebarCollapsed }">
+                <!-- Tasks panel for Week view -->
+                <template x-if="taskTab === 'week'">
+                    <div class="bg-blackbook-800 rounded-lg overflow-hidden">
+                        <!-- Header with title, date, and add task button -->
+                        <div class="px-4 py-3 border-b border-blackbook-700 flex items-center justify-between">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-sm font-semibold text-blackbook-200">This Week's Tasks</span>
+                                <span class="bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded" id="today-task-count">0</span>
+                                <span class="text-blackbook-500 mx-1">·</span>
+                                <span class="text-sm text-blackbook-400">Today is <span id="today-date-display"></span></span>
+                                <span class="text-blackbook-500 mx-1">·</span>
+                                <span class="text-sm text-blackbook-500">Timezone: <span id="timezone-display">NYC</span></span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span id="sync-status" class="text-xs"></span>
+                                <button class="text-blackbook-400 hover:text-blackbook-200 text-sm flex items-center gap-1"
+                                        hx-post="/tasks/sync"
+                                        hx-target="#sync-status"
+                                        hx-swap="innerHTML">
+                                    <svg class="w-4 h-4 htmx-request:animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                     </svg>
-                                </div>
-                            </template>
-                            <button type="button" class="p-0.5 hover:bg-blackbook-100 rounded transition-colors" x-show="!$root.editMode">
-                                <svg class="w-4 h-4 text-blackbook-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
-                            <h2 class="text-base font-semibold text-blackbook-900 flex items-center gap-2">
-                                <svg class="w-5 h-5 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0A2.704 2.704 0 003 15.546V12a9 9 0 1118 0v3.546z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h.01M12 4a1 1 0 00-1 1v3a1 1 0 001 1h.01M6 16h.01"/>
-                                </svg>
-                                Upcoming Birthdays
-                            </h2>
-                        </div>
-                        <div class="flex items-center gap-3" @click.stop>
-                            <div class="flex items-center bg-blackbook-100 rounded-md p-0.5">
-                                <button @click="view = 'list'; htmx.ajax('GET', '/dashboard/birthdays-widget?view=list', '#birthday-reminders')"
-                                        :class="view === 'list' ? 'bg-white shadow-sm' : 'hover:bg-blackbook-200'"
-                                        class="px-2 py-1 rounded text-sm font-medium transition-colors flex items-center gap-1">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
-                                    </svg>
-                                    List
+                                    Sync
                                 </button>
-                                <button @click="view = 'calendar'; htmx.ajax('GET', '/dashboard/birthdays-widget?view=calendar', '#birthday-reminders')"
-                                        :class="view === 'calendar' ? 'bg-white shadow-sm' : 'hover:bg-blackbook-200'"
-                                        class="px-2 py-1 rounded text-sm font-medium transition-colors flex items-center gap-1">
+                                <button class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                                        id="add-task-btn"
+                                        hx-get="/dashboard/add-task-modal"
+                                        hx-target="#add-task-modal-container"
+                                        hx-swap="innerHTML">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                     </svg>
-                                    Calendar
+                                    Add task
                                 </button>
                             </div>
-                            <a href="/people" class="text-sm text-blue-600 hover:text-blue-800">View People</a>
+                        </div>
+
+                        <!-- Tasks Content -->
+                        <div class="p-4" id="tasks-panel-content"
+                             hx-get="/dashboard/tasks-panel?view=week"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            <div class="flex justify-center py-8">
+                                <svg class="animate-spin h-6 w-6 text-blackbook-500" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div x-show="open" x-collapse class="p-4" id="birthday-reminders"
-                     hx-get="/dashboard/birthdays-widget?view=list"
-                     hx-trigger="load"
-                     hx-swap="innerHTML">
-                    <div class="flex justify-center py-8">
-                        <svg class="animate-spin h-6 w-6 text-blackbook-400" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+                </template>
+
+                <!-- Tasks Kanban (shown when "All Lists" selected) -->
+                <template x-if="taskTab === 'lists'">
+                    <div class="bg-blackbook-800 rounded-lg overflow-hidden flex flex-col" id="kanban-container"
+                         :style="'height: calc(100vh - 180px); min-height: 400px;'">
+                        <div class="p-3 flex-1 overflow-hidden">
+                            <div id="tasks-kanban-content" class="h-full"
+                                 hx-get="/dashboard/tasks-widget-expanded"
+                                 hx-trigger="load"
+                                 hx-swap="innerHTML">
+                                <div class="flex justify-center py-8">
+                                    <svg class="animate-spin h-6 w-6 text-blackbook-500" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </template>
             </div>
         </div>
+    </template>
 
+    <!-- Keyboard Navigation Footer -->
+    <div class="keyboard-footer">
+        <div class="flex items-center gap-4">
+            <span><kbd>j/k</kbd> Navigate</span>
+            <span><kbd>x</kbd> Complete</span>
+            <span><kbd>e</kbd> Edit</span>
+            <span><kbd>n</kbd> New task</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span><kbd>c</kbd> Calendar</span>
+            <span><kbd>1</kbd> Week</span>
+            <span><kbd>2</kbd> Lists</span>
+            <span><kbd>[</kbd> Sidebar</span>
+        </div>
     </div>
+
+    <!-- Modal Containers -->
+    <div id="add-event-modal-container"></div>
+    <div id="add-task-modal-container"></div>
+    <div id="event-detail-modal-container"></div>
 </div>
 
 <script>
-function dashboardLayout() {
+function dashboardState() {
     return {
-        editMode: false,
-        widgetOrder: [],
-        dragState: {
-            dragging: false,
-            element: null,
-            clone: null,
-            placeholder: null,
-            offsetX: 0,
-            offsetY: 0
+        mainTab: 'tasks',           // 'calendar' or 'tasks' - default to tasks
+        taskTab: 'week',            // 'week' or 'lists'
+        calendarView: 'week',       // 'day', 'week', 'month', 'schedule'
+        calendarDate: new Date(),   // Current focused date for calendar views
+        calendarMonth: new Date().getMonth(),
+        calendarYear: new Date().getFullYear(),
+        selectedTaskIndex: -1,
+        selectedAccountId: '',      // '' = All Accounts
+        googleAccounts: [],         // Populated on init
+        // Sidebar resizing state
+        sidebarWidth: 300,          // Default width in pixels
+        sidebarCollapsed: false,    // Whether sidebar is fully hidden
+        isResizing: false,          // Whether user is currently dragging resizer
+        minSidebarWidth: 200,       // Minimum sidebar width
+        maxSidebarWidth: 500,       // Maximum sidebar width
+
+        get calendarMonthYear() {
+            const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+            return `${months[this.calendarMonth]} ${this.calendarYear}`;
+        },
+
+        get calendarDateDisplay() {
+            const opts = { month: 'long', year: 'numeric' };
+            if (this.calendarView === 'day') {
+                return this.calendarDate.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+            } else if (this.calendarView === 'month' || this.calendarView === 'schedule') {
+                return this.calendarDate.toLocaleDateString('en-US', opts);
+            } else {
+                return this.calendarDate.toLocaleDateString('en-US', opts);
+            }
+        },
+
+        get currentWeekNumber() {
+            const d = new Date(this.calendarDate);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+            const yearStart = new Date(d.getFullYear(), 0, 1);
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
         },
 
         init() {
-            // Load saved order from localStorage
-            const savedOrder = localStorage.getItem('dashboardWidgetOrder');
-            if (savedOrder) {
-                this.widgetOrder = JSON.parse(savedOrder);
-                this.applySavedOrder();
-            }
-        },
+            this.initKeyboardNavigation();
+            this.loadGoogleAccounts();
+            this.loadSidebarPreferences();
 
-        toggleEditMode() {
-            this.editMode = !this.editMode;
-            if (this.editMode) {
-                this.$nextTick(() => this.initDragDrop());
-            } else {
-                this.cleanupDragDrop();
-            }
-        },
+            window.dashboardCurrentView = this.taskTab;
+            window.dashboardAccountId = this.selectedAccountId;
 
-        applySavedOrder() {
-            const container = document.getElementById('dashboard-widgets');
-            if (!container) return;
+            setInterval(() => this.updateDateDisplay(), 60000);
 
-            const widgets = {};
-            container.querySelectorAll('.dashboard-widget').forEach(el => {
-                widgets[el.dataset.widgetId] = el;
+            // Load initial content after Alpine renders templates
+            // hx-trigger="load" doesn't work inside Alpine x-if templates
+            this.$nextTick(() => {
+                // Update date display now that DOM elements exist
+                this.updateDateDisplay();
+
+                if (this.mainTab === 'tasks') {
+                    if (this.taskTab === 'lists') {
+                        this.loadTasksKanban();
+                    } else {
+                        this.loadTasks(this.taskTab);
+                    }
+                } else if (this.mainTab === 'calendar') {
+                    this.loadCalendarView();
+                }
             });
 
-            // Reorder based on saved order
-            this.widgetOrder.forEach(id => {
-                if (widgets[id]) {
-                    container.appendChild(widgets[id]);
+            // Re-enforce calendar height on window resize
+            window.addEventListener('resize', () => {
+                if (this.mainTab === 'calendar') {
+                    this.enforceCalendarHeight();
+                }
+            });
+
+            // Handle mouse events for sidebar resizing
+            window.addEventListener('mousemove', (e) => this.handleResize(e));
+            window.addEventListener('mouseup', () => this.stopResize());
+
+            document.body.addEventListener('htmx:afterSwap', (e) => {
+                if (e.detail.target.id === 'tasks-panel-content') {
+                    this.selectedTaskIndex = -1;
+                    this.updateTaskSelection();
+                }
+                // Force calendar container height after content loads
+                if (e.detail.target.id === 'calendar-view-content') {
+                    this.enforceCalendarHeight();
+                }
+            });
+
+            // Listen for switch-to-tasks event from calendar views
+            window.addEventListener('switch-to-tasks', () => {
+                this.mainTab = 'tasks';
+                this.taskTab = 'week';
+                // Wait for DOM to update before loading tasks
+                this.$nextTick(() => this.loadTasks('week'));
+            });
+
+            const self = this;
+            document.body.addEventListener('htmx:configRequest', (e) => {
+                const path = e.detail.path || '';
+                if (path.includes('/dashboard/schedule-widget') ||
+                    path.includes('/dashboard/tasks-widget-expanded') ||
+                    path.includes('/dashboard/tasks-panel') ||
+                    path.includes('/dashboard/calendar-view/')) {
+                    if (self.selectedAccountId) {
+                        e.detail.parameters['account_id'] = self.selectedAccountId;
+                    }
                 }
             });
         },
 
-        initDragDrop() {
-            const container = document.getElementById('dashboard-widgets');
-            if (!container) return;
-
-            // Add event listeners to drag handles
-            container.querySelectorAll('.widget-drag-handle').forEach(handle => {
-                handle.addEventListener('mousedown', (e) => this.startDrag(e));
-                handle.addEventListener('touchstart', (e) => this.startDrag(e), { passive: false });
-            });
-
-            // Global move/end listeners
-            this._onDrag = (e) => this.onDrag(e);
-            this._endDrag = (e) => this.endDrag(e);
-
-            document.addEventListener('mousemove', this._onDrag);
-            document.addEventListener('touchmove', this._onDrag, { passive: false });
-            document.addEventListener('mouseup', this._endDrag);
-            document.addEventListener('touchend', this._endDrag);
+        // Calendar view methods
+        goToToday() {
+            this.calendarDate = new Date();
+            this.loadCalendarView();
         },
 
-        cleanupDragDrop() {
-            if (this.dragState.clone) {
-                this.dragState.clone.remove();
+        navigateCalendar(direction) {
+            const d = new Date(this.calendarDate);
+            if (this.calendarView === 'day') {
+                d.setDate(d.getDate() + direction);
+            } else if (this.calendarView === 'week') {
+                d.setDate(d.getDate() + (direction * 7));
+            } else if (this.calendarView === 'month') {
+                d.setMonth(d.getMonth() + direction);
+            } else if (this.calendarView === 'schedule') {
+                d.setDate(d.getDate() + (direction * 7));
             }
-            if (this.dragState.placeholder) {
-                this.dragState.placeholder.remove();
-            }
-            document.querySelectorAll('.widget-drop-indicator').forEach(el => el.remove());
+            this.calendarDate = d;
+            this.loadCalendarView();
+        },
 
-            // Remove event listeners
-            if (this._onDrag) {
-                document.removeEventListener('mousemove', this._onDrag);
-                document.removeEventListener('touchmove', this._onDrag);
+        loadCalendarView() {
+            const dateStr = this.calendarDate.toISOString().split('T')[0];
+            const accountParam = this.selectedAccountId ? `&account_id=${this.selectedAccountId}` : '';
+            htmx.ajax('GET', `/dashboard/calendar-view/${this.calendarView}?date=${dateStr}${accountParam}`, '#calendar-view-content');
+        },
+
+        enforceCalendarHeight() {
+            // Calculate available height and enforce it via JavaScript
+            const navHeight = 64;  // BlackBook nav bar
+            const mainPadding = 48; // py-6 = 24px top + 24px bottom
+            const tabsHeight = 52;  // Calendar/Tasks tabs row
+            const calendarHeader = 56; // Calendar header with Today button
+            const footerHeight = 76;  // Footer
+            const buffer = 20;  // Extra buffer
+
+            const availableHeight = window.innerHeight - navHeight - mainPadding - tabsHeight - footerHeight - buffer;
+
+            const container = document.getElementById('calendar-container');
+            const content = document.getElementById('calendar-view-content');
+
+            if (container) {
+                container.style.height = availableHeight + 'px';
+                container.style.maxHeight = availableHeight + 'px';
             }
-            if (this._endDrag) {
-                document.removeEventListener('mouseup', this._endDrag);
-                document.removeEventListener('touchend', this._endDrag);
+            if (content) {
+                const contentHeight = availableHeight - calendarHeader;
+                content.style.height = contentHeight + 'px';
+                content.style.maxHeight = contentHeight + 'px';
             }
         },
 
-        startDrag(e) {
-            if (e.button && e.button !== 0) return;
+        showAddEvent() {
+            htmx.ajax('GET', '/dashboard/add-event-form', '#add-event-modal-container');
+        },
+
+        // Mini calendar methods (for left panel)
+        prevMonth() {
+            if (this.calendarMonth === 0) {
+                this.calendarMonth = 11;
+                this.calendarYear--;
+            } else {
+                this.calendarMonth--;
+            }
+            this.loadMiniCalendar();
+        },
+
+        nextMonth() {
+            if (this.calendarMonth === 11) {
+                this.calendarMonth = 0;
+                this.calendarYear++;
+            } else {
+                this.calendarMonth++;
+            }
+            this.loadMiniCalendar();
+        },
+
+        loadMiniCalendar() {
+            htmx.ajax('GET', `/dashboard/mini-calendar?month=${this.calendarMonth + 1}&year=${this.calendarYear}`, '#mini-calendar-content');
+        },
+
+        // Sidebar resize methods
+        loadSidebarPreferences() {
+            const savedWidth = localStorage.getItem('dashboardSidebarWidth');
+            const savedCollapsed = localStorage.getItem('dashboardSidebarCollapsed');
+            if (savedWidth) {
+                this.sidebarWidth = parseInt(savedWidth, 10);
+            }
+            if (savedCollapsed) {
+                this.sidebarCollapsed = savedCollapsed === 'true';
+            }
+        },
+
+        saveSidebarPreferences() {
+            localStorage.setItem('dashboardSidebarWidth', this.sidebarWidth.toString());
+            localStorage.setItem('dashboardSidebarCollapsed', this.sidebarCollapsed.toString());
+        },
+
+        toggleSidebar() {
+            this.sidebarCollapsed = !this.sidebarCollapsed;
+            this.saveSidebarPreferences();
+        },
+
+        startResize(e) {
+            this.isResizing = true;
             e.preventDefault();
-            e.stopPropagation();
-
-            const handle = e.target.closest('.widget-drag-handle');
-            if (!handle) return;
-
-            const widget = handle.closest('.dashboard-widget');
-            if (!widget) return;
-
-            const rect = widget.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-            this.dragState.dragging = true;
-            this.dragState.element = widget;
-            this.dragState.offsetX = clientX - rect.left;
-            this.dragState.offsetY = clientY - rect.top;
-
-            // Create placeholder
-            this.dragState.placeholder = document.createElement('div');
-            this.dragState.placeholder.className = widget.className + ' opacity-30 border-2 border-dashed border-blue-400';
-            this.dragState.placeholder.style.height = rect.height + 'px';
-            widget.parentNode.insertBefore(this.dragState.placeholder, widget);
-
-            // Create visual clone
-            this.dragState.clone = widget.cloneNode(true);
-            this.dragState.clone.style.cssText = `
-                position: fixed;
-                left: ${rect.left}px;
-                top: ${rect.top}px;
-                width: ${rect.width}px;
-                z-index: 1000;
-                opacity: 0.95;
-                pointer-events: none;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-                transform: rotate(1deg);
-            `;
-            document.body.appendChild(this.dragState.clone);
-
-            // Hide original
-            widget.style.display = 'none';
-
-            document.body.style.cursor = 'grabbing';
+            document.body.style.cursor = 'col-resize';
             document.body.style.userSelect = 'none';
         },
 
-        onDrag(e) {
-            if (!this.dragState.dragging) return;
-            e.preventDefault();
+        handleResize(e) {
+            if (!this.isResizing) return;
 
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const container = document.querySelector('.flex-1.flex.flex-col.lg\\:flex-row');
+            if (!container) return;
 
-            // Move clone
-            if (this.dragState.clone) {
-                this.dragState.clone.style.left = (clientX - this.dragState.offsetX) + 'px';
-                this.dragState.clone.style.top = (clientY - this.dragState.offsetY) + 'px';
+            const containerRect = container.getBoundingClientRect();
+            let newWidth = e.clientX - containerRect.left;
+
+            // Clamp to min/max
+            newWidth = Math.max(this.minSidebarWidth, Math.min(this.maxSidebarWidth, newWidth));
+            this.sidebarWidth = newWidth;
+        },
+
+        stopResize() {
+            if (this.isResizing) {
+                this.isResizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                this.saveSidebarPreferences();
             }
+        },
 
-            // Find drop target
-            const container = document.getElementById('dashboard-widgets');
-            const widgets = Array.from(container.querySelectorAll('.dashboard-widget'))
-                .filter(w => w !== this.dragState.element && w.style.display !== 'none');
+        // Account methods
+        async loadGoogleAccounts() {
+            try {
+                const response = await fetch('/dashboard/api/google-accounts');
+                const data = await response.json();
+                this.googleAccounts = data.accounts || [];
+            } catch (e) {
+                console.error('Failed to load accounts:', e);
+            }
+        },
 
-            let targetWidget = null;
-            let insertBefore = true;
-
-            for (const widget of widgets) {
-                const rect = widget.getBoundingClientRect();
-                const midY = rect.top + rect.height / 2;
-                const midX = rect.left + rect.width / 2;
-
-                // Check if cursor is within this widget's area
-                if (clientY >= rect.top && clientY <= rect.bottom) {
-                    if (clientY < midY) {
-                        targetWidget = widget;
-                        insertBefore = true;
-                        break;
-                    } else {
-                        targetWidget = widget;
-                        insertBefore = false;
-                    }
+        onAccountFilterChange() {
+            window.dashboardAccountId = this.selectedAccountId;
+            if (this.mainTab === 'calendar') {
+                this.loadCalendarView();
+            } else {
+                this.refreshSchedule();
+                this.loadTasks(this.taskTab);
+                if (this.taskTab === 'lists') {
+                    this.loadTasksKanban();
                 }
             }
+        },
 
-            // Move placeholder to new position
-            if (targetWidget && this.dragState.placeholder) {
-                if (insertBefore) {
-                    container.insertBefore(this.dragState.placeholder, targetWidget);
+        refreshSchedule() {
+            const accountParam = this.selectedAccountId ? `&account_id=${this.selectedAccountId}` : '';
+            htmx.ajax('GET', `/dashboard/schedule-widget?${accountParam}`, '#schedule-content');
+        },
+
+        updateDateDisplay() {
+            const now = new Date();
+            const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+            const dateStr = now.toLocaleDateString('en-US', options);
+
+            const dateDisplay = document.getElementById('today-date-display');
+            if (dateDisplay) dateDisplay.textContent = dateStr;
+
+            const tzAbbreviations = {
+                'America/New_York': 'NYC',
+                'America/Chicago': 'CHI',
+                'America/Denver': 'DEN',
+                'America/Los_Angeles': 'LA',
+                'Europe/London': 'LON',
+                'Europe/Paris': 'PAR',
+                'Asia/Tokyo': 'TYO',
+                'UTC': 'UTC'
+            };
+            const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const tzAbbr = tzAbbreviations[userTz] || userTz.split('/').pop().substring(0, 3).toUpperCase();
+
+            const tzDisplay = document.getElementById('timezone-display');
+            if (tzDisplay) tzDisplay.textContent = tzAbbr;
+        },
+
+        loadTasks(view) {
+            this.taskTab = view;
+            window.dashboardCurrentView = view;
+            const accountParam = this.selectedAccountId ? `&account_id=${this.selectedAccountId}` : '';
+            htmx.ajax('GET', `/dashboard/tasks-panel?view=${view}${accountParam}`, '#tasks-panel-content');
+        },
+
+        loadTasksKanban() {
+            const accountParam = this.selectedAccountId ? `?account_id=${this.selectedAccountId}` : '';
+            htmx.ajax('GET', `/dashboard/tasks-widget-expanded${accountParam}`, '#tasks-kanban-content');
+        },
+
+        getTaskItems() {
+            return document.querySelectorAll('#tasks-panel-content .task-item');
+        },
+
+        updateTaskSelection() {
+            const tasks = this.getTaskItems();
+            tasks.forEach((task, index) => {
+                if (index === this.selectedTaskIndex) {
+                    task.classList.add('task-selected');
+                    task.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
                 } else {
-                    container.insertBefore(this.dragState.placeholder, targetWidget.nextSibling);
+                    task.classList.remove('task-selected');
                 }
+            });
+        },
+
+        selectNextTask() {
+            const tasks = this.getTaskItems();
+            if (tasks.length === 0) return;
+            if (this.selectedTaskIndex < tasks.length - 1) {
+                this.selectedTaskIndex++;
+            } else {
+                this.selectedTaskIndex = 0;
+            }
+            this.updateTaskSelection();
+        },
+
+        selectPrevTask() {
+            const tasks = this.getTaskItems();
+            if (tasks.length === 0) return;
+            if (this.selectedTaskIndex > 0) {
+                this.selectedTaskIndex--;
+            } else {
+                this.selectedTaskIndex = tasks.length - 1;
+            }
+            this.updateTaskSelection();
+        },
+
+        completeSelectedTask() {
+            const tasks = this.getTaskItems();
+            if (this.selectedTaskIndex < 0 || this.selectedTaskIndex >= tasks.length) return;
+            const task = tasks[this.selectedTaskIndex];
+            const toggleBtn = task.querySelector('.task-toggle');
+            if (toggleBtn) toggleBtn.click();
+        },
+
+        editSelectedTask() {
+            const tasks = this.getTaskItems();
+            if (this.selectedTaskIndex < 0 || this.selectedTaskIndex >= tasks.length) return;
+            const task = tasks[this.selectedTaskIndex];
+            const editBtn = task.querySelector('.task-edit');
+            if (editBtn) {
+                editBtn.click();
+            } else {
+                const content = task.querySelector('.task-content');
+                if (content) content.click();
             }
         },
 
-        endDrag(e) {
-            if (!this.dragState.dragging) return;
+        initKeyboardNavigation() {
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
 
-            const container = document.getElementById('dashboard-widgets');
+                const addTaskModal = document.getElementById('add-task-modal');
+                const editModal = document.getElementById('task-edit-modal');
+                const addEventModal = document.getElementById('add-event-modal');
+                const eventDetailModal = document.getElementById('event-detail-modal');
+                if (addTaskModal || addEventModal || eventDetailModal || (editModal && !editModal.classList.contains('hidden'))) return;
 
-            // Move actual element to placeholder position
-            if (this.dragState.placeholder && this.dragState.element) {
-                container.insertBefore(this.dragState.element, this.dragState.placeholder);
-                this.dragState.element.style.display = '';
-                this.saveWidgetOrder();
-            }
-
-            // Cleanup
-            if (this.dragState.clone) {
-                this.dragState.clone.remove();
-            }
-            if (this.dragState.placeholder) {
-                this.dragState.placeholder.remove();
-            }
-
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-
-            this.dragState = { dragging: false, element: null, clone: null, placeholder: null, offsetX: 0, offsetY: 0 };
-        },
-
-        saveWidgetOrder() {
-            const container = document.getElementById('dashboard-widgets');
-            const newOrder = Array.from(container.querySelectorAll('.dashboard-widget'))
-                .map(el => el.dataset.widgetId);
-
-            this.widgetOrder = newOrder;
-            localStorage.setItem('dashboardWidgetOrder', JSON.stringify(newOrder));
-
-            // Also save to server
-            fetch('/dashboard/save-layout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ section_order: newOrder })
-            }).catch(err => console.error('Error saving layout:', err));
+                switch(e.key) {
+                    case 'c':
+                        this.mainTab = 'calendar';
+                        this.$nextTick(() => { this.enforceCalendarHeight(); this.loadCalendarView(); });
+                        break;
+                    case '1':
+                        this.mainTab = 'tasks';
+                        this.taskTab = 'week';
+                        this.loadTasks('week');
+                        break;
+                    case '2':
+                        this.mainTab = 'tasks';
+                        this.taskTab = 'lists';
+                        this.$nextTick(() => this.loadTasksKanban());
+                        break;
+                    case 'n':
+                        e.preventDefault();
+                        document.getElementById('add-task-btn')?.click();
+                        break;
+                    case 'j':
+                        if (this.mainTab === 'tasks') {
+                            e.preventDefault();
+                            this.selectNextTask();
+                        }
+                        break;
+                    case 'k':
+                        if (this.mainTab === 'tasks') {
+                            e.preventDefault();
+                            this.selectPrevTask();
+                        }
+                        break;
+                    case 'x':
+                        if (this.mainTab === 'tasks') {
+                            e.preventDefault();
+                            this.completeSelectedTask();
+                        }
+                        break;
+                    case 'e':
+                        if (this.mainTab === 'tasks') {
+                            e.preventDefault();
+                            this.editSelectedTask();
+                        }
+                        break;
+                    case 'Escape':
+                        this.selectedTaskIndex = -1;
+                        this.updateTaskSelection();
+                        break;
+                    case '[':
+                        // Toggle sidebar (only in tasks view)
+                        if (this.mainTab === 'tasks') {
+                            e.preventDefault();
+                            this.toggleSidebar();
+                        }
+                        break;
+                }
+            });
         }
     };
 }
-
-// DateTime display with live clock
-(function() {
-    const datetimeDisplay = document.getElementById('datetime-display');
-    if (!datetimeDisplay) return;
-
-    // Timezone abbreviation mapping
-    const tzAbbreviations = {
-        'America/New_York': 'NYC',
-        'America/Chicago': 'CHI',
-        'America/Denver': 'DEN',
-        'America/Los_Angeles': 'LA',
-        'America/Anchorage': 'ANC',
-        'Pacific/Honolulu': 'HNL',
-        'America/Toronto': 'TOR',
-        'America/Vancouver': 'VAN',
-        'America/Mexico_City': 'MEX',
-        'America/Sao_Paulo': 'SAO',
-        'America/Buenos_Aires': 'BUE',
-        'Europe/London': 'LON',
-        'Europe/Paris': 'PAR',
-        'Europe/Berlin': 'BER',
-        'Europe/Amsterdam': 'AMS',
-        'Europe/Warsaw': 'WAW',
-        'Europe/Moscow': 'MOW',
-        'Europe/Istanbul': 'IST',
-        'Asia/Dubai': 'DXB',
-        'Asia/Kolkata': 'DEL',
-        'Asia/Singapore': 'SIN',
-        'Asia/Hong_Kong': 'HKG',
-        'Asia/Shanghai': 'SHA',
-        'Asia/Tokyo': 'TYO',
-        'Asia/Seoul': 'SEL',
-        'Australia/Sydney': 'SYD',
-        'Australia/Melbourne': 'MEL',
-        'Pacific/Auckland': 'AKL',
-        'UTC': 'UTC'
-    };
-
-    function updateDateTime() {
-        const now = new Date();
-
-        // Format: Monday, December 15, 2025
-        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        const dateStr = now.toLocaleDateString('en-US', dateOptions);
-
-        // Format time: HH:MM (24-hour)
-        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-        // Get timezone abbreviation
-        const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const tzAbbr = tzAbbreviations[userTz] || userTz.split('/').pop().substring(0, 3).toUpperCase();
-
-        datetimeDisplay.innerHTML = `${dateStr} <span class="text-blackbook-500 ml-2">${timeStr} ${tzAbbr}</span>`;
-    }
-
-    // Update immediately and then every minute
-    updateDateTime();
-    setInterval(updateDateTime, 60000);
-})();
 </script>
 {% endblock %}

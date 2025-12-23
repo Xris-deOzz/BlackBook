@@ -228,7 +228,7 @@
 <body class="bg-blackbook-50 dark:bg-blackbook-900 text-blackbook-900 dark:text-blackbook-100 min-h-screen flex flex-col transition-colors duration-200">
     <!-- Navigation -->
     <nav class="bg-blackbook-800 shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="w-full px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
                     <a href="/" class="text-xl font-bold text-white">
@@ -390,7 +390,7 @@
     {% block breadcrumb %}{% endblock %}
 
     <!-- Main Content -->
-    <main class="flex-grow max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
+    <main class="flex-grow w-full py-6 px-4 sm:px-6 lg:px-8">
         {% block content %}
         <div class="bg-white dark:bg-blackbook-800 rounded-lg shadow-md p-6">
             <h1 class="text-2xl font-bold mb-4">{{ title | default("Welcome") }}</h1>
@@ -421,7 +421,7 @@
 
     <!-- Footer -->
     <footer class="bg-blackbook-800 text-white mt-auto">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="w-full px-4 sm:px-6 lg:px-8 py-4">
             <p class="text-center text-sm text-blackbook-400">
                 BlackBook &copy; 2025 | Personal CRM
             </p>

@@ -1,0 +1,125 @@
+<!-- Add Task Modal -->
+<div id="add-task-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" @keydown.escape.window="closeAddTaskModal()">
+    <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-md mx-4 border border-blackbook-600 max-h-[90vh] overflow-y-auto" @click.outside="closeAddTaskModal()">
+        <h3 class="text-lg font-semibold text-blackbook-100 mb-4">Add New Task</h3>
+        <form id="add-task-form" class="space-y-3">
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">List</label>
+                <select id="add-task-list"
+                        class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    {% for list in task_lists %}
+                    <option value="{{ list.list_id }}" {% if loop.first %}selected{% endif %}>{{ list.list_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Title <span class="text-red-400">*</span></label>
+                <input type="text" id="add-task-title" required autofocus
+                       class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500"
+                       placeholder="Enter task title...">
+            </div>
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Notes</label>
+                <textarea id="add-task-notes" rows="3"
+                          class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-300 focus:outline-none focus:border-blue-500"
+                          placeholder="Add notes..."></textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
+                <div class="flex gap-2">
+                    <input type="date" id="add-task-due-date"
+                           class="flex-1 px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    <button type="button" onclick="setTaskQuickDate('add-task-due-date', 0)"
+                            class="px-2 py-2 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Today</button>
+                    <button type="button" onclick="setTaskQuickDate('add-task-due-date', 1)"
+                            class="px-2 py-2 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Tmrw</button>
+                    <button type="button" onclick="setTaskQuickDate('add-task-due-date', 7)"
+                            class="px-2 py-2 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">+1Wk</button>
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button type="submit"
+                        class="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Task
+                </button>
+                <button type="button" onclick="closeAddTaskModal()"
+                        class="flex-1 px-4 py-2 text-sm bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function() {
+    const form = document.getElementById('add-task-form');
+    const modal = document.getElementById('add-task-modal');
+    const titleInput = document.getElementById('add-task-title');
+
+    // Focus title input when modal opens
+    setTimeout(() => titleInput?.focus(), 100);
+
+    form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const listId = document.getElementById('add-task-list').value;
+        const title = titleInput.value.trim();
+        const notes = document.getElementById('add-task-notes').value.trim();
+        const dueDate = document.getElementById('add-task-due-date').value;
+
+        if (!title) {
+            titleInput.focus();
+            return;
+        }
+
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Adding...';
+        submitBtn.disabled = true;
+
+        try {
+            const response = await fetch(`/tasks/${listId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    notes: notes || null,
+                    due_date: dueDate || null
+                })
+            });
+
+            if (response.ok) {
+                closeAddTaskModal();
+                // Refresh tasks panel
+                const currentView = window.dashboardCurrentView || 'today';
+                htmx.ajax('GET', `/dashboard/tasks-panel?view=${currentView}`, '#tasks-panel-content');
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to create task');
+            }
+        } catch (error) {
+            console.error('Error creating task:', error);
+            alert('Failed to create task. Please try again.');
+        } finally {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    });
+})();
+
+function closeAddTaskModal() {
+    const container = document.getElementById('add-task-modal-container');
+    if (container) container.innerHTML = '';
+}
+
+function setTaskQuickDate(inputId, daysFromToday) {
+    const date = new Date();
+    date.setDate(date.getDate() + daysFromToday);
+    document.getElementById(inputId).value = date.toISOString().split('T')[0];
+}
+</script>

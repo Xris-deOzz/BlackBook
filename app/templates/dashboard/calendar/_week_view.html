@@ -1,0 +1,121 @@
+<!-- Week View - 7-day hourly grid -->
+<div class="flex flex-col flex-1 min-h-0 overflow-hidden">
+    <!-- Week Header with day columns -->
+    <div class="flex-shrink-0 border-b border-blackbook-700">
+        <div class="flex pr-[17px]"><!-- pr-[17px] compensates for scrollbar width -->
+            <!-- Timezone label -->
+            <div class="w-16 flex-shrink-0 text-xs text-blackbook-500 text-right pr-2 py-2">
+                GMT-05<br>NYC
+            </div>
+            <!-- Day headers -->
+            {% for day in days %}
+            <div class="flex-1 text-center py-2 border-l border-blackbook-700/50 {% if day.is_today %}bg-blackbook-700/30{% endif %}">
+                <div class="text-xs text-blackbook-500">{{ day.day_name }}</div>
+                <div class="w-8 h-8 rounded-full mx-auto flex items-center justify-center text-sm font-medium
+                            {% if day.is_today %}bg-cyan-600 text-white{% else %}text-blackbook-200{% endif %}">
+                    {{ day.day_num }}
+                </div>
+                {% if day.is_today and pending_tasks_count > 0 %}
+                <div class="mt-1">
+                    <button onclick="window.dispatchEvent(new CustomEvent('switch-to-tasks'))"
+                            class="text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-1.5 py-0.5 rounded-full cursor-pointer transition-colors">
+                        ○ {{ pending_tasks_count }} pending task{{ 's' if pending_tasks_count != 1 else '' }}
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- All-day events row -->
+        {% if all_day_events %}
+        <div class="flex border-t border-blackbook-700/50 pr-[17px]">
+            <div class="w-16 flex-shrink-0"></div>
+            {% for day in days %}
+            <div class="flex-1 border-l border-blackbook-700/50 p-1 space-y-0.5 min-h-[28px]">
+                {% for event in all_day_events %}
+                {% if event.start_time_local.date() == day.date %}
+                <div class="text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-90
+                            {% if event.calendar_color %}bg-{{ event.calendar_color }}-600 text-white{% else %}bg-blackbook-600 text-blackbook-200{% endif %}"
+                     hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
+                     hx-target="#event-detail-modal-container"
+                     hx-swap="innerHTML">
+                    {{ event.summary or '(No title)' }}
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Scrollable time grid -->
+    <div class="flex-1 min-h-0 overflow-y-auto" id="week-view-scroll">
+        <div class="flex relative">
+            <!-- Time labels column -->
+            <div class="w-16 flex-shrink-0">
+                {% for hour in hours %}
+                <div class="h-16 text-xs text-blackbook-500 text-right pr-2 -mt-2">
+                    {{ '%02d:00' % hour }}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Day columns -->
+            {% for day in days %}
+            <div class="flex-1 border-l border-blackbook-700/50 relative {% if day.is_today %}bg-blackbook-700/10{% endif %}">
+                <!-- Hour grid lines -->
+                {% for hour in hours %}
+                <div class="h-16 border-b border-blackbook-700/30"></div>
+                {% endfor %}
+
+                <!-- Events for this day -->
+                {% for event in timed_events %}
+                {% if event.start_time_local and event.start_time_local.date() == day.date %}
+                {% set start_hour = event.start_time_local.hour %}
+                {% set start_minute = event.start_time_local.minute %}
+                {% set end_hour = event.end_time_local.hour if event.end_time_local else start_hour + 1 %}
+                {% set end_minute = event.end_time_local.minute if event.end_time_local else start_minute %}
+                {% set duration_minutes = ((end_hour * 60 + end_minute) - (start_hour * 60 + start_minute)) %}
+                {% set top_px = (start_hour * 64) + (start_minute * 64 / 60) %}
+                {% set height_px = (duration_minutes * 64 / 60) %}
+                <div class="absolute left-1 right-1 rounded px-1 py-0.5 text-xs cursor-pointer hover:opacity-90 overflow-hidden
+                            {% if event.calendar_color %}bg-{{ event.calendar_color }}-600{% else %}bg-blackbook-600{% endif %}"
+                     style="top: {{ top_px }}px; height: {{ [height_px, 20]|max }}px;"
+                     hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
+                     hx-target="#event-detail-modal-container"
+                     hx-swap="innerHTML">
+                    <div class="font-medium text-white truncate">{{ event.summary or '(No title)' }}</div>
+                    {% if height_px > 24 %}
+                    <div class="text-white/80 truncate">
+                        {{ event.start_time_local.strftime('%H:%M') }} - {{ event.end_time_local.strftime('%H:%M') if event.end_time_local else '' }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <!-- Current time line (spans all columns) -->
+            {% if show_current_time %}
+            <div class="absolute left-16 right-0 border-t-2 border-red-500 z-20 pointer-events-none"
+                 style="top: {{ (current_hour * 64) + (current_minute * 64 / 60) }}px;">
+                <div class="w-3 h-3 bg-red-500 rounded-full -mt-1.5 -ml-1.5"></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Scroll to current time or 8am
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('week-view-scroll');
+    if (container) {
+        const scrollHour = {{ current_hour if show_current_time else 8 }};
+        container.scrollTop = Math.max(0, (scrollHour - 1) * 64);
+    }
+});
+</script>

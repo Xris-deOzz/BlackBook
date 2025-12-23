@@ -37,6 +37,12 @@ class TaskCreate(BaseModel):
     due_date: Optional[str] = None  # Format: YYYY-MM-DD
 
 
+class TaskMove(BaseModel):
+    """Request model for moving a task to another list."""
+    target_list_id: str
+    previous_task_id: Optional[str] = None  # Task ID to insert after (for ordering)
+
+
 @router.post("/sync", response_class=HTMLResponse)
 async def sync_tasks(
     request: Request,
@@ -60,9 +66,14 @@ async def sync_tasks(
                     Synced {result['tasks_count']} tasks
                 </span>
                 <script>
-                    // Refresh tasks widget after sync
+                    // Refresh tasks panel after sync
                     setTimeout(function() {{
-                        htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+                        const currentView = window.dashboardCurrentView || 'today';
+                        htmx.ajax('GET', '/dashboard/tasks-panel?view=' + currentView, '#tasks-panel-content');
+                        // Also refresh kanban if visible
+                        if (document.getElementById('tasks-kanban-content')) {{
+                            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+                        }}
                     }}, 500);
                 </script>
                 """,
@@ -238,6 +249,47 @@ async def reorder_task_lists(
 
     except Exception as e:
         db.rollback()
+        return JSONResponse(
+            content={"success": False, "error": str(e)},
+            status_code=500,
+        )
+
+
+@router.post("/{list_id}/{task_id}/move")
+async def move_task(
+    list_id: str,
+    task_id: str,
+    task_move: TaskMove,
+    db: Session = Depends(get_db),
+):
+    """
+    Move a task to a different list.
+
+    Args:
+        list_id: The source task list ID
+        task_id: The task ID to move
+        task_move: Target list ID and optional position
+
+    Returns:
+        JSON response with success status
+    """
+    try:
+        from app.services.tasks_service import get_tasks_service
+
+        tasks_service = get_tasks_service(db)
+        result = tasks_service.move_task(
+            source_list_id=list_id,
+            task_id=task_id,
+            target_list_id=task_move.target_list_id,
+            previous_task_id=task_move.previous_task_id,
+        )
+
+        if result["success"]:
+            return JSONResponse(content=result, status_code=200)
+        else:
+            return JSONResponse(content=result, status_code=400)
+
+    except Exception as e:
         return JSONResponse(
             content={"success": False, "error": str(e)},
             status_code=500,

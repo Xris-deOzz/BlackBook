@@ -185,9 +185,91 @@ class CalendarService:
             .filter(CalendarEvent.start_time < today_end)
         )
 
-        # Filter by account if specified
+        # Filter by account if specified, otherwise filter to active accounts only
         if account_id:
             query = query.filter(CalendarEvent.google_account_id == account_id)
+        else:
+            # Only show events from active accounts (prevents orphaned events)
+            active_account_ids = [a.id for a in self.db.query(GoogleAccount).filter_by(is_active=True).all()]
+            if active_account_ids:
+                query = query.filter(CalendarEvent.google_account_id.in_(active_account_ids))
+
+        events = query.order_by(CalendarEvent.start_time).all()
+
+        return events
+
+    def get_events_for_range(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        account_id: UUID | None = None,
+        fetch_fresh: bool = True,
+    ) -> list[CalendarEvent]:
+        """
+        Get calendar events for a specific date range.
+
+        Args:
+            start_date: Start of date range (timezone-aware)
+            end_date: End of date range (timezone-aware)
+            account_id: Optional UUID to filter events to a specific Google account.
+            fetch_fresh: Whether to fetch fresh events from Google API (default True)
+
+        Returns:
+            List of CalendarEvent objects, sorted by start time
+        """
+        # Convert to UTC for database queries (database stores times in UTC)
+        if start_date.tzinfo is not None:
+            start_utc = start_date.astimezone(timezone.utc)
+        else:
+            start_utc = start_date.replace(tzinfo=timezone.utc)
+
+        if end_date.tzinfo is not None:
+            end_utc = end_date.astimezone(timezone.utc)
+        else:
+            end_utc = end_date.replace(tzinfo=timezone.utc)
+
+        # Fetch fresh events from accounts if requested
+        if fetch_fresh:
+            if account_id:
+                # Fetch only from specific account
+                account = self.db.query(GoogleAccount).filter_by(id=account_id, is_active=True).first()
+                if account:
+                    try:
+                        self.fetch_events(
+                            account_id=account.id,
+                            time_min=start_utc,
+                            time_max=end_utc,
+                        )
+                    except (CalendarAuthError, CalendarAPIError):
+                        pass
+            else:
+                # Fetch from all active accounts
+                accounts = self.db.query(GoogleAccount).filter_by(is_active=True).all()
+                for account in accounts:
+                    try:
+                        self.fetch_events(
+                            account_id=account.id,
+                            time_min=start_utc,
+                            time_max=end_utc,
+                        )
+                    except (CalendarAuthError, CalendarAPIError):
+                        continue
+
+        # Query cached events for the range (using UTC times)
+        query = (
+            self.db.query(CalendarEvent)
+            .filter(CalendarEvent.start_time >= start_utc)
+            .filter(CalendarEvent.start_time < end_utc)
+        )
+
+        # Filter by account if specified, otherwise filter to active accounts only
+        if account_id:
+            query = query.filter(CalendarEvent.google_account_id == account_id)
+        else:
+            # Only show events from active accounts (prevents orphaned events)
+            active_account_ids = [a.id for a in self.db.query(GoogleAccount).filter_by(is_active=True).all()]
+            if active_account_ids:
+                query = query.filter(CalendarEvent.google_account_id.in_(active_account_ids))
 
         events = query.order_by(CalendarEvent.start_time).all()
 
@@ -247,9 +329,14 @@ class CalendarService:
             .filter(CalendarEvent.start_time < time_max)
         )
 
-        # Filter by account if specified
+        # Filter by account if specified, otherwise filter to active accounts only
         if account_id:
             query = query.filter(CalendarEvent.google_account_id == account_id)
+        else:
+            # Only show events from active accounts (prevents orphaned events)
+            active_account_ids = [a.id for a in self.db.query(GoogleAccount).filter_by(is_active=True).all()]
+            if active_account_ids:
+                query = query.filter(CalendarEvent.google_account_id.in_(active_account_ids))
 
         events = query.order_by(CalendarEvent.start_time).all()
 
@@ -268,6 +355,7 @@ class CalendarService:
         notification_minutes: int | None = None,
         account_id: UUID | None = None,
         timezone_str: str | None = None,
+        recurrence: str | None = None,
         send_updates: str = "none",
     ) -> str | None:
         """
@@ -286,6 +374,7 @@ class CalendarService:
             account_id: Optional specific Google account to use
             timezone_str: Timezone string (e.g., "America/New_York"). If not provided,
                           uses the datetime's timezone or defaults to "America/New_York"
+            recurrence: RRULE string for recurring events (e.g., "RRULE:FREQ=WEEKLY")
             send_updates: Whether to send invite emails ("all", "externalOnly", "none")
 
         Returns:
@@ -382,6 +471,10 @@ class CalendarService:
                 ],
             }
 
+        # Add recurrence rule for recurring events
+        if recurrence:
+            event_body["recurrence"] = [recurrence]
+
         try:
             credentials = self._get_credentials(account)
             service = build("calendar", "v3", credentials=credentials)
@@ -400,6 +493,217 @@ class CalendarService:
 
         except HttpError as e:
             raise CalendarAPIError(f"Failed to create calendar event: {e}")
+
+    def delete_event(
+        self,
+        google_event_id: str,
+        account_id: UUID,
+    ) -> bool:
+        """
+        Delete an event from Google Calendar.
+
+        Args:
+            google_event_id: Google Calendar event ID to delete
+            account_id: UUID of the Google account that owns the event
+
+        Returns:
+            True if deletion was successful, False otherwise
+
+        Raises:
+            CalendarServiceError: If account not found
+            CalendarAuthError: If authentication fails
+            CalendarAPIError: If API call fails
+        """
+        account = self.db.query(GoogleAccount).filter_by(id=account_id, is_active=True).first()
+        if not account:
+            raise CalendarServiceError(f"Account not found: {account_id}")
+
+        try:
+            credentials = self._get_credentials(account)
+            service = build("calendar", "v3", credentials=credentials)
+
+            service.events().delete(
+                calendarId="primary",
+                eventId=google_event_id,
+                sendUpdates="none",
+            ).execute()
+
+            return True
+
+        except HttpError as e:
+            if e.resp.status == 404:
+                # Event already deleted or doesn't exist - treat as success
+                return True
+            raise CalendarAPIError(f"Failed to delete calendar event: {e}")
+
+    def update_event(
+        self,
+        google_event_id: str,
+        account_id: UUID,
+        summary: str | None = None,
+        start_datetime: datetime | None = None,
+        end_datetime: datetime | None = None,
+        description: str | None = None,
+        location: str | None = None,
+        attendee_emails: list[str] | None = None,
+        add_video_conferencing: bool = False,
+        timezone_str: str | None = None,
+        recurrence: str | None = None,
+        send_updates: str = "none",
+    ) -> dict[str, Any] | None:
+        """
+        Update an existing event in Google Calendar.
+
+        Args:
+            google_event_id: Google Calendar event ID to update
+            account_id: UUID of the Google account that owns the event
+            summary: Event title (optional, keeps existing if not provided)
+            start_datetime: Start date/time (optional)
+            end_datetime: End date/time (optional)
+            description: Event description/notes (optional)
+            location: Event location (optional)
+            attendee_emails: List of attendee emails (optional, replaces existing)
+            add_video_conferencing: Whether to add Google Meet
+            timezone_str: Timezone string (e.g., "America/New_York")
+            recurrence: RRULE string for recurring events (optional)
+            send_updates: Whether to send invite emails ("all", "externalOnly", "none")
+
+        Returns:
+            Updated event data dict if successful, None otherwise
+
+        Raises:
+            CalendarServiceError: If account not found
+            CalendarAuthError: If authentication fails
+            CalendarAPIError: If API call fails
+        """
+        account = self.db.query(GoogleAccount).filter_by(id=account_id, is_active=True).first()
+        if not account:
+            raise CalendarServiceError(f"Account not found: {account_id}")
+
+        try:
+            credentials = self._get_credentials(account)
+            service = build("calendar", "v3", credentials=credentials)
+
+            # First, get the existing event to preserve fields we're not updating
+            existing_event = service.events().get(
+                calendarId="primary",
+                eventId=google_event_id,
+            ).execute()
+
+            # Build update body - start with existing event
+            event_body = existing_event.copy()
+
+            # Update fields if provided
+            if summary is not None:
+                event_body["summary"] = summary
+
+            if description is not None:
+                event_body["description"] = description
+
+            if location is not None:
+                event_body["location"] = location
+
+            # Determine timezone to use
+            if timezone_str:
+                tz_to_use = timezone_str
+            elif start_datetime and start_datetime.tzinfo is not None:
+                tz_to_use = str(start_datetime.tzinfo)
+            else:
+                # Use existing timezone or default
+                tz_to_use = existing_event.get("start", {}).get("timeZone", "America/New_York")
+
+            # Update start/end times if provided
+            if start_datetime is not None:
+                start_str = start_datetime.strftime("%Y-%m-%dT%H:%M:%S")
+                event_body["start"] = {
+                    "dateTime": start_str,
+                    "timeZone": tz_to_use,
+                }
+
+            if end_datetime is not None:
+                end_str = end_datetime.strftime("%Y-%m-%dT%H:%M:%S")
+                event_body["end"] = {
+                    "dateTime": end_str,
+                    "timeZone": tz_to_use,
+                }
+
+            # Update attendees if provided
+            if attendee_emails is not None:
+                attendees = []
+                for email in attendee_emails:
+                    if email and email.strip():
+                        attendees.append({"email": email.strip()})
+                event_body["attendees"] = attendees if attendees else []
+
+            # Add Google Meet video conferencing if requested
+            if add_video_conferencing and "conferenceData" not in existing_event:
+                event_body["conferenceData"] = {
+                    "createRequest": {
+                        "requestId": f"meet-update-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                        "conferenceSolutionKey": {"type": "hangoutsMeet"},
+                    }
+                }
+
+            # Update recurrence if provided
+            if recurrence is not None:
+                if recurrence:
+                    event_body["recurrence"] = [recurrence]
+                else:
+                    # Clear recurrence
+                    event_body.pop("recurrence", None)
+
+            # Determine conference version
+            conference_version = 1 if add_video_conferencing else 0
+
+            updated_event = service.events().update(
+                calendarId="primary",
+                eventId=google_event_id,
+                body=event_body,
+                sendUpdates=send_updates,
+                conferenceDataVersion=conference_version,
+            ).execute()
+
+            # Also update local cache
+            self._cache_event(account, updated_event)
+            self.db.commit()
+
+            return updated_event
+
+        except HttpError as e:
+            raise CalendarAPIError(f"Failed to update calendar event: {e}")
+
+    def get_event(
+        self,
+        google_event_id: str,
+        account_id: UUID,
+    ) -> dict[str, Any] | None:
+        """
+        Get a single event from Google Calendar.
+
+        Args:
+            google_event_id: Google Calendar event ID
+            account_id: UUID of the Google account
+
+        Returns:
+            Event data dict if found, None otherwise
+        """
+        account = self.db.query(GoogleAccount).filter_by(id=account_id, is_active=True).first()
+        if not account:
+            return None
+
+        try:
+            credentials = self._get_credentials(account)
+            service = build("calendar", "v3", credentials=credentials)
+
+            event = service.events().get(
+                calendarId="primary",
+                eventId=google_event_id,
+            ).execute()
+
+            return event
+
+        except HttpError:
+            return None
 
     def match_attendees_to_persons(
         self,
@@ -671,6 +975,9 @@ class CalendarService:
             .first()
         )
 
+        # Get the direct link to view in Google Calendar
+        html_link = event_data.get("htmlLink")
+
         if existing:
             # Update existing event
             existing.summary = event_data.get("summary")
@@ -682,6 +989,7 @@ class CalendarService:
             existing.is_recurring = is_recurring
             existing.recurring_event_id = recurring_event_id
             existing.organizer_email = organizer_email
+            existing.html_link = html_link
             return existing
         else:
             # Create new event
@@ -697,6 +1005,7 @@ class CalendarService:
                 is_recurring=is_recurring,
                 recurring_event_id=recurring_event_id,
                 organizer_email=organizer_email,
+                html_link=html_link,
             )
             self.db.add(event)
             return event

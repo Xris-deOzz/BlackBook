@@ -1,0 +1,68 @@
+<!-- Schedule Widget (timed events) -->
+{% if selected_date and not is_today %}
+<div class="flex items-center justify-between mb-2">
+    <span class="text-xs text-blackbook-400">{{ selected_date.strftime('%A, %b %d') }}</span>
+    <button class="text-xs text-blue-400 hover:text-blue-300"
+            hx-get="/dashboard/schedule-widget"
+            hx-target="#schedule-content"
+            hx-swap="innerHTML">
+        Back to Today
+    </button>
+</div>
+{% endif %}
+
+{% if events %}
+<div class="space-y-1">
+    {% for event in events %}
+    <div class="flex items-center gap-3 py-1.5 text-sm cursor-pointer hover:bg-blackbook-700/50 rounded px-2 -mx-2 transition-colors"
+         hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
+         hx-target="#event-detail-modal-container"
+         hx-swap="innerHTML">
+        <!-- Time -->
+        <div class="w-12 flex-shrink-0 text-cyan-400 font-medium tabular-nums">
+            {% if event.is_all_day %}
+            <span class="text-xs text-blackbook-500">All day</span>
+            {% elif event.start_time_local %}
+            {{ event.start_time_local.strftime('%H:%M') }}
+            {% else %}
+            {{ event.start_time.strftime('%H:%M') }}
+            {% endif %}
+        </div>
+        <!-- Event info -->
+        <div class="flex-1 min-w-0">
+            <div class="text-blackbook-200 truncate">{{ event.summary or 'Untitled Event' }}</div>
+            {% if event.attendee_count > 0 %}
+            <div class="text-xs text-blackbook-500">{{ event.attendee_count }} attendee{{ 's' if event.attendee_count > 1 else '' }}</div>
+            {% endif %}
+        </div>
+        <!-- Video call indicator -->
+        {% if event.is_video_call %}
+        <div class="flex-shrink-0">
+            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Video call">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-4 text-blackbook-500 text-sm">
+    {% if is_today %}
+    <p>No events scheduled for today</p>
+    {% else %}
+    <p>No events on {{ selected_date.strftime('%b %d') if selected_date else 'this day' }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+// Update schedule count in header
+(function() {
+    const count = {{ events|length }};
+    const countEl = document.getElementById('schedule-count');
+    if (countEl) {
+        countEl.textContent = count > 0 ? count : '';
+    }
+})();
+</script>

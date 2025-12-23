@@ -1,0 +1,76 @@
+<!-- Schedule/Agenda View - List grouped by day -->
+<div class="flex-1 min-h-0 overflow-y-auto">
+    <div class="divide-y divide-blackbook-700/50">
+        {% for day in days %}
+        <div class="flex py-4 hover:bg-blackbook-700/20">
+            <!-- Date column -->
+            <div class="w-24 flex-shrink-0 text-right pr-4">
+                <div class="text-2xl font-bold {% if day.is_today %}text-cyan-400{% else %}text-blackbook-200{% endif %}">
+                    {{ day.day_num }}
+                </div>
+                <div class="text-xs text-blackbook-500 uppercase">
+                    {{ day.day_name }}, {{ day.month }}
+                </div>
+                {% if day.pending_tasks_count > 0 %}
+                <div class="mt-1">
+                    <span class="text-xs text-cyan-400">
+                        ○ {{ day.pending_tasks_count }} pending tasks
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Events column -->
+            <div class="flex-1 space-y-2">
+                {% for event in day.events %}
+                <div class="flex items-start gap-3 py-1.5 px-3 rounded hover:bg-blackbook-700/50 cursor-pointer group"
+                     hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
+                     hx-target="#event-detail-modal-container"
+                     hx-swap="innerHTML">
+                    <!-- Color dot -->
+                    <div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0
+                                {% if event.calendar_color %}bg-{{ event.calendar_color }}-500{% elif event.is_all_day %}bg-green-500{% else %}bg-blackbook-500{% endif %}">
+                    </div>
+
+                    <!-- Time -->
+                    <div class="w-24 flex-shrink-0 text-sm text-blackbook-400">
+                        {% if event.is_all_day %}
+                            All day
+                        {% else %}
+                            {{ event.start_time_local.strftime('%H:%M') }} - {{ event.end_time_local.strftime('%H:%M') if event.end_time_local else '' }}
+                        {% endif %}
+                    </div>
+
+                    <!-- Event title -->
+                    <div class="flex-1">
+                        <div class="text-sm text-blackbook-100 group-hover:text-white">
+                            {{ event.summary or '(No title)' }}
+                        </div>
+                        {% if event.location %}
+                        <div class="text-xs text-blackbook-500 truncate">
+                            {{ event.location }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if not day.events %}
+                <div class="text-sm text-blackbook-500 py-2 px-3">
+                    No events
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not days %}
+        <div class="text-center py-12 text-blackbook-500">
+            <svg class="w-12 h-12 mx-auto mb-3 text-blackbook-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <p>No events scheduled in this period</p>
+        </div>
+        {% endif %}
+    </div>
+</div>

@@ -2,6 +2,7 @@
 CalendarEvent model for storing Google Calendar events.
 """
 
+import base64
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
@@ -97,6 +98,10 @@ class CalendarEvent(Base):
         String(255),
         comment="Email of the event organizer",
     )
+    html_link: Mapped[str | None] = mapped_column(
+        String(500),
+        comment="Direct link to view event in Google Calendar",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -186,8 +191,25 @@ class CalendarEvent(Base):
 
     @property
     def google_calendar_url(self) -> str:
-        """Generate URL to view this event in Google Calendar."""
-        return f"https://calendar.google.com/calendar/event?eid={self.google_event_id}"
+        """Get URL to view this event in Google Calendar.
+
+        Uses the html_link from Google API if available (most reliable),
+        otherwise falls back to constructing the URL.
+        """
+        # Use stored html_link from Google API if available
+        if self.html_link:
+            return self.html_link
+
+        # Fallback: construct URL using base64 encoding
+        # Format: base64(event_id + ' ' + calendar_email)
+        calendar_email = ""
+        if self.google_account and self.google_account.email:
+            calendar_email = self.google_account.email
+
+        eid_source = f"{self.google_event_id} {calendar_email}"
+        eid_encoded = base64.b64encode(eid_source.encode()).decode()
+
+        return f"https://calendar.google.com/calendar/event?eid={eid_encoded}"
 
     def get_attendee_by_email(self, email: str) -> dict[str, Any] | None:
         """

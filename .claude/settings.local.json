@@ -13,7 +13,30 @@
       "Bash(cmd.exe /c 'copy \"\"c:\\\\Users\\\\ossow\\\\OneDrive\\\\PerunsBlackBook\\\\app\\\\routers\\\\import_contacts.py\"\" \"\"\\\\\\\\bearcave\\\\docker\\\\blackbook\\\\app\\\\routers\\\\import_contacts.py\"\"')",
       "Bash(cmd.exe /c:*)",
       "Bash(cmd.exe /c 'copy \"\"c:\\\\Users\\\\ossow\\\\OneDrive\\\\PerunsBlackBook\\\\app\\\\templates\\\\settings\\\\index.html\"\" \"\"\\\\\\\\bearcave\\\\docker\\\\blackbook\\\\app\\\\templates\\\\settings\\\\\"\" /Y')",
-      "Bash(python -m uvicorn:*)"
+      "Bash(python -m uvicorn:*)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(xargs -0 git rm --cached)",
+      "Bash(git reset:*)",
+      "Bash(curl:*)",
+      "Bash(timeout /T 5 /NOBREAK)",
+      "Bash(python -c:*)",
+      "Bash(timeout:*)",
+      "Bash(mkdir:*)",
+      "Bash(timeout /t 5:*)",
+      "Bash(cat:*)",
+      "Bash(python -m alembic:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout /t 3)",
+      "Bash(taskkill:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(wmic process where \"commandline like ''%uvicorn%''\" get processid,commandline)",
+      "Bash(pkill:*)",
+      "Bash(kill:*)"
     ]
   }
 }

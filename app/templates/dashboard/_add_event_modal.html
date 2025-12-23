@@ -1,0 +1,586 @@
+<!-- Add/Edit Event Modal -->
+<div id="add-event-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" @keydown.escape.window="closeAddEventModal()"
+     data-edit-mode="{{ 'true' if edit_mode else 'false' }}"
+     data-event-id="{{ event.google_event_id if event else '' }}"
+     data-account-id="{{ selected_account_id or '' }}">
+    <div class="bg-blackbook-800 rounded-lg p-4 w-full max-w-lg mx-4 border border-blackbook-600 max-h-[90vh] overflow-y-auto" @click.outside="closeAddEventModal()">
+        <h3 class="text-lg font-semibold text-blackbook-100 mb-4">
+            {% if edit_mode %}Edit Event{% else %}Add New Event{% endif %}
+        </h3>
+        <form id="add-event-form" class="space-y-3">
+            <!-- Calendar & Timezone Row -->
+            <div class="grid grid-cols-2 gap-3">
+                {% if google_accounts %}
+                <div>
+                    <label class="block text-xs text-blackbook-400 mb-1">Calendar</label>
+                    <select id="add-event-account"
+                            class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500"
+                            {% if edit_mode %}disabled{% endif %}>
+                        {% for account in google_accounts %}
+                        <option value="{{ account.id }}" {% if (selected_account_id and selected_account_id == account.id|string) or (not selected_account_id and loop.first) %}selected{% endif %}>{{ account.email }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if edit_mode %}
+                    <input type="hidden" id="add-event-account-hidden" value="{{ selected_account_id }}">
+                    {% endif %}
+                </div>
+                {% endif %}
+                <div>
+                    <label class="block text-xs text-blackbook-400 mb-1">Timezone</label>
+                    <select id="add-event-timezone"
+                            class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                        <option value="America/New_York">Eastern (NYC)</option>
+                        <option value="America/Chicago">Central (Chicago)</option>
+                        <option value="America/Denver">Mountain (Denver)</option>
+                        <option value="America/Los_Angeles">Pacific (LA)</option>
+                        <option value="America/Phoenix">Arizona (Phoenix)</option>
+                        <option value="Europe/London">London (GMT/BST)</option>
+                        <option value="Europe/Paris">Paris (CET)</option>
+                        <option value="Europe/Warsaw">Warsaw (CET)</option>
+                        <option value="Asia/Tokyo">Tokyo (JST)</option>
+                        <option value="Asia/Singapore">Singapore (SGT)</option>
+                        <option value="UTC">UTC</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Title -->
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Title <span class="text-red-400">*</span></label>
+                <input type="text" id="add-event-title" required autofocus
+                       value="{{ event.summary if event else '' }}"
+                       class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500"
+                       placeholder="Event title...">
+            </div>
+
+            <!-- Guests (right after Title) -->
+            <div x-data="guestTypeahead({{ event.attendees|tojson if event and event.attendees else '[]' }})" class="relative">
+                <label class="block text-xs text-blackbook-400 mb-1">Guests</label>
+
+                <!-- Selected guests as chips -->
+                <div class="flex flex-wrap gap-1 mb-2" x-show="selectedGuests.length > 0">
+                    <template x-for="(guest, index) in selectedGuests" :key="index">
+                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-600/20 text-blue-300 rounded text-xs">
+                            <span x-text="guest.name || guest.email"></span>
+                            <button type="button" @click="removeGuest(index)" class="hover:text-white ml-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </span>
+                    </template>
+                </div>
+
+                <!-- Search input -->
+                <div class="relative">
+                    <input type="text"
+                           x-model="searchQuery"
+                           @input.debounce.200ms="searchContacts()"
+                           @keydown.enter.prevent="addRawEmail()"
+                           @keydown.escape="showResults = false"
+                           @keydown.arrow-down.prevent="navigateDown()"
+                           @keydown.arrow-up.prevent="navigateUp()"
+                           @focus="if(searchQuery.length >= 2) searchContacts()"
+                           placeholder="Search contacts or type email..."
+                           class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+
+                    <!-- Results dropdown -->
+                    <div x-show="showResults && results.length > 0"
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="opacity-100 scale-100"
+                         x-transition:leave-end="opacity-0 scale-95"
+                         class="absolute z-50 w-full mt-1 bg-blackbook-700 border border-blackbook-600 rounded shadow-lg max-h-48 overflow-y-auto">
+                        <template x-for="(person, idx) in results" :key="person.id">
+                            <div @click="addGuest(person)"
+                                 @mouseenter="selectedIndex = idx"
+                                 :class="{'bg-blue-600/30 border-l-2 border-blue-500': selectedIndex === idx, 'hover:bg-blackbook-600': selectedIndex !== idx}"
+                                 class="px-3 py-2 cursor-pointer border-l-2 border-transparent">
+                                <div class="text-sm text-blackbook-100 font-medium" x-text="person.name"></div>
+                                <div class="text-xs text-blackbook-400" x-text="person.emails[0]?.email"></div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Loading indicator -->
+                    <div x-show="isSearching" class="absolute right-3 top-2.5">
+                        <svg class="w-4 h-4 animate-spin text-blackbook-400" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+
+                    <!-- Hint text for raw email -->
+                    <div class="text-xs text-blackbook-500 mt-1" x-show="searchQuery.length > 0 && searchQuery.includes('@') && results.length === 0">
+                        Press Enter to add <span class="text-blue-400" x-text="searchQuery"></span>
+                    </div>
+                </div>
+
+                <!-- Hidden input for form submission -->
+                <input type="hidden" id="add-event-guests" :value="JSON.stringify(selectedGuests.map(g => g.email))">
+            </div>
+
+            <!-- Date and Quick Set -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-blackbook-400 mb-1">Date <span class="text-red-400">*</span></label>
+                    <input type="date" id="add-event-date" required
+                           value="{{ event.date if event else '' }}"
+                           class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-blackbook-400 mb-1">Quick Set</label>
+                    <div class="flex gap-1">
+                        <button type="button" onclick="setEventQuickDate(0)" class="px-2 py-2 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Today</button>
+                        <button type="button" onclick="setEventQuickDate(1)" class="px-2 py-2 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Tomorrow</button>
+                        <button type="button" onclick="setEventQuickDate(7)" class="px-2 py-2 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">+1 Week</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-blackbook-400 mb-1">Start Time <span class="text-red-400">*</span></label>
+                    <input type="time" id="add-event-start-time" required
+                           value="{{ event.start_time if event else '' }}"
+                           class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-blackbook-400 mb-1">End Time</label>
+                    <input type="time" id="add-event-end-time"
+                           value="{{ event.end_time if event else '' }}"
+                           class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <!-- Location -->
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Location</label>
+                <input type="text" id="add-event-location"
+                       value="{{ event.location if event else '' }}"
+                       class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500"
+                       placeholder="Add location...">
+            </div>
+
+            <!-- Recurrence Options -->
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Repeat</label>
+                <select id="add-event-recurrence"
+                        class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                    <option value="" {% if not event or not event.recurrence %}selected{% endif %}>Does not repeat</option>
+                    <option value="RRULE:FREQ=DAILY" {% if event and event.recurrence and 'FREQ=DAILY' in event.recurrence %}selected{% endif %}>Daily</option>
+                    <option value="RRULE:FREQ=WEEKLY" {% if event and event.recurrence and 'FREQ=WEEKLY' in event.recurrence and 'BYDAY' not in event.recurrence %}selected{% endif %}>Weekly</option>
+                    <option value="RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR" {% if event and event.recurrence and 'BYDAY=MO,TU,WE,TH,FR' in event.recurrence %}selected{% endif %}>Weekdays (Mon-Fri)</option>
+                    <option value="RRULE:FREQ=MONTHLY" {% if event and event.recurrence and 'FREQ=MONTHLY' in event.recurrence %}selected{% endif %}>Monthly</option>
+                    <option value="RRULE:FREQ=YEARLY" {% if event and event.recurrence and 'FREQ=YEARLY' in event.recurrence %}selected{% endif %}>Yearly</option>
+                </select>
+            </div>
+
+            <!-- Video Conferencing Options -->
+            <div x-data="{ videoOption: '{{ 'meet' if event and event.has_video else 'none' }}' }">
+                <label class="block text-xs text-blackbook-400 mb-2">Video Conferencing</label>
+                <div class="flex flex-wrap gap-2">
+                    <label class="inline-flex items-center gap-2 px-3 py-2 bg-blackbook-700 border border-blackbook-600 rounded cursor-pointer hover:bg-blackbook-600 transition-colors"
+                           :class="{'border-blue-500 bg-blue-600/20': videoOption === 'none'}">
+                        <input type="radio" name="video-option" value="none" x-model="videoOption" class="hidden">
+                        <svg class="w-4 h-4 text-blackbook-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        <span class="text-sm text-blackbook-300">None</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-3 py-2 bg-blackbook-700 border border-blackbook-600 rounded cursor-pointer hover:bg-blackbook-600 transition-colors"
+                           :class="{'border-green-500 bg-green-600/20': videoOption === 'meet'}">
+                        <input type="radio" name="video-option" value="meet" x-model="videoOption" class="hidden">
+                        <svg class="w-4 h-4 text-green-500" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+                        </svg>
+                        <span class="text-sm text-blackbook-300">Google Meet</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-3 py-2 bg-blackbook-700 border border-blackbook-600 rounded cursor-pointer hover:bg-blackbook-600 transition-colors"
+                           :class="{'border-blue-400 bg-blue-600/20': videoOption === 'zoom'}">
+                        <input type="radio" name="video-option" value="zoom" x-model="videoOption" class="hidden">
+                        <svg class="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M4 4h10a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm14 3l4-2v10l-4-2V7z"/>
+                        </svg>
+                        <span class="text-sm text-blackbook-300">Zoom</span>
+                    </label>
+                </div>
+
+                <!-- Zoom link input (shown when Zoom is selected) -->
+                <div x-show="videoOption === 'zoom'" x-transition class="mt-2">
+                    <input type="text" id="add-event-zoom-link"
+                           class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500"
+                           placeholder="Paste Zoom meeting link...">
+                    <p class="text-xs text-blackbook-500 mt-1">Paste your Zoom meeting URL (e.g., https://zoom.us/j/...)</p>
+                </div>
+
+                <!-- Hidden inputs for form submission -->
+                <input type="hidden" id="add-event-video-option" :value="videoOption">
+            </div>
+
+            <!-- Description (Rich Text) -->
+            <div>
+                <label class="block text-xs text-blackbook-400 mb-1">Description</label>
+                <!-- Toolbar -->
+                <div class="flex gap-1 mb-1 p-1 bg-blackbook-700 border border-blackbook-600 rounded-t border-b-0">
+                    <button type="button" onclick="formatDescription('bold')" class="p-1.5 text-blackbook-400 hover:text-white hover:bg-blackbook-600 rounded" title="Bold (Ctrl+B)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"/>
+                        </svg>
+                    </button>
+                    <button type="button" onclick="formatDescription('italic')" class="p-1.5 text-blackbook-400 hover:text-white hover:bg-blackbook-600 rounded" title="Italic (Ctrl+I)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 4h4m-2 0v16m-4 0h8"/>
+                        </svg>
+                    </button>
+                    <button type="button" onclick="formatDescription('insertUnorderedList')" class="p-1.5 text-blackbook-400 hover:text-white hover:bg-blackbook-600 rounded" title="Bullet List">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <button type="button" onclick="formatDescription('createLink')" class="p-1.5 text-blackbook-400 hover:text-white hover:bg-blackbook-600 rounded" title="Add Link">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                        </svg>
+                    </button>
+                </div>
+                <!-- Editable area -->
+                <div id="add-event-description"
+                     contenteditable="true"
+                     class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded-b text-blackbook-300 focus:outline-none focus:border-blue-500 min-h-[80px] max-h-[150px] overflow-y-auto"
+                     placeholder="Add description..."
+                     onkeydown="handleDescriptionKeydown(event)">{{ event.description|safe if event and event.description else '' }}</div>
+                <input type="hidden" id="add-event-description-hidden">
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-2 pt-2">
+                <button type="submit" id="add-event-submit-btn"
+                        class="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    {% if edit_mode %}Save Changes{% else %}Create Event{% endif %}
+                </button>
+                <button type="button" onclick="closeAddEventModal()"
+                        class="flex-1 px-4 py-2 text-sm bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Placeholder for contenteditable */
+#add-event-description:empty:before {
+    content: attr(placeholder);
+    color: #6b7280;
+    pointer-events: none;
+}
+#add-event-description:focus:before {
+    content: '';
+}
+/* Rich text styling inside description */
+#add-event-description b, #add-event-description strong { font-weight: 600; }
+#add-event-description i, #add-event-description em { font-style: italic; }
+#add-event-description ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+#add-event-description a { color: #60a5fa; text-decoration: underline; }
+</style>
+
+<script>
+// Guest typeahead Alpine component
+function guestTypeahead(initialGuests = []) {
+    return {
+        searchQuery: '',
+        results: [],
+        selectedGuests: initialGuests.map(g => ({ email: g.email, name: g.name || null, person_id: null })),
+        showResults: false,
+        selectedIndex: 0,
+        isSearching: false,
+
+        async searchContacts() {
+            if (this.searchQuery.length < 2) {
+                this.results = [];
+                this.showResults = false;
+                return;
+            }
+
+            this.isSearching = true;
+
+            try {
+                const response = await fetch(`/dashboard/people-search?q=${encodeURIComponent(this.searchQuery)}`);
+                const data = await response.json();
+                this.results = data.results || [];
+                this.selectedIndex = 0;
+                this.showResults = this.results.length > 0;
+            } catch (e) {
+                console.error('Search failed:', e);
+                this.results = [];
+            } finally {
+                this.isSearching = false;
+            }
+        },
+
+        addGuest(person) {
+            // Add first email from person
+            const email = person.emails[0]?.email;
+            if (email && !this.selectedGuests.find(g => g.email === email)) {
+                this.selectedGuests.push({
+                    name: person.name,
+                    email: email,
+                    person_id: person.id
+                });
+            }
+            this.searchQuery = '';
+            this.showResults = false;
+            this.results = [];
+        },
+
+        addRawEmail() {
+            // If there's a selected result, add it
+            if (this.showResults && this.results.length > 0 && this.selectedIndex >= 0) {
+                this.addGuest(this.results[this.selectedIndex]);
+                return;
+            }
+
+            // Otherwise, try to add as raw email
+            const email = this.searchQuery.trim();
+            if (email && email.includes('@') && !this.selectedGuests.find(g => g.email === email)) {
+                this.selectedGuests.push({ email: email, name: null, person_id: null });
+            }
+            this.searchQuery = '';
+            this.showResults = false;
+        },
+
+        removeGuest(index) {
+            this.selectedGuests.splice(index, 1);
+        },
+
+        navigateDown() {
+            if (this.results.length > 0) {
+                this.selectedIndex = Math.min(this.selectedIndex + 1, this.results.length - 1);
+            }
+        },
+
+        navigateUp() {
+            if (this.results.length > 0) {
+                this.selectedIndex = Math.max(this.selectedIndex - 1, 0);
+            }
+        }
+    };
+}
+
+// Rich text formatting
+function formatDescription(command) {
+    const descEl = document.getElementById('add-event-description');
+    descEl.focus();
+
+    if (command === 'createLink') {
+        const url = prompt('Enter URL:');
+        if (url) {
+            document.execCommand('createLink', false, url);
+        }
+    } else {
+        document.execCommand(command, false, null);
+    }
+}
+
+function handleDescriptionKeydown(event) {
+    // Handle Ctrl+B for bold
+    if (event.ctrlKey && event.key === 'b') {
+        event.preventDefault();
+        formatDescription('bold');
+    }
+    // Handle Ctrl+I for italic
+    if (event.ctrlKey && event.key === 'i') {
+        event.preventDefault();
+        formatDescription('italic');
+    }
+}
+
+(function() {
+    const form = document.getElementById('add-event-form');
+    const titleInput = document.getElementById('add-event-title');
+    const dateInput = document.getElementById('add-event-date');
+    const startTimeInput = document.getElementById('add-event-start-time');
+    const endTimeInput = document.getElementById('add-event-end-time');
+    const timezoneSelect = document.getElementById('add-event-timezone');
+    const descriptionEl = document.getElementById('add-event-description');
+
+    // Check if we're in edit mode
+    const modal = document.getElementById('add-event-modal');
+    const isEditMode = modal?.dataset.editMode === 'true';
+
+    // Only set defaults when creating a new event
+    if (!isEditMode) {
+        // Set default date to today
+        const today = new Date();
+        dateInput.value = today.toISOString().split('T')[0];
+
+        // Set default start time to next hour
+        const nextHour = new Date();
+        nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+        startTimeInput.value = nextHour.toTimeString().slice(0, 5);
+
+        // Set default end time to 1 hour after start
+        const endHour = new Date(nextHour);
+        endHour.setHours(endHour.getHours() + 1);
+        endTimeInput.value = endHour.toTimeString().slice(0, 5);
+
+        // Detect user's timezone and select it
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (timezoneSelect) {
+            const options = timezoneSelect.options;
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === userTimezone) {
+                    timezoneSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Focus title input when modal opens
+    setTimeout(() => titleInput?.focus(), 100);
+
+    // Auto-update end time when start time changes
+    startTimeInput?.addEventListener('change', () => {
+        if (startTimeInput.value) {
+            const [hours, mins] = startTimeInput.value.split(':').map(Number);
+            const endDate = new Date();
+            endDate.setHours(hours + 1, mins, 0, 0);
+            endTimeInput.value = endDate.toTimeString().slice(0, 5);
+        }
+    });
+
+    form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Check if we're in edit mode
+        const modal = document.getElementById('add-event-modal');
+        const isEditMode = modal?.dataset.editMode === 'true';
+        const eventId = modal?.dataset.eventId;
+
+        const accountSelect = document.getElementById('add-event-account');
+        const accountHidden = document.getElementById('add-event-account-hidden');
+        const accountId = isEditMode && accountHidden ? accountHidden.value : (accountSelect ? accountSelect.value : null);
+        const timezone = timezoneSelect ? timezoneSelect.value : 'America/New_York';
+        const title = titleInput.value.trim();
+        const eventDate = dateInput.value;
+        const startTime = startTimeInput.value;
+        const endTime = endTimeInput.value || null;
+        const locationInput = document.getElementById('add-event-location');
+        const descriptionEl = document.getElementById('add-event-description');
+        const guestsJson = document.getElementById('add-event-guests').value;
+        const videoOption = document.getElementById('add-event-video-option').value;
+        const zoomLinkInput = document.getElementById('add-event-zoom-link');
+
+        // Handle location - if Zoom is selected and link provided, use that
+        let location = locationInput.value.trim() || null;
+        if (videoOption === 'zoom' && zoomLinkInput && zoomLinkInput.value.trim()) {
+            location = zoomLinkInput.value.trim();
+        }
+
+        // Get description HTML content
+        const description = descriptionEl.innerHTML.trim() || null;
+
+        if (!title || !eventDate || !startTime) {
+            alert('Please fill in required fields');
+            return;
+        }
+
+        // Parse guests from JSON
+        let guests = null;
+        if (guestsJson) {
+            try {
+                guests = JSON.parse(guestsJson);
+                if (!Array.isArray(guests) || guests.length === 0) {
+                    guests = null;
+                }
+            } catch (e) {
+                guests = guestsJson.split(',').map(g => g.trim()).filter(g => g);
+                if (guests.length === 0) guests = null;
+            }
+        }
+
+        // Show loading state
+        const submitBtn = document.getElementById('add-event-submit-btn');
+        const originalText = submitBtn.innerHTML;
+        const loadingText = isEditMode ? 'Saving...' : 'Creating...';
+        submitBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ' + loadingText;
+        submitBtn.disabled = true;
+
+        try {
+            // Get recurrence value
+            const recurrenceSelect = document.getElementById('add-event-recurrence');
+            const recurrence = recurrenceSelect ? recurrenceSelect.value : null;
+
+            const payload = {
+                title,
+                date: eventDate,
+                start_time: startTime,
+                end_time: endTime,
+                timezone: timezone,
+                location,
+                description,
+                guests,
+                add_video_conferencing: videoOption === 'meet',
+                account_id: accountId,
+                recurrence: recurrence || null
+            };
+
+            // Use different endpoint for edit vs create
+            const url = isEditMode ? `/calendar/update/${eventId}` : '/calendar/create';
+            const method = isEditMode ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                closeAddEventModal();
+                // Refresh schedule widget
+                htmx.ajax('GET', '/dashboard/schedule-widget', '#schedule-content');
+                // Close event detail modal if open
+                const detailContainer = document.getElementById('event-detail-modal-container');
+                if (detailContainer) detailContainer.innerHTML = '';
+                // Show brief success message
+                const statusEl = document.getElementById('sync-status');
+                if (statusEl) {
+                    const successMsg = isEditMode ? 'Event updated' : 'Event created';
+                    statusEl.innerHTML = '<span class="text-green-500">' + successMsg + '</span>';
+                    setTimeout(() => { statusEl.innerHTML = ''; }, 3000);
+                }
+            } else {
+                alert(data.error || (isEditMode ? 'Failed to update event' : 'Failed to create event'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert(isEditMode ? 'Failed to update event. Please try again.' : 'Failed to create event. Please try again.');
+        } finally {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    });
+})();
+
+function setEventQuickDate(daysFromToday) {
+    const date = new Date();
+    date.setDate(date.getDate() + daysFromToday);
+    document.getElementById('add-event-date').value = date.toISOString().split('T')[0];
+}
+
+function closeAddEventModal() {
+    const container = document.getElementById('add-event-modal-container');
+    if (container) container.innerHTML = '';
+}
+</script>

@@ -1,0 +1,64 @@
+<!-- Month View - Calendar grid -->
+<div class="flex flex-col flex-1 min-h-0 overflow-hidden">
+    <!-- Day headers -->
+    <div class="flex-shrink-0 grid grid-cols-7 border-b border-blackbook-700">
+        {% for day_name in day_headers %}
+        <div class="text-xs text-blackbook-500 text-center py-2 font-medium
+                    {% if loop.index > 5 %}text-blackbook-600{% endif %}">
+            {{ day_name }}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Weeks grid -->
+    <div class="flex-1 min-h-0 grid grid-rows-6 overflow-hidden">
+        {% for week in weeks %}
+        <div class="grid grid-cols-7 border-b border-blackbook-700/50 min-h-0">
+            {% for day in week %}
+            <div class="border-r border-blackbook-700/50 p-1 overflow-hidden flex flex-col
+                        {% if not day.is_current_month %}bg-blackbook-900/50{% endif %}
+                        {% if day.is_today %}bg-blackbook-700/30{% endif %}
+                        hover:bg-blackbook-700/20 cursor-pointer"
+                 @click="calendarDate = new Date('{{ day.date.isoformat() }}'); calendarView = 'day'; loadCalendarView()">
+
+                <!-- Day number -->
+                <div class="flex-shrink-0 mb-1">
+                    <span class="inline-flex items-center justify-center w-7 h-7 text-sm
+                                {% if day.is_today %}rounded-full bg-cyan-600 text-white font-medium
+                                {% elif day.is_current_month %}text-blackbook-200
+                                {% else %}text-blackbook-600{% endif %}">
+                        {{ day.day_num }}
+                    </span>
+                </div>
+
+                <!-- Events -->
+                <div class="flex-1 overflow-hidden space-y-0.5">
+                    {% for event in day.events[:3] %}
+                    <div class="text-xs truncate rounded px-1 py-0.5 cursor-pointer hover:opacity-90
+                                {% if event.is_all_day %}
+                                    {% if event.calendar_color %}bg-{{ event.calendar_color }}-600 text-white{% else %}bg-green-600 text-white{% endif %}
+                                {% else %}
+                                    text-blackbook-300 hover:bg-blackbook-600
+                                {% endif %}"
+                         hx-get="/dashboard/event-detail/{{ event.google_event_id }}?account_id={{ event.google_account_id }}"
+                         hx-target="#event-detail-modal-container"
+                         hx-swap="innerHTML"
+                         @click.stop>
+                        {% if event.is_all_day %}
+                            {{ event.summary or '(No title)' }}
+                        {% else %}
+                            <span class="text-blackbook-500">{{ event.start_time_local.strftime('%H:%M') }}</span>
+                            {{ event.summary or '(No title)' }}
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% if day.events|length > 3 %}
+                    <div class="text-xs text-blackbook-500 px-1">+{{ day.events|length - 3 }} more</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>

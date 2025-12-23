@@ -1,0 +1,34 @@
+<!-- Mini Calendar Grid -->
+<table class="mini-calendar w-full text-blackbook-300">
+    <thead>
+        <tr>
+            <th class="w-8">S</th>
+            <th class="w-8">M</th>
+            <th class="w-8">T</th>
+            <th class="w-8">W</th>
+            <th class="w-8">T</th>
+            <th class="w-8">F</th>
+            <th class="w-8">S</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for week in month_days %}
+        <tr>
+            {% for day in week %}
+            {% if day == 0 %}
+            <td class="empty"></td>
+            {% else %}
+            {% set date_str = '%04d-%02d-%02d'|format(year, month, day) %}
+            <td class="{% if day == today.day and month == today.month and year == today.year %}today{% endif %}{% if day in event_days %} has-event{% endif %}"
+                title="{% if day in event_days %}{{ event_days[day] }} birthday(s){% else %}View {{ date_str }}{% endif %}"
+                hx-get="/dashboard/schedule-widget?selected_date={{ date_str }}"
+                hx-target="#schedule-content"
+                hx-swap="innerHTML">
+                {{ day }}
+            </td>
+            {% endif %}
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

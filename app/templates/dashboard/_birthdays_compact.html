@@ -1,0 +1,69 @@
+<!-- Compact Birthdays Widget -->
+{% if birthdays %}
+{% set todays_birthdays = birthdays | selectattr('is_today') | list %}
+{% set upcoming_birthdays = birthdays | rejectattr('is_today') | list %}
+
+<div class="space-y-2">
+    <!-- Today's Birthdays -->
+    {% for item in todays_birthdays %}
+    <div class="flex items-center justify-between py-1.5 group">
+        <a href="/people/{{ item.person.id }}" class="flex items-center gap-2 flex-1 min-w-0 hover:text-white">
+            <span class="text-pink-400">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z"/>
+                    <path d="M9 11H3v5a2 2 0 002 2h4v-7zM11 18h4a2 2 0 002-2v-5h-6v7z"/>
+                </svg>
+            </span>
+            <span class="text-sm text-blackbook-200 truncate">{{ item.person.full_name }}</span>
+        </a>
+        {% if item.person.emails and item.person.emails|length > 0 %}
+        <a href="/emails/compose?to={{ item.person.emails[0].email }}&subject=Happy%20Birthday!"
+           class="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 rounded hover:bg-blackbook-700/50 transition-colors">
+            Send
+        </a>
+        {% elif item.person.email %}
+        <a href="/emails/compose?to={{ item.person.email }}&subject=Happy%20Birthday!"
+           class="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 rounded hover:bg-blackbook-700/50 transition-colors">
+            Send
+        </a>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <!-- Upcoming Birthdays (Coming Up section) -->
+    {% if upcoming_birthdays %}
+    <div class="pt-2 mt-2 border-t border-blackbook-700">
+        <div class="text-xs text-blackbook-500 uppercase tracking-wider mb-2">Coming Up</div>
+        {% for item in upcoming_birthdays[:4] %}
+        <div class="flex items-center justify-between py-1 text-sm">
+            <a href="/people/{{ item.person.id }}" class="flex items-center gap-2 flex-1 min-w-0 text-blackbook-400 hover:text-white">
+                <span class="text-blackbook-500">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z"/>
+                        <path d="M9 11H3v5a2 2 0 002 2h4v-7zM11 18h4a2 2 0 002-2v-5h-6v7z"/>
+                    </svg>
+                </span>
+                <span class="truncate">{{ item.person.full_name }}</span>
+            </a>
+            <span class="text-xs text-blackbook-500 flex-shrink-0">{{ item.birthday_date.strftime('%b %d') }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="text-center py-4 text-blackbook-500 text-sm">
+    <p>No upcoming birthdays</p>
+</div>
+{% endif %}
+
+<script>
+// Update birthdays count in header
+(function() {
+    const count = {{ birthdays|length if birthdays else 0 }};
+    const countEl = document.getElementById('birthdays-count');
+    if (countEl) {
+        countEl.textContent = count > 0 ? count : '';
+    }
+})();
+</script>
