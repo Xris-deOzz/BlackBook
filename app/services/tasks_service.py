@@ -191,14 +191,24 @@ class TasksService:
                                 # Google Tasks uses RFC 3339 format
                                 due_dt = datetime.fromisoformat(due.replace("Z", "+00:00"))
                                 local_tz = ZoneInfo("America/New_York")
-                                due_local = due_dt.astimezone(local_tz)
-                                due_date = due_local.date()
 
-                                task_data["due_date"] = due_date.strftime("%Y-%m-%d")
-                                task_data["due_date_display"] = due_date.strftime("%b %d, %Y")
+                                # Check if this is a date-only task (midnight UTC)
+                                # Google stores date-only tasks as T00:00:00.000Z
+                                is_date_only = (due_dt.hour == 0 and due_dt.minute == 0 and due_dt.second == 0)
 
-                                # Check if time is set (not midnight UTC means time was specified)
-                                if due_dt.hour != 0 or due_dt.minute != 0:
+                                if is_date_only:
+                                    # For date-only tasks, extract the date directly from UTC
+                                    # to avoid timezone shift issues
+                                    due_date = due_dt.date()
+                                    task_data["due_date"] = due_date.strftime("%Y-%m-%d")
+                                    task_data["due_date_display"] = due_date.strftime("%b %d, %Y")
+                                    # No time for date-only tasks
+                                else:
+                                    # Task has a specific time - convert to local timezone
+                                    due_local = due_dt.astimezone(local_tz)
+                                    due_date = due_local.date()
+                                    task_data["due_date"] = due_date.strftime("%Y-%m-%d")
+                                    task_data["due_date_display"] = due_date.strftime("%b %d, %Y")
                                     task_data["due_time"] = due_local.strftime("%H:%M")
                                     task_data["due_time_display"] = due_local.strftime("%I:%M %p").lstrip("0")
 
@@ -383,11 +393,19 @@ class TasksService:
                     try:
                         # Parse RFC 3339 format
                         due_dt = datetime.fromisoformat(due_str.replace("Z", "+00:00"))
-                        due_date = due_dt.strftime("%Y-%m-%d")
 
-                        # Check if it has a specific time (not midnight UTC)
-                        due_local = due_dt.astimezone(local_tz)
-                        if due_dt.hour != 0 or due_dt.minute != 0:
+                        # Check if this is a date-only task (midnight UTC)
+                        is_date_only = (due_dt.hour == 0 and due_dt.minute == 0 and due_dt.second == 0)
+
+                        if is_date_only:
+                            # For date-only tasks, extract the date directly from UTC
+                            # to avoid timezone shift issues
+                            due_date = due_dt.strftime("%Y-%m-%d")
+                            # No time for date-only tasks
+                        else:
+                            # Task has a specific time - convert to local timezone
+                            due_local = due_dt.astimezone(local_tz)
+                            due_date = due_local.strftime("%Y-%m-%d")
                             due_time = due_local.strftime("%H:%M")
                     except Exception:
                         pass
@@ -458,8 +476,12 @@ class TasksService:
                             due_dt = due_dt.replace(tzinfo=local_tz)
                             body["due"] = due_dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
                         else:
-                            # Date only (midnight UTC - Google interprets as all-day)
-                            body["due"] = f"{due_date}T00:00:00.000Z"
+                            # Date only: Use noon local time to avoid timezone day-shift issues
+                            # Google Tasks will display this as an all-day task on the correct date
+                            local_tz = ZoneInfo("America/New_York")
+                            due_dt = datetime.strptime(f"{due_date} 12:00", "%Y-%m-%d %H:%M")
+                            due_dt = due_dt.replace(tzinfo=local_tz)
+                            body["due"] = due_dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
                 if not body:
                     return {"success": False, "error": "No updates provided"}
@@ -578,7 +600,12 @@ class TasksService:
                         due_dt = due_dt.replace(tzinfo=local_tz)
                         body["due"] = due_dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
                     else:
-                        body["due"] = f"{due_date}T00:00:00.000Z"
+                        # Date only: Use noon local time to avoid timezone day-shift issues
+                        # Google Tasks will display this as an all-day task on the correct date
+                        local_tz = ZoneInfo("America/New_York")
+                        due_dt = datetime.strptime(f"{due_date} 12:00", "%Y-%m-%d %H:%M")
+                        due_dt = due_dt.replace(tzinfo=local_tz)
+                        body["due"] = due_dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
                 # Create the task (with optional parent for subtasks)
                 insert_kwargs = {

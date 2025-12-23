@@ -172,16 +172,31 @@
     }
 
     function refreshTaskViews() {
-        const currentView = window.dashboardCurrentView || 'today';
-        htmx.ajax('GET', `/dashboard/tasks-panel?view=${currentView}`, '#tasks-panel-content');
+        const currentView = window.dashboardCurrentView || 'week';
+
+        // Refresh main tasks panel
+        const tasksPanel = document.getElementById('tasks-panel-content');
+        if (tasksPanel) {
+            htmx.ajax('GET', `/dashboard/tasks-panel?view=${currentView}`, {target: '#tasks-panel-content', swap: 'innerHTML'});
+        }
+
+        // Refresh widget on dashboard
         const widgetContainer = document.getElementById('todays-tasks');
         if (widgetContainer) {
-            htmx.ajax('GET', '/dashboard/tasks-widget', '#todays-tasks');
+            htmx.ajax('GET', '/dashboard/tasks-widget', {target: '#todays-tasks', swap: 'innerHTML'});
         }
+
+        // Refresh kanban view if visible
         const expandedContainer = document.getElementById('tasks-kanban-content');
         if (expandedContainer) {
-            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', '#tasks-kanban-content');
+            htmx.ajax('GET', '/dashboard/tasks-widget-expanded', {target: '#tasks-kanban-content', swap: 'innerHTML'});
         }
+
+        // Also try refreshing by class selector as fallback
+        document.querySelectorAll('[data-refresh-tasks]').forEach(el => {
+            const url = el.getAttribute('data-refresh-url') || `/dashboard/tasks-panel?view=${currentView}`;
+            htmx.ajax('GET', url, {target: el, swap: 'innerHTML'});
+        });
     }
 
     // Add Subtask to the just-created task
