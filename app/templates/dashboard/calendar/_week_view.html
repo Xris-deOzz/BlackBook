@@ -3,8 +3,8 @@
     <!-- Week Header with day columns - horizontal scroll on mobile -->
     <div class="flex-shrink-0 border-b border-blackbook-700 overflow-x-auto lg:overflow-x-visible" id="week-header-scroll">
         <div class="flex pr-[17px] min-w-[800px] lg:min-w-0"><!-- pr-[17px] compensates for scrollbar width -->
-            <!-- Timezone label -->
-            <div class="w-12 sm:w-16 flex-shrink-0 text-xs text-blackbook-500 text-right pr-2 py-2">
+            <!-- Timezone label - hidden on mobile -->
+            <div class="w-12 sm:w-16 flex-shrink-0 text-xs text-blackbook-500 text-right pr-2 py-2 hidden md:block">
                 <span class="hidden sm:inline">GMT-05<br></span>NYC
             </div>
             <!-- Day headers -->
@@ -23,7 +23,7 @@
         {% set has_all_day_content = all_day_events or days|selectattr('untimed_tasks')|list %}
         {% if has_all_day_content %}
         <div class="flex border-t border-blackbook-700/50 pr-[17px] min-w-[800px] lg:min-w-0">
-            <div class="w-12 sm:w-16 flex-shrink-0"></div>
+            <div class="w-12 sm:w-16 flex-shrink-0 hidden md:block"></div>
             {% for day in days %}
             <div class="flex-1 min-w-[90px] sm:min-w-[100px] border-l border-blackbook-700/50 p-1 space-y-0.5 min-h-[28px] max-h-20 overflow-y-auto">
                 <!-- All-day events -->
@@ -67,8 +67,8 @@
     <!-- Scrollable time grid - horizontal scroll on mobile -->
     <div class="flex-1 min-h-0 overflow-auto" id="week-view-scroll">
         <div class="flex relative min-w-[800px] lg:min-w-0">
-            <!-- Time labels column -->
-            <div class="w-12 sm:w-16 flex-shrink-0 sticky left-0 bg-blackbook-800 z-10">
+            <!-- Time labels column - hidden on mobile -->
+            <div class="w-12 sm:w-16 flex-shrink-0 sticky left-0 bg-blackbook-800 z-10 hidden md:block">
                 {% for hour in hours %}
                 <div class="h-16 text-xs text-blackbook-500 text-right pr-2 -mt-2">
                     {{ '%02d:00' % hour }}
@@ -146,7 +146,7 @@
 
             <!-- Current time line (spans all columns) -->
             {% if show_current_time %}
-            <div id="current-time-line" class="absolute left-12 sm:left-16 right-0 z-20 pointer-events-none flex items-center"
+            <div id="current-time-line" class="absolute left-0 md:left-16 right-0 z-20 pointer-events-none flex items-center"
                  style="top: {{ (current_hour * 64) + (current_minute * 64 / 60) }}px;">
                 <div class="w-3 h-3 bg-red-500 rounded-full -ml-1.5 flex-shrink-0"></div>
                 <div class="flex-1 h-0.5 bg-red-500"></div>

@@ -3,8 +3,8 @@
     <!-- Day Header -->
     <div class="flex-shrink-0 border-b border-blackbook-700">
         <div class="flex pr-[17px]"><!-- pr-[17px] compensates for scrollbar width -->
-            <!-- Timezone spacer -->
-            <div class="w-12 sm:w-16 flex-shrink-0"></div>
+            <!-- Timezone spacer - hidden on mobile -->
+            <div class="w-12 sm:w-16 flex-shrink-0 hidden md:block"></div>
             <!-- Day column header -->
             <div class="flex-1 text-center py-2 sm:py-3">
                 <div class="text-xs text-blackbook-500">{{ view_date.strftime('%a').upper() }}</div>
@@ -18,7 +18,7 @@
         <!-- Untimed tasks (like all-day events) -->
         {% if untimed_tasks %}
         <div class="flex pr-[17px]">
-            <div class="w-12 sm:w-16 flex-shrink-0"></div>
+            <div class="w-12 sm:w-16 flex-shrink-0 hidden md:block"></div>
             <div class="flex-1 px-2 py-2 space-y-1 border-t border-blackbook-700/50">
                 {% for task in untimed_tasks %}
                 <div class="flex items-center gap-2 text-sm bg-cyan-900/20 text-cyan-200 rounded px-2 py-1.5 border-l-2 border-cyan-500 group calendar-task"
@@ -49,8 +49,8 @@
     <!-- Scrollable time grid -->
     <div class="flex-1 min-h-0 overflow-y-auto" id="day-view-scroll">
         <div class="flex">
-            <!-- Timezone label -->
-            <div class="w-12 sm:w-16 flex-shrink-0 pt-2">
+            <!-- Timezone label - hidden on mobile -->
+            <div class="w-12 sm:w-16 flex-shrink-0 pt-2 hidden md:block">
                 <div class="text-xs text-blackbook-500 text-right pr-2">
                     <span class="hidden sm:inline">GMT-05<br></span>NYC
                 </div>
