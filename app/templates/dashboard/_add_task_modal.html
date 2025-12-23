@@ -49,7 +49,7 @@
                 <label class="block text-xs text-blackbook-400 mb-1">List</label>
                 {% if task_lists %}
                 <select id="add-task-list"
-                        class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                        class="w-full px-3 py-3 sm:py-2 text-base sm:text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
                     {% for list in task_lists %}
                     <option value="{{ list.list_id }}" {% if selected_list_id == list.list_id %}selected{% elif loop.first and not selected_list_id %}selected{% endif %}>{{ list.list_name }}</option>
                     {% endfor %}
@@ -65,13 +65,13 @@
             <div>
                 <label class="block text-xs text-blackbook-400 mb-1">Title <span class="text-red-400">*</span></label>
                 <input type="text" id="add-task-title" required autofocus
-                       class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500"
+                       class="w-full px-3 py-3 sm:py-2 text-base sm:text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500"
                        placeholder="Enter task title...">
             </div>
             <div>
                 <label class="block text-xs text-blackbook-400 mb-1">Notes</label>
                 <textarea id="add-task-notes" rows="3"
-                          class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-300 focus:outline-none focus:border-blue-500"
+                          class="w-full px-3 py-3 sm:py-2 text-base sm:text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-300 focus:outline-none focus:border-blue-500"
                           placeholder="Add notes..."></textarea>
             </div>
             <!-- Due Date & Time -->
@@ -80,43 +80,43 @@
                     <div class="flex-1">
                         <label class="block text-xs text-blackbook-400 mb-1">Due Date</label>
                         <input type="date" id="add-task-due-date"
-                               class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                               class="w-full px-3 py-3 sm:py-2 text-base sm:text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
                     </div>
-                    <div class="w-28">
+                    <div class="w-32 sm:w-28">
                         <label class="block text-xs text-blackbook-400 mb-1">Time <span class="text-blackbook-500">(opt)</span></label>
                         <input type="time" id="add-task-due-time"
-                               class="w-full px-3 py-2 text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
+                               class="w-full px-3 py-3 sm:py-2 text-base sm:text-sm bg-blackbook-700 border border-blackbook-600 rounded text-blackbook-100 focus:outline-none focus:border-blue-500">
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-2 mt-2">
+                <div class="flex flex-wrap gap-2 mt-3 sm:mt-2">
                     <button type="button" onclick="setTaskQuickDate('add-task-due-date', 0)"
-                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Today</button>
+                            class="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600 active:bg-blackbook-600">Today</button>
                     <button type="button" onclick="setTaskQuickDate('add-task-due-date', 1)"
-                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">Tmrw</button>
+                            class="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600 active:bg-blackbook-600">Tmrw</button>
                     <button type="button" onclick="setTaskQuickDate('add-task-due-date', 7)"
-                            class="px-2 py-1 text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600">+1Wk</button>
-                    <span class="border-l border-blackbook-600 mx-1"></span>
+                            class="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600 border border-blackbook-600 active:bg-blackbook-600">+1Wk</button>
+                    <span class="border-l border-blackbook-600 mx-1 hidden sm:inline"></span>
                     <button type="button" onclick="setTaskQuickTime('09:00')"
-                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">9am</button>
+                            class="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600 active:bg-blackbook-600">9am</button>
                     <button type="button" onclick="setTaskQuickTime('14:00')"
-                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">2pm</button>
+                            class="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600 active:bg-blackbook-600">2pm</button>
                     <button type="button" onclick="setTaskQuickTime('17:00')"
-                            class="px-2 py-1 text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600">5pm</button>
+                            class="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs bg-blackbook-700 text-cyan-400 rounded hover:bg-blackbook-600 border border-blackbook-600 active:bg-blackbook-600">5pm</button>
                     <button type="button" onclick="clearTaskDateTime()"
-                            class="px-2 py-1 text-xs text-blackbook-400 hover:text-blackbook-200 border border-blackbook-600 rounded">Clear</button>
+                            class="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs text-blackbook-400 hover:text-blackbook-200 border border-blackbook-600 rounded active:bg-blackbook-700">Clear</button>
                 </div>
             </div>
-            <div class="flex gap-2 pt-2">
+            <div class="flex flex-col-reverse sm:flex-row gap-2 pt-3">
+                <button type="button" onclick="closeAddTaskModal()"
+                        class="w-full sm:flex-1 px-4 py-3 sm:py-2 text-sm bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600">
+                    Cancel
+                </button>
                 <button type="submit"
-                        class="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center justify-center gap-2">
+                        class="w-full sm:flex-1 px-4 py-3 sm:py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center justify-center gap-2 font-medium">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
                     {% if parent_task_id %}Add Subtask{% else %}Add Task{% endif %}
-                </button>
-                <button type="button" onclick="closeAddTaskModal()"
-                        class="flex-1 px-4 py-2 text-sm bg-blackbook-700 text-blackbook-300 rounded hover:bg-blackbook-600">
-                    Cancel
                 </button>
             </div>
         </form>
