@@ -55,15 +55,18 @@
 
     <!-- Week Days - Horizontal Scrolling Columns with snap on mobile -->
     <div class="relative">
-        <!-- Scroll hint indicator (fades out after first scroll) -->
-        <div id="scroll-hint" class="absolute right-0 top-1/2 -translate-y-1/2 z-10 pointer-events-none lg:hidden">
-            <div class="bg-gradient-to-l from-blackbook-900 to-transparent w-12 h-full absolute right-0 top-0"></div>
-            <div class="animate-pulse bg-blackbook-600/80 rounded-full p-1.5 mr-1">
-                <svg class="w-4 h-4 text-blackbook-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <!-- Scroll hint button (fades out after first scroll) -->
+        <button id="scroll-hint"
+                onclick="document.getElementById('week-days-container').scrollBy({left: 280, behavior: 'smooth'})"
+                class="absolute right-0 top-1/2 -translate-y-1/2 z-10 lg:hidden touch-target"
+                aria-label="Scroll right to see more days">
+            <div class="bg-gradient-to-l from-blackbook-900 to-transparent w-12 h-full absolute right-0 top-0 pointer-events-none"></div>
+            <div class="animate-pulse bg-blackbook-600/80 hover:bg-blackbook-500 rounded-full p-2 mr-1 transition-colors">
+                <svg class="w-5 h-5 text-blackbook-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
             </div>
-        </div>
+        </button>
         <div class="flex gap-2 sm:gap-3 overflow-x-auto pb-2 snap-x snap-mandatory lg:snap-none -mx-2 px-2 sm:mx-0 sm:px-0 scrollbar-hide" style="min-height: 400px;" id="week-days-container">
             {% for day in days %}
             <div class="day-column flex-shrink-0 w-[85vw] sm:w-[45vw] lg:w-64 min-w-[220px] bg-blackbook-700/30 rounded-lg flex flex-col transition-all snap-start"

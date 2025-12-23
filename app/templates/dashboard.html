@@ -40,9 +40,9 @@
     .task-scheduled {
         @apply bg-blackbook-700/50 hover:bg-blackbook-700;
     }
-    /* Keyboard nav footer - hidden on mobile, shown on md+ */
+    /* Keyboard nav footer - hidden on mobile/tablet, shown on lg+ (desktop only) */
     .keyboard-footer {
-        @apply fixed bottom-0 left-0 right-0 bg-blackbook-800 border-t border-blackbook-700 px-4 py-2 hidden md:flex items-center justify-between text-xs text-blackbook-400;
+        @apply fixed bottom-0 left-0 right-0 bg-blackbook-800 border-t border-blackbook-700 px-4 py-2 hidden lg:flex items-center justify-between text-xs text-blackbook-400;
     }
     .keyboard-footer kbd {
         @apply px-1.5 py-0.5 bg-blackbook-700 rounded text-blackbook-300 font-mono text-xs mr-1;
@@ -413,7 +413,7 @@
                                     </svg>
                                     Sync
                                 </button>
-                                <button class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                                <button class="hidden sm:flex text-blue-400 hover:text-blue-300 text-sm items-center gap-1"
                                         id="add-task-btn"
                                         hx-get="/dashboard/add-task-modal"
                                         hx-target="#add-task-modal-container"
