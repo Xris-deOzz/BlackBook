@@ -448,6 +448,9 @@
                 if (countEl) countEl.textContent = ids.length;
                 const inlineCountEl = document.getElementById('bulk-delete-count-inline');
                 if (inlineCountEl) inlineCountEl.textContent = ids.length;
+
+                // Attach event handlers (scripts in innerHTML don't execute)
+                setupBulkDeleteModal();
             })
             .catch(error => {
                 console.error('Error loading delete modal:', error);
@@ -456,6 +459,100 @@
                     performBulkDelete(ids, 'both');
                 }
             });
+    }
+
+    // Setup bulk delete modal event handlers
+    function setupBulkDeleteModal() {
+        const confirmBtn = document.getElementById('bulk-delete-confirm-btn');
+        const cancelBtn = document.getElementById('bulk-delete-cancel-btn');
+        const modal = document.getElementById('bulk-delete-modal');
+
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                executeBulkDeleteFromModal();
+            });
+        }
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                closeBulkDeleteModal();
+            });
+        }
+
+        // Radio button styling
+        document.querySelectorAll('.delete-option input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.querySelectorAll('.delete-option').forEach(opt => {
+                    opt.removeAttribute('data-selected');
+                });
+                if (this.checked) {
+                    this.closest('.delete-option').setAttribute('data-selected', 'true');
+                }
+            });
+        });
+
+        // Backdrop click to close
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeBulkDeleteModal();
+                }
+            });
+        }
+    }
+
+    // Close bulk delete modal
+    function closeBulkDeleteModal() {
+        const container = document.getElementById('bulk-delete-modal-container');
+        if (container) container.innerHTML = '';
+    }
+
+    // Execute delete from modal
+    async function executeBulkDeleteFromModal() {
+        const scopeInput = document.querySelector('input[name="bulk_delete_scope"]:checked');
+        const scope = scopeInput ? scopeInput.value : 'both';
+        const ids = window._bulkDeleteIds;
+
+        if (!ids || ids.length === 0) {
+            alert('No contacts selected');
+            return;
+        }
+
+        const deleteBtn = document.getElementById('bulk-delete-confirm-btn');
+        if (deleteBtn) {
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = 'Deleting...';
+        }
+
+        try {
+            const response = await fetch('/people/batch/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: ids, scope: scope })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                closeBulkDeleteModal();
+                window.location.reload();
+            } else {
+                alert(data.detail || data.error || 'Failed to delete contacts');
+                if (deleteBtn) {
+                    deleteBtn.disabled = false;
+                    deleteBtn.textContent = 'Delete';
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred: ' + error.message);
+            if (deleteBtn) {
+                deleteBtn.disabled = false;
+                deleteBtn.textContent = 'Delete';
+            }
+        }
     }
 
     // Fallback bulk delete function (used if modal fails to load)
