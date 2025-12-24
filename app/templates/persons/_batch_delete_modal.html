@@ -108,12 +108,11 @@
 
         <!-- Footer -->
         <div class="flex items-center justify-end gap-3 p-4 border-t border-blackbook-200">
-            <button type="button" onclick="closeBulkDeleteModal()"
+            <button type="button" id="bulk-delete-cancel-btn"
                     class="px-4 py-2 text-blackbook-600 hover:text-blackbook-800 font-medium">
                 Cancel
             </button>
-            <button type="button" onclick="executeBulkDelete()"
-                    id="bulk-delete-confirm-btn"
+            <button type="button" id="bulk-delete-confirm-btn"
                     class="px-4 py-2 bg-red-600 text-white font-medium rounded-md hover:bg-red-700">
                 Delete
             </button>
@@ -122,111 +121,124 @@
 </div>
 
 <script>
-// Close bulk delete modal
-window.closeBulkDeleteModal = function() {
-    const container = document.getElementById('bulk-delete-modal-container');
-    if (container) container.innerHTML = '';
-    window._bulkDeleteIds = null;
-}
+(function() {
+    // Close bulk delete modal
+    function closeBulkDeleteModal() {
+        const container = document.getElementById('bulk-delete-modal-container');
+        if (container) container.innerHTML = '';
+        window._bulkDeleteIds = null;
+    }
+    window.closeBulkDeleteModal = closeBulkDeleteModal;
 
-// Handle radio button selection styling
-document.querySelectorAll('.delete-option input[type="radio"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        // Remove selected from all
-        document.querySelectorAll('.delete-option').forEach(opt => {
-            opt.removeAttribute('data-selected');
-        });
-        // Add selected to parent label
-        if (this.checked) {
-            this.closest('.delete-option').setAttribute('data-selected', 'true');
+    // Execute bulk delete
+    async function executeBulkDelete() {
+        console.log('executeBulkDelete called');
+
+        const scopeInput = document.querySelector('input[name="bulk_delete_scope"]:checked');
+        const scope = scopeInput ? scopeInput.value : 'both';
+        const deleteBtn = document.getElementById('bulk-delete-confirm-btn');
+
+        // Get IDs from stored variable or try to get from selection
+        let ids = window._bulkDeleteIds;
+        if (!ids && typeof getSelectedIds === 'function') {
+            ids = getSelectedIds();
         }
-    });
-});
 
-// Execute bulk delete with selected scope
-window.executeBulkDelete = async function() {
-    const scopeInput = document.querySelector('input[name="bulk_delete_scope"]:checked');
-    const scope = scopeInput ? scopeInput.value : 'both';
-    const deleteBtn = document.getElementById('bulk-delete-confirm-btn');
+        console.log('Delete - scope:', scope, 'ids:', ids);
 
-    // Get IDs from stored variable or try to get from selection
-    let ids = window._bulkDeleteIds;
-    if (!ids && typeof getSelectedIds === 'function') {
-        ids = getSelectedIds();
-    }
+        if (!ids || ids.length === 0) {
+            alert('No contacts selected');
+            return;
+        }
 
-    console.log('Delete clicked - scope:', scope, 'ids:', ids);
+        // Disable button and show loading
+        if (deleteBtn) {
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = 'Deleting...';
+        }
 
-    if (!ids || ids.length === 0) {
-        alert('No contacts selected');
-        return;
-    }
+        try {
+            const response = await fetch('/people/batch/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: ids, scope: scope })
+            });
 
-    // Disable button and show loading
-    if (deleteBtn) {
-        deleteBtn.disabled = true;
-        deleteBtn.innerHTML = `
-            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Deleting...
-        `;
-    }
+            const data = await response.json();
+            console.log('Delete response:', data);
 
-    try {
-        const response = await fetch('/people/batch/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids: ids, scope: scope })
-        });
-
-        const data = await response.json();
-        console.log('Delete response:', data);
-
-        if (response.ok && data.success) {
-            closeBulkDeleteModal();
-            // Refresh the table
-            if (typeof htmx !== 'undefined') {
-                htmx.trigger('#search', 'search');
-            }
-            if (typeof clearSelection === 'function') {
-                clearSelection();
-            }
-
-            // Show success summary if there were errors
-            if (data.failed > 0) {
-                alert(`Deleted ${data.deleted_count} contacts. ${data.failed} failed.`);
+            if (response.ok && data.success) {
+                closeBulkDeleteModal();
+                // Refresh page
+                window.location.reload();
             } else {
-                // Refresh page if htmx not available
-                if (typeof htmx === 'undefined') {
-                    window.location.reload();
+                alert(data.detail || data.error || 'Failed to delete contacts');
+                if (deleteBtn) {
+                    deleteBtn.disabled = false;
+                    deleteBtn.textContent = 'Delete';
                 }
             }
-        } else {
-            alert(data.detail || data.error || 'Failed to delete contacts');
-            // Re-enable button
+        } catch (error) {
+            console.error('Error deleting contacts:', error);
+            alert('An error occurred: ' + error.message);
             if (deleteBtn) {
                 deleteBtn.disabled = false;
                 deleteBtn.textContent = 'Delete';
             }
         }
-    } catch (error) {
-        console.error('Error deleting contacts:', error);
-        alert('An error occurred while deleting contacts');
-        // Re-enable button
-        if (deleteBtn) {
-            deleteBtn.disabled = false;
-            deleteBtn.textContent = 'Delete';
+    }
+
+    // Attach event listeners directly
+    const confirmBtn = document.getElementById('bulk-delete-confirm-btn');
+    const cancelBtn = document.getElementById('bulk-delete-cancel-btn');
+
+    if (confirmBtn) {
+        console.log('Attaching click handler to Delete button');
+        confirmBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Delete button clicked');
+            executeBulkDelete();
+        });
+    } else {
+        console.error('Delete button not found!');
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            closeBulkDeleteModal();
+        });
+    }
+
+    // Handle radio button selection styling
+    document.querySelectorAll('.delete-option input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('.delete-option').forEach(opt => {
+                opt.removeAttribute('data-selected');
+            });
+            if (this.checked) {
+                this.closest('.delete-option').setAttribute('data-selected', 'true');
+            }
+        });
+    });
+
+    // Close on escape
+    function handleEscape(e) {
+        if (e.key === 'Escape') {
+            closeBulkDeleteModal();
+            document.removeEventListener('keydown', handleEscape);
         }
     }
-}
+    document.addEventListener('keydown', handleEscape);
 
-// Close on escape
-document.addEventListener('keydown', function handler(e) {
-    if (e.key === 'Escape') {
-        closeBulkDeleteModal();
-        document.removeEventListener('keydown', handler);
+    // Close on backdrop click
+    const modal = document.getElementById('bulk-delete-modal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeBulkDeleteModal();
+            }
+        });
     }
-});
+})();
 </script>
