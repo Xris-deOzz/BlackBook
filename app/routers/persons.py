@@ -420,6 +420,7 @@ async def create_person(
 
 class BatchDeleteRequest(BaseModel):
     ids: List[str]
+    scope: str = "both"  # "blackbook_only", "google_only", or "both"
 
 
 class BatchAddTagsRequest(BaseModel):
@@ -488,28 +489,106 @@ async def batch_add_tags(
     return {"success": True, "added_count": added_count}
 
 
+@router.post("/batch/delete/modal", response_class=HTMLResponse)
+async def get_batch_delete_modal(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Return the batch delete confirmation modal.
+    Accepts POST with JSON body containing ids to check Google link status.
+    """
+    # Try to get IDs from JSON body
+    try:
+        body = await request.json()
+        ids = body.get("ids", [])
+    except Exception:
+        ids = []
+
+    total_count = len(ids)
+    google_linked_count = 0
+
+    # Count how many persons have google_resource_name
+    for id_str in ids:
+        try:
+            person_id = UUID(id_str)
+            person = db.query(Person).filter(Person.id == person_id).first()
+            if person and person.google_resource_name:
+                google_linked_count += 1
+        except ValueError:
+            continue
+
+    return templates.TemplateResponse(
+        "persons/_batch_delete_modal.html",
+        {
+            "request": request,
+            "total_count": total_count,
+            "google_linked_count": google_linked_count,
+        },
+    )
+
+
+@router.get("/batch/delete/modal", response_class=HTMLResponse)
+async def get_batch_delete_modal_simple(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Return the batch delete confirmation modal (GET version).
+    The count will be updated by JavaScript after loading.
+    """
+    return templates.TemplateResponse(
+        "persons/_batch_delete_modal.html",
+        {
+            "request": request,
+            "total_count": 0,  # Will be updated by JS
+            "google_linked_count": 0,  # Will be updated by JS
+        },
+    )
+
+
 @router.post("/batch/delete", response_class=JSONResponse)
 async def batch_delete_persons(
     request: BatchDeleteRequest,
     db: Session = Depends(get_db),
 ):
     """
-    Delete multiple persons at once.
+    Delete multiple persons at once with optional Google Contacts sync.
+
+    Supports scope parameter:
+    - "blackbook_only": Delete from BlackBook only, keep in Google
+    - "google_only": Delete from Google only, keep in BlackBook
+    - "both": Delete from both BlackBook and Google (default)
     """
-    deleted_count = 0
+    from app.services.contacts_service import ContactsService
+
+    # Validate scope
+    if request.scope not in ("blackbook_only", "google_only", "both"):
+        raise HTTPException(status_code=400, detail="Invalid scope")
+
+    # Convert string IDs to UUIDs
+    person_ids = []
     for id_str in request.ids:
         try:
-            person_id = UUID(id_str)
-            person = db.query(Person).filter(Person.id == person_id).first()
-            if person:
-                db.delete(person)
-                deleted_count += 1
+            person_ids.append(UUID(id_str))
         except ValueError:
             continue  # Invalid UUID, skip
 
-    db.commit()
+    if not person_ids:
+        return {"success": True, "deleted_count": 0, "blackbook_deleted": 0, "google_deleted": 0}
 
-    return {"success": True, "deleted_count": deleted_count}
+    # Use ContactsService for scope-aware bulk deletion
+    contacts_service = ContactsService(db)
+    result = contacts_service.delete_persons_bulk_with_scope(person_ids, request.scope)
+
+    return {
+        "success": result["success"],
+        "deleted_count": result["blackbook_deleted"],
+        "blackbook_deleted": result["blackbook_deleted"],
+        "google_deleted": result["google_deleted"],
+        "failed": result["failed"],
+        "errors": result.get("errors", []),
+    }
 
 
 @router.get("/merge", response_class=HTMLResponse)
@@ -818,25 +897,73 @@ async def update_person(
     return RedirectResponse(url=f"/people/{person.id}", status_code=303)
 
 
-@router.delete("/{person_id}", response_class=HTMLResponse)
-async def delete_person(
+@router.get("/{person_id}/delete/modal", response_class=HTMLResponse)
+async def get_delete_modal(
     request: Request,
     person_id: UUID,
     db: Session = Depends(get_db),
 ):
     """
-    Delete a person.
+    Return the delete confirmation modal for a person.
+    Shows Google sync options if person is linked to Google Contacts.
     """
     person = db.query(Person).filter(Person.id == person_id).first()
-
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
 
-    db.delete(person)
-    db.commit()
+    return templates.TemplateResponse(
+        "persons/_delete_modal.html",
+        {
+            "request": request,
+            "person": person,
+            "has_google_link": bool(person.google_resource_name),
+        },
+    )
 
-    # Return redirect for HTMX or standard redirect
-    return RedirectResponse(url="/people", status_code=303)
+
+@router.delete("/{person_id}", response_class=JSONResponse)
+async def delete_person(
+    request: Request,
+    person_id: UUID,
+    scope: str = Query("both", regex="^(blackbook_only|google_only|both)$"),
+    db: Session = Depends(get_db),
+):
+    """
+    Delete a person with optional Google Contacts sync.
+
+    Args:
+        person_id: UUID of the person to delete
+        scope: Delete scope - "blackbook_only", "google_only", or "both" (default)
+
+    Returns:
+        JSON response with success status and redirect URL
+    """
+    from app.services.contacts_service import ContactsService, ContactsServiceError
+
+    person = db.query(Person).filter(Person.id == person_id).first()
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    # Use ContactsService for scope-aware deletion
+    contacts_service = ContactsService(db)
+
+    try:
+        result = contacts_service.delete_person_with_scope(person_id, scope)
+
+        if result["success"]:
+            return {
+                "success": True,
+                "redirect_url": "/people",
+                "blackbook_deleted": result["blackbook_deleted"],
+                "google_deleted": result["google_deleted"],
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=result.get("error", "Failed to delete contact")
+            )
+    except ContactsServiceError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{person_id}", response_class=HTMLResponse)

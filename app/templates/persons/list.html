@@ -423,12 +423,6 @@
             return;
         }
 
-        // Update count in modal when it loads
-        const updateModalCount = () => {
-            const countEl = document.getElementById('bulk-delete-count');
-            if (countEl) countEl.textContent = ids.length;
-        };
-
         // Create container if it doesn't exist
         let container = document.getElementById('bulk-delete-modal-container');
         if (!container) {
@@ -437,12 +431,20 @@
             document.body.appendChild(container);
         }
 
-        // Fetch and display modal
-        fetch('/people/batch/delete/modal')
+        // POST IDs to get modal with proper Google link count
+        fetch('/people/batch/delete/modal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: ids })
+        })
             .then(response => response.text())
             .then(html => {
                 container.innerHTML = html;
-                updateModalCount();
+                // Update the count in case JS needs to override
+                const countEl = document.getElementById('bulk-delete-count');
+                if (countEl) countEl.textContent = ids.length;
+                const inlineCountEl = document.getElementById('bulk-delete-count-inline');
+                if (inlineCountEl) inlineCountEl.textContent = ids.length;
             })
             .catch(error => {
                 console.error('Error loading delete modal:', error);

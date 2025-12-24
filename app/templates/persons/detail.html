@@ -392,12 +392,7 @@
         }
     });
 
-    // Close modal on outside click
-    document.getElementById('delete-modal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeDeleteModal();
-        }
-    });
+    // Close modal on outside click (handled by modal template onclick)
 
     // Edit All Mode - Triggers all section edit buttons at once
     function enterEditAllMode() {
