@@ -423,6 +423,9 @@
             return;
         }
 
+        // Store IDs globally for the modal to use
+        window._bulkDeleteIds = ids;
+
         // Create container if it doesn't exist
         let container = document.getElementById('bulk-delete-modal-container');
         if (!container) {

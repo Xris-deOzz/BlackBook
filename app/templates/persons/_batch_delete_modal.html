@@ -36,34 +36,60 @@
                 <strong>{{ google_linked_count }}</strong> of {{ total_count }} contacts are linked to Google Contacts.
             </p>
 
-            <div class="space-y-3 mb-4">
-                <label class="flex items-start p-3 rounded-lg border-2 border-blackbook-200 hover:bg-blackbook-50 cursor-pointer has-[:checked]:border-red-500 has-[:checked]:bg-red-100 has-[:checked]:shadow-sm transition-all">
+            <div class="space-y-3 mb-4" id="bulk-delete-options">
+                <label class="delete-option flex items-start p-3 rounded-lg border-2 cursor-pointer transition-all" data-selected="true">
                     <input type="radio" name="bulk_delete_scope" value="both" checked
-                           class="h-4 w-4 mt-0.5 text-red-600 border-blackbook-300 focus:ring-red-500">
+                           class="h-4 w-4 mt-0.5 text-red-600 border-gray-300 focus:ring-red-500">
                     <div class="ml-3">
-                        <span class="block text-sm font-medium text-blackbook-900">Delete from Both</span>
-                        <span class="block text-xs text-blackbook-500">Remove from BlackBook and Google Contacts</span>
+                        <span class="block text-sm font-medium option-title">Delete from Both</span>
+                        <span class="block text-xs option-desc">Remove from BlackBook and Google Contacts</span>
                     </div>
                 </label>
 
-                <label class="flex items-start p-3 rounded-lg border-2 border-blackbook-200 hover:bg-blackbook-50 cursor-pointer has-[:checked]:border-blackbook-600 has-[:checked]:bg-blackbook-100 has-[:checked]:shadow-sm transition-all">
+                <label class="delete-option flex items-start p-3 rounded-lg border-2 cursor-pointer transition-all">
                     <input type="radio" name="bulk_delete_scope" value="blackbook_only"
-                           class="h-4 w-4 mt-0.5 text-blackbook-600 border-blackbook-300 focus:ring-blackbook-500">
+                           class="h-4 w-4 mt-0.5 text-gray-600 border-gray-300 focus:ring-gray-500">
                     <div class="ml-3">
-                        <span class="block text-sm font-medium text-blackbook-900">BlackBook Only</span>
-                        <span class="block text-xs text-blackbook-500">Keep in Google Contacts (may re-sync later)</span>
+                        <span class="block text-sm font-medium option-title">BlackBook Only</span>
+                        <span class="block text-xs option-desc">Keep in Google Contacts (may re-sync later)</span>
                     </div>
                 </label>
 
-                <label class="flex items-start p-3 rounded-lg border-2 border-blackbook-200 hover:bg-blackbook-50 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-100 has-[:checked]:shadow-sm transition-all">
+                <label class="delete-option flex items-start p-3 rounded-lg border-2 cursor-pointer transition-all">
                     <input type="radio" name="bulk_delete_scope" value="google_only"
-                           class="h-4 w-4 mt-0.5 text-blue-600 border-blackbook-300 focus:ring-blue-500">
+                           class="h-4 w-4 mt-0.5 text-blue-600 border-gray-300 focus:ring-blue-500">
                     <div class="ml-3">
-                        <span class="block text-sm font-medium text-blackbook-900">Google Only</span>
-                        <span class="block text-xs text-blackbook-500">Remove from Google, keep in BlackBook</span>
+                        <span class="block text-sm font-medium option-title">Google Only</span>
+                        <span class="block text-xs option-desc">Remove from Google, keep in BlackBook</span>
                     </div>
                 </label>
             </div>
+            <style>
+                .delete-option {
+                    border-color: #374151;
+                    background-color: transparent;
+                }
+                .delete-option:hover {
+                    background-color: rgba(55, 65, 81, 0.3);
+                }
+                .delete-option[data-selected="true"] {
+                    border-color: #ef4444 !important;
+                    background-color: rgba(239, 68, 68, 0.15) !important;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                }
+                .delete-option .option-title {
+                    color: #f3f4f6;
+                }
+                .delete-option .option-desc {
+                    color: #9ca3af;
+                }
+                .delete-option[data-selected="true"] .option-title {
+                    color: #fecaca !important;
+                }
+                .delete-option[data-selected="true"] .option-desc {
+                    color: #fca5a5 !important;
+                }
+            </style>
             {% else %}
             <!-- No contacts linked to Google -->
             <input type="hidden" name="bulk_delete_scope" value="blackbook_only">
@@ -100,14 +126,36 @@
 window.closeBulkDeleteModal = function() {
     const container = document.getElementById('bulk-delete-modal-container');
     if (container) container.innerHTML = '';
+    window._bulkDeleteIds = null;
 }
+
+// Handle radio button selection styling
+document.querySelectorAll('.delete-option input[type="radio"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        // Remove selected from all
+        document.querySelectorAll('.delete-option').forEach(opt => {
+            opt.removeAttribute('data-selected');
+        });
+        // Add selected to parent label
+        if (this.checked) {
+            this.closest('.delete-option').setAttribute('data-selected', 'true');
+        }
+    });
+});
 
 // Execute bulk delete with selected scope
 window.executeBulkDelete = async function() {
     const scopeInput = document.querySelector('input[name="bulk_delete_scope"]:checked');
     const scope = scopeInput ? scopeInput.value : 'both';
     const deleteBtn = document.getElementById('bulk-delete-confirm-btn');
-    const ids = getSelectedIds(); // Use function from list.html
+
+    // Get IDs from stored variable or try to get from selection
+    let ids = window._bulkDeleteIds;
+    if (!ids && typeof getSelectedIds === 'function') {
+        ids = getSelectedIds();
+    }
+
+    console.log('Delete clicked - scope:', scope, 'ids:', ids);
 
     if (!ids || ids.length === 0) {
         alert('No contacts selected');
@@ -134,16 +182,26 @@ window.executeBulkDelete = async function() {
         });
 
         const data = await response.json();
+        console.log('Delete response:', data);
 
         if (response.ok && data.success) {
             closeBulkDeleteModal();
             // Refresh the table
-            htmx.trigger('#search', 'search');
-            clearSelection();
+            if (typeof htmx !== 'undefined') {
+                htmx.trigger('#search', 'search');
+            }
+            if (typeof clearSelection === 'function') {
+                clearSelection();
+            }
 
             // Show success summary if there were errors
             if (data.failed > 0) {
                 alert(`Deleted ${data.deleted_count} contacts. ${data.failed} failed.`);
+            } else {
+                // Refresh page if htmx not available
+                if (typeof htmx === 'undefined') {
+                    window.location.reload();
+                }
             }
         } else {
             alert(data.detail || data.error || 'Failed to delete contacts');
