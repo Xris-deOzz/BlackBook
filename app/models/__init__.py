@@ -28,6 +28,7 @@ from app.models.organization_type_lookup import OrganizationType, ProfileStyle
 from app.models.investment_profile_option import InvestmentProfileOption, OptionType
 from app.models.relationship_type import RelationshipType as PersonRelationshipType
 from app.models.google_account import GoogleAccount
+from app.models.person_google_link import PersonGoogleLink
 from app.models.email_ignore import EmailIgnoreList, IgnorePatternType
 from app.models.email_cache import EmailCache
 from app.models.calendar_event import CalendarEvent
@@ -76,6 +77,7 @@ __all__ = [
     "AffiliationType",
     "PersonRelationshipType",
     "GoogleAccount",
+    "PersonGoogleLink",
     "EmailIgnoreList",
     "EmailCache",
     "CalendarEvent",

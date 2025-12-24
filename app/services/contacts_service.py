@@ -4,6 +4,7 @@ Google Contacts service for syncing contacts from Google People API.
 Handles fetching contacts, matching to existing persons, and creating new persons.
 """
 
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Any
@@ -12,9 +13,89 @@ from uuid import UUID
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
-from app.models import GoogleAccount, Person, PersonEmail, Tag
+from app.models import GoogleAccount, Person, PersonEmail, PersonPhone, Tag, PersonGoogleLink
+from app.utils.social_utils import extract_linkedin_id
+
+
+# =============================================================================
+# Name Normalization - Strip titles, credentials, and suffixes for matching
+# =============================================================================
+
+# Professional credentials to strip (case-insensitive)
+CREDENTIALS_TO_STRIP = {
+    # Finance/Investment
+    "cfa", "cpa", "cfp", "caia", "cima", "cmt", "frm", "pfs", "cia",
+    # Legal
+    "jd", "llb", "llm", "esq", "esquire",
+    # Medical
+    "md", "do", "dds", "dmd", "pharm.d", "pharmd", "rn", "np", "pa-c", "pac",
+    # Academic
+    "phd", "ph.d", "edd", "ed.d", "psyd", "psy.d", "dba", "d.b.a",
+    # Business
+    "mba", "m.b.a", "mpa", "mpp", "emba",
+    # Engineering/Technical
+    "pe", "p.e", "se", "ra", "aia", "asla", "pmp",
+    # Other
+    "clu", "chfc", "cebs", "sphr", "shrm-scp", "shrm-cp",
+}
+
+# Name suffixes to strip (case-insensitive)
+SUFFIXES_TO_STRIP = {
+    # Generational
+    "jr", "jr.", "junior",
+    "sr", "sr.", "senior",
+    "i", "ii", "iii", "iv", "v", "vi",
+    "1st", "2nd", "3rd", "4th", "5th",
+    # Titles
+    "esq", "esq.",
+}
+
+
+def normalize_name_for_matching(first_name: str | None, last_name: str | None) -> tuple[str, str]:
+    """
+    Normalize first and last name for matching by stripping credentials and suffixes.
+
+    Args:
+        first_name: First name (may contain credentials)
+        last_name: Last name (may contain suffixes or credentials)
+
+    Returns:
+        Tuple of (normalized_first, normalized_last) in lowercase
+
+    Examples:
+        ("Tom", "Moran CFA") -> ("tom", "moran")
+        ("John", "Smith Jr.") -> ("john", "smith")
+        ("Robert", "Johnson III") -> ("robert", "johnson")
+    """
+    def clean_name_part(name: str | None) -> str:
+        if not name:
+            return ""
+
+        # Convert to lowercase and strip whitespace
+        name = name.lower().strip()
+
+        # Split into words
+        words = name.split()
+
+        # Filter out credentials and suffixes
+        cleaned_words = []
+        for word in words:
+            # Remove trailing punctuation for comparison
+            word_clean = word.rstrip(".,")
+
+            # Skip if it's a credential or suffix
+            if word_clean in CREDENTIALS_TO_STRIP or word_clean in SUFFIXES_TO_STRIP:
+                continue
+
+            cleaned_words.append(word)
+
+        return " ".join(cleaned_words)
+
+    return clean_name_part(first_name), clean_name_part(last_name)
+
+
 from app.models.person_email import EmailLabel
 from app.models.tag import PersonTag
 from app.models.tag_subcategory import (
@@ -129,8 +210,18 @@ class ContactsService:
             db: Database session for querying and creating records
         """
         self.db = db
-        self._email_to_person_cache: dict[str, UUID] | None = None
         self._contact_groups_cache: dict[str, str] | None = None  # resourceName -> displayName
+
+        # Optimized person indexes (built once, used for all contacts)
+        self._indexes_built = False
+        self._persons_by_id: dict[UUID, Person] = {}
+        self._persons_by_google_resource: dict[str, Person] = {}
+        self._persons_by_normalized_name: dict[tuple[str, str], list[Person]] = {}
+        self._persons_by_email: dict[str, list[Person]] = {}
+        self._persons_by_phone: dict[str, list[Person]] = {}
+        self._persons_by_linkedin: dict[str, list[Person]] = {}
+        # Legacy cache for backwards compatibility
+        self._email_to_person_cache: dict[str, UUID] | None = None
 
     def _fetch_contact_groups(self, service: Any) -> dict[str, str]:
         """
@@ -310,8 +401,8 @@ class ContactsService:
         if not account:
             raise ContactsServiceError(f"Account not found: {account_id}")
 
-        # Build email lookup cache
-        self._build_email_cache()
+        # Build optimized person indexes (single query, all indexes)
+        self._build_person_indexes()
 
         # Fetch contacts from Google (both saved and other contacts)
         contacts, saved_count, other_count = self.fetch_contacts(
@@ -340,7 +431,7 @@ class ContactsService:
 
             if person:
                 # Update existing person (MERGE: fill blanks only, never overwrite)
-                updated = self._update_person_from_contact(person, contact)
+                updated = self._update_person_from_contact(person, contact, account.id)
                 if updated:
                     result.contacts_updated += 1
                 result.contacts_matched += 1
@@ -525,6 +616,178 @@ class ContactsService:
                     if email and email not in self._email_to_person_cache:
                         self._email_to_person_cache[email] = p.id
 
+    def _build_person_indexes(self) -> None:
+        """
+        Build comprehensive in-memory indexes for fast contact matching.
+
+        This loads ALL persons with their emails and phones in a SINGLE query,
+        then builds multiple indexes for O(1) lookups:
+        - By google_resource_name (for already-synced contacts)
+        - By normalized name (first + last, with titles stripped)
+        - By email address
+        - By phone number (normalized digits only)
+        - By LinkedIn username
+
+        This eliminates N+1 queries during sync - all matching is done in memory.
+        """
+        if self._indexes_built:
+            return
+
+        # Single query to load all persons with related data
+        all_persons = (
+            self.db.query(Person)
+            .options(
+                selectinload(Person.emails),
+                selectinload(Person.phones),
+            )
+            .all()
+        )
+
+        # Clear indexes
+        self._persons_by_id = {}
+        self._persons_by_google_resource = {}
+        self._persons_by_normalized_name = {}
+        self._persons_by_email = {}
+        self._persons_by_phone = {}
+        self._persons_by_linkedin = {}
+
+        for person in all_persons:
+            # Index by ID
+            self._persons_by_id[person.id] = person
+
+            # Index by google_resource_name (for re-syncs)
+            if person.google_resource_name:
+                self._persons_by_google_resource[person.google_resource_name] = person
+
+            # Index by normalized name
+            norm_first, norm_last = normalize_name_for_matching(
+                person.first_name, person.last_name
+            )
+            if norm_first or norm_last:
+                name_key = (norm_first, norm_last)
+                if name_key not in self._persons_by_normalized_name:
+                    self._persons_by_normalized_name[name_key] = []
+                self._persons_by_normalized_name[name_key].append(person)
+
+            # Index by email (from PersonEmail table)
+            for pe in person.emails:
+                if pe.email:
+                    email_lower = pe.email.lower()
+                    if email_lower not in self._persons_by_email:
+                        self._persons_by_email[email_lower] = []
+                    self._persons_by_email[email_lower].append(person)
+
+            # Also index legacy email field
+            if person.email:
+                for email in person.email.split(","):
+                    email_lower = email.strip().lower()
+                    if email_lower and "@" in email_lower:
+                        if email_lower not in self._persons_by_email:
+                            self._persons_by_email[email_lower] = []
+                        if person not in self._persons_by_email[email_lower]:
+                            self._persons_by_email[email_lower].append(person)
+
+            # Index by phone (from PersonPhone table)
+            for pp in person.phones:
+                if pp.phone:
+                    phone_norm = self._normalize_phone(pp.phone)
+                    if len(phone_norm) >= 7:
+                        if phone_norm not in self._persons_by_phone:
+                            self._persons_by_phone[phone_norm] = []
+                        self._persons_by_phone[phone_norm].append(person)
+
+            # Also index legacy phone field
+            if person.phone:
+                phone_norm = self._normalize_phone(person.phone)
+                if len(phone_norm) >= 7:
+                    if phone_norm not in self._persons_by_phone:
+                        self._persons_by_phone[phone_norm] = []
+                    if person not in self._persons_by_phone[phone_norm]:
+                        self._persons_by_phone[phone_norm].append(person)
+
+            # Index by LinkedIn username (from URL or linkedin_id field)
+            linkedin_user = None
+            if person.linkedin_id:
+                linkedin_user = person.linkedin_id.lower()
+            elif person.linkedin:
+                linkedin_user = self._normalize_linkedin_url(person.linkedin)
+
+            if linkedin_user:
+                if linkedin_user not in self._persons_by_linkedin:
+                    self._persons_by_linkedin[linkedin_user] = []
+                self._persons_by_linkedin[linkedin_user].append(person)
+
+        self._indexes_built = True
+
+        # Also populate legacy cache for backwards compatibility
+        self._email_to_person_cache = {
+            email: persons[0].id
+            for email, persons in self._persons_by_email.items()
+            if persons
+        }
+
+    def _add_person_to_indexes(self, person: Person, emails: list[str] | None = None) -> None:
+        """
+        Add a newly created person to all in-memory indexes.
+
+        This is called after creating a new person during sync to ensure
+        subsequent contacts in the same batch can match against it.
+
+        Args:
+            person: The newly created Person object
+            emails: List of email addresses (optional, extracted from person.emails if not provided)
+        """
+        if not self._indexes_built:
+            return  # Indexes not built yet, nothing to update
+
+        # Index by ID
+        self._persons_by_id[person.id] = person
+
+        # Index by google_resource_name
+        if person.google_resource_name:
+            self._persons_by_google_resource[person.google_resource_name] = person
+
+        # Index by normalized name
+        norm_first, norm_last = normalize_name_for_matching(
+            person.first_name, person.last_name
+        )
+        if norm_first or norm_last:
+            name_key = (norm_first, norm_last)
+            if name_key not in self._persons_by_normalized_name:
+                self._persons_by_normalized_name[name_key] = []
+            if person not in self._persons_by_normalized_name[name_key]:
+                self._persons_by_normalized_name[name_key].append(person)
+
+        # Index by email
+        if emails:
+            for email in emails:
+                email_lower = email.lower()
+                if email_lower not in self._persons_by_email:
+                    self._persons_by_email[email_lower] = []
+                if person not in self._persons_by_email[email_lower]:
+                    self._persons_by_email[email_lower].append(person)
+                # Also update legacy cache
+                if self._email_to_person_cache is not None:
+                    self._email_to_person_cache[email_lower] = person.id
+
+        # Index by phone
+        if person.phone:
+            phone_norm = self._normalize_phone(person.phone)
+            if len(phone_norm) >= 7:
+                if phone_norm not in self._persons_by_phone:
+                    self._persons_by_phone[phone_norm] = []
+                if person not in self._persons_by_phone[phone_norm]:
+                    self._persons_by_phone[phone_norm].append(person)
+
+        # Index by LinkedIn
+        if person.linkedin:
+            linkedin_user = self._normalize_linkedin_url(person.linkedin)
+            if linkedin_user:
+                if linkedin_user not in self._persons_by_linkedin:
+                    self._persons_by_linkedin[linkedin_user] = []
+                if person not in self._persons_by_linkedin[linkedin_user]:
+                    self._persons_by_linkedin[linkedin_user].append(person)
+
     def _parse_urls(self, urls: list[dict[str, Any]]) -> dict[str, Any]:
         """
         Parse Google Contact URLs into categorized fields.
@@ -559,30 +822,244 @@ class ContactsService:
 
     def _match_contact_to_person(self, contact: GoogleContact) -> Person | None:
         """
-        Try to find an existing person using 3-tier matching:
-        1. Match by google_resource_name (exact Google ID) 
-        2. Match by email address
-        3. (Future) Match by phone + similar name
+        Try to find an existing person using optimized in-memory matching.
+
+        Priority order:
+        1. google_resource_name - exact match (fastest for re-syncs)
+        2. Name + identifier - name matches AND shares email/phone/linkedin
+        3. Email only - direct email match
+        4. Phone only - direct phone match
+        5. LinkedIn only - direct LinkedIn profile match
+        6. Name only - exact name match (consolidates same-name contacts)
+
+        All lookups are O(1) using pre-built indexes - no database queries.
+
+        Note: Tier 6 prevents duplicate proliferation by matching contacts with
+        the same name to the oldest existing person, even without identifier match.
+        Users can split genuinely different people later via the People page.
         """
-        # Tier 1: Match by google_resource_name (most reliable)
-        if contact.resource_name:
-            person = self.db.query(Person).filter(
-                Person.google_resource_name == contact.resource_name
-            ).first()
-            if person:
+        # Ensure indexes are built
+        if not self._indexes_built:
+            self._build_person_indexes()
+
+        # Tier 1: Match by google_resource_name (instant for re-syncs)
+        if contact.resource_name and contact.resource_name in self._persons_by_google_resource:
+            return self._persons_by_google_resource[contact.resource_name]
+
+        # Extract contact identifiers for matching
+        contact_emails = {
+            email_data.get("value", "").lower()
+            for email_data in contact.emails
+            if email_data.get("value")
+        }
+        contact_phones = {
+            self._normalize_phone(phone_data.get("value", ""))
+            for phone_data in contact.phones
+            if phone_data.get("value")
+        }
+        contact_phones = {p for p in contact_phones if len(p) >= 7}
+
+        contact_linkedin = None
+        for url_data in contact.urls:
+            url = url_data.get("value", "")
+            if "linkedin.com" in url.lower():
+                contact_linkedin = self._normalize_linkedin_url(url)
+                break
+
+        # Tier 2: Name + identifier match (name matches AND shares identifier)
+        norm_first, norm_last = normalize_name_for_matching(
+            contact.given_name, contact.family_name
+        )
+        if norm_first or norm_last:
+            name_key = (norm_first, norm_last)
+            if name_key in self._persons_by_normalized_name:
+                name_matches = self._persons_by_normalized_name[name_key]
+
+                # Check if any name match also has a matching identifier
+                for person in name_matches:
+                    # Check emails
+                    person_emails = {pe.email.lower() for pe in person.emails if pe.email}
+                    if person.email:
+                        for e in person.email.split(","):
+                            e = e.strip().lower()
+                            if e and "@" in e:
+                                person_emails.add(e)
+                    if contact_emails & person_emails:
+                        return person
+
+                    # Check phones
+                    person_phones = set()
+                    for pp in person.phones:
+                        if pp.phone:
+                            pn = self._normalize_phone(pp.phone)
+                            if len(pn) >= 7:
+                                person_phones.add(pn)
+                    if person.phone:
+                        pn = self._normalize_phone(person.phone)
+                        if len(pn) >= 7:
+                            person_phones.add(pn)
+                    if contact_phones & person_phones:
+                        return person
+
+                    # Check LinkedIn
+                    if contact_linkedin and person.linkedin:
+                        person_linkedin = self._normalize_linkedin_url(person.linkedin)
+                        if person_linkedin == contact_linkedin:
+                            return person
+
+        # Tier 3: Email only match
+        for email in contact_emails:
+            if email in self._persons_by_email:
+                return self._persons_by_email[email][0]
+
+        # Tier 4: Phone only match
+        for phone in contact_phones:
+            if phone in self._persons_by_phone:
+                return self._persons_by_phone[phone][0]
+
+        # Tier 5: LinkedIn only match
+        if contact_linkedin and contact_linkedin in self._persons_by_linkedin:
+            return self._persons_by_linkedin[contact_linkedin][0]
+
+        # Tier 6: Name-only match (consolidation)
+        # If we have an exact name match but no identifier overlap, still match to
+        # the existing person to prevent duplicate proliferation. The user can
+        # review and split later if they're genuinely different people.
+        if norm_first or norm_last:
+            name_key = (norm_first, norm_last)
+            if name_key in self._persons_by_normalized_name:
+                name_matches = self._persons_by_normalized_name[name_key]
+                if name_matches:
+                    # Return the oldest person with this name (first in list)
+                    # Sort by created_at to ensure consistency
+                    sorted_matches = sorted(name_matches, key=lambda p: p.created_at or p.id)
+                    return sorted_matches[0]
+
+        return None
+
+    def _normalize_linkedin_url(self, url: str) -> str | None:
+        """
+        Normalize LinkedIn URL to a comparable format.
+
+        Extracts the username/profile part from various LinkedIn URL formats:
+        - https://www.linkedin.com/in/username
+        - https://linkedin.com/in/username/
+        - http://www.linkedin.com/in/username
+
+        Returns lowercase username or None if not a valid LinkedIn URL.
+        """
+        import re
+        url_lower = url.lower().strip()
+
+        # Match LinkedIn profile URLs
+        match = re.search(r'linkedin\.com/in/([a-z0-9\-_]+)', url_lower)
+        if match:
+            return match.group(1).rstrip('/')
+
+        return None
+
+    def _match_by_linkedin(self, contact: GoogleContact) -> Person | None:
+        """
+        Match by LinkedIn profile URL.
+
+        LinkedIn URLs are unique identifiers - if they match, it's the same person.
+        """
+        # Extract LinkedIn URL from contact's URLs
+        contact_linkedin = None
+        for url_data in contact.urls:
+            url = url_data.get("value", "")
+            if "linkedin.com" in url.lower():
+                contact_linkedin = self._normalize_linkedin_url(url)
+                break
+
+        if not contact_linkedin:
+            return None
+
+        # Search for persons with matching LinkedIn
+        persons_with_linkedin = self.db.query(Person).filter(
+            Person.linkedin.isnot(None)
+        ).all()
+
+        for person in persons_with_linkedin:
+            person_linkedin = self._normalize_linkedin_url(person.linkedin)
+            if person_linkedin and person_linkedin == contact_linkedin:
                 return person
 
-        # Tier 2: Match by email
-        if self._email_to_person_cache is None:
-            self._build_email_cache()
+        return None
 
-        for email_data in contact.emails:
-            email = email_data.get("value", "").lower()
-            if email and email in self._email_to_person_cache:
-                person_id = self._email_to_person_cache[email]
-                return self.db.query(Person).filter_by(id=person_id).first()
+    def _normalize_phone(self, phone: str) -> str:
+        """Normalize phone number by keeping only digits."""
+        import re
+        return re.sub(r'\D', '', phone)
 
-        # Tier 3: TODO - Match by phone + similar name (future enhancement)
+    def _match_by_phone_and_name(self, contact: GoogleContact) -> Person | None:
+        """
+        Match by phone number + name similarity.
+
+        Only matches if:
+        1. Phone numbers match (normalized)
+        2. AND either last name matches OR full name is very similar
+        """
+        from app.models.person_phone import PersonPhone
+
+        # Get normalized phones from contact
+        contact_phones = set()
+        for phone_data in contact.phones:
+            phone_value = phone_data.get("value", "")
+            if phone_value:
+                normalized = self._normalize_phone(phone_value)
+                if len(normalized) >= 7:  # Minimum reasonable phone length
+                    contact_phones.add(normalized)
+
+        if not contact_phones:
+            return None
+
+        # Search for persons with matching phone
+        # Check legacy phone field first
+        persons_with_phone = []
+
+        all_persons = self.db.query(Person).filter(Person.phone.isnot(None)).all()
+        for person in all_persons:
+            if person.phone:
+                normalized = self._normalize_phone(person.phone)
+                if normalized in contact_phones:
+                    persons_with_phone.append(person)
+
+        # Also check PersonPhone table
+        person_phones = self.db.query(PersonPhone).all()
+        for pp in person_phones:
+            normalized = self._normalize_phone(pp.phone)
+            if normalized in contact_phones:
+                person = self.db.query(Person).filter_by(id=pp.person_id).first()
+                if person and person not in persons_with_phone:
+                    persons_with_phone.append(person)
+
+        if not persons_with_phone:
+            return None
+
+        # Now check name similarity
+        contact_name = (contact.display_name or "").lower().strip()
+        contact_last = (contact.family_name or "").lower().strip()
+        contact_first = (contact.given_name or "").lower().strip()
+
+        for person in persons_with_phone:
+            person_name = (person.full_name or "").lower().strip()
+            person_last = (person.last_name or "").lower().strip()
+            person_first = (person.first_name or "").lower().strip()
+
+            # Match if last names are the same (and not empty)
+            if contact_last and person_last and contact_last == person_last:
+                return person
+
+            # Match if first names are the same (and not empty)
+            if contact_first and person_first and contact_first == person_first:
+                return person
+
+            # Match if full names are very similar
+            if contact_name and person_name:
+                # Simple similarity: one name contains the other
+                if contact_name in person_name or person_name in contact_name:
+                    return person
 
         return None
 
@@ -630,6 +1107,8 @@ class ContactsService:
             parsed_urls = self._parse_urls(contact.urls)
             if parsed_urls["linkedin"]:
                 person.linkedin = parsed_urls["linkedin"]
+                # Extract and store LinkedIn ID for better matching
+                person.linkedin_id = extract_linkedin_id(parsed_urls["linkedin"])
             if parsed_urls["twitter"]:
                 person.twitter = parsed_urls["twitter"]
             if parsed_urls["website"]:
@@ -677,12 +1156,26 @@ class ContactsService:
         if contact.labels:
             self._assign_tags_to_person(person, contact.labels)
 
+        # Add new person to in-memory indexes for same-batch matching
+        self._add_person_to_indexes(person, list(unique_emails.keys()))
+
+        # Create PersonGoogleLink for multi-account tracking
+        google_link = PersonGoogleLink(
+            person_id=person.id,
+            google_account_id=account_id,
+            google_resource_name=contact.resource_name,
+            google_etag=contact.etag,
+            synced_at=datetime.now(timezone.utc),
+        )
+        self.db.add(google_link)
+
         return person
 
     def _update_person_from_contact(
         self,
         person: Person,
         contact: GoogleContact,
+        account_id: UUID | None = None,
     ) -> bool:
         """
         Update existing person with Google Contact data.
@@ -740,7 +1233,14 @@ class ContactsService:
             parsed_urls = self._parse_urls(contact.urls)
             if not person.linkedin and parsed_urls["linkedin"]:
                 person.linkedin = parsed_urls["linkedin"]
+                # Extract and store LinkedIn ID for better matching
+                person.linkedin_id = extract_linkedin_id(parsed_urls["linkedin"])
                 updated = True
+            elif person.linkedin and not person.linkedin_id:
+                # Backfill linkedin_id from existing linkedin URL
+                person.linkedin_id = extract_linkedin_id(person.linkedin)
+                if person.linkedin_id:
+                    updated = True
             if not person.twitter and parsed_urls["twitter"]:
                 person.twitter = parsed_urls["twitter"]
                 updated = True
@@ -751,16 +1251,46 @@ class ContactsService:
         # Always update Google sync tracking fields
         if contact.resource_name and person.google_resource_name != contact.resource_name:
             person.google_resource_name = contact.resource_name
+            # Update the in-memory index for google_resource_name
+            if self._indexes_built:
+                self._persons_by_google_resource[contact.resource_name] = person
             updated = True
         if contact.etag:
             person.google_etag = contact.etag
         person.google_synced_at = datetime.now(timezone.utc)
 
-        # Store Google Contact ID and addresses in custom_fields
+        # Create or update PersonGoogleLink for multi-account tracking
+        if account_id and contact.resource_name:
+            existing_link = self.db.query(PersonGoogleLink).filter_by(
+                google_account_id=account_id,
+                google_resource_name=contact.resource_name,
+            ).first()
+
+            if existing_link:
+                # Update existing link
+                existing_link.synced_at = datetime.now(timezone.utc)
+                if contact.etag:
+                    existing_link.google_etag = contact.etag
+            else:
+                # Create new link (same person in different Google account)
+                google_link = PersonGoogleLink(
+                    person_id=person.id,
+                    google_account_id=account_id,
+                    google_resource_name=contact.resource_name,
+                    google_etag=contact.etag,
+                    synced_at=datetime.now(timezone.utc),
+                )
+                self.db.add(google_link)
+
+        # Store Google Contact ID, Account ID, and addresses in custom_fields
         if person.custom_fields is None:
             person.custom_fields = {}
         if "google_contact_id" not in person.custom_fields:
             person.custom_fields["google_contact_id"] = contact.google_contact_id
+            updated = True
+        # Store google_account_id for synced contacts (so we know which account to sync with)
+        if account_id and "google_account_id" not in person.custom_fields:
+            person.custom_fields["google_account_id"] = str(account_id)
             updated = True
 
         # Store addresses in custom_fields if not already there
@@ -785,9 +1315,15 @@ class ContactsService:
                 self.db.add(person_email)
                 existing_emails.add(email.lower())
 
-                # Update cache
+                # Update caches/indexes
+                email_lower = email.lower()
                 if self._email_to_person_cache is not None:
-                    self._email_to_person_cache[email.lower()] = person.id
+                    self._email_to_person_cache[email_lower] = person.id
+                if self._indexes_built:
+                    if email_lower not in self._persons_by_email:
+                        self._persons_by_email[email_lower] = []
+                    if person not in self._persons_by_email[email_lower]:
+                        self._persons_by_email[email_lower].append(person)
 
                 updated = True
 
@@ -1024,9 +1560,16 @@ class ContactsService:
                 credentials = self._get_credentials(account)
                 service = build("people", "v1", credentials=credentials)
 
-                # Delete the contact
-                # Google People API: DELETE https://people.googleapis.com/v1/{resourceName}:deleteContact
-                service.people().deleteContact(resourceName=resource_name).execute()
+                # Delete the contact - use appropriate API based on resource type
+                if resource_name.startswith("otherContacts/"):
+                    # "Other Contacts" are auto-created from email interactions
+                    # Google doesn't allow deleting these via API - they're auto-managed
+                    # We'll just clear the link in BlackBook and consider it done
+                    # The contact may reappear if you interact with them again
+                    return True
+                else:
+                    # Regular contacts use people.deleteContact() API
+                    service.people().deleteContact(resourceName=resource_name).execute()
 
                 return True
 
@@ -1105,7 +1648,18 @@ class ContactsService:
 
             except (ContactsAuthError, ContactsAPIError, ContactsServiceError) as e:
                 result["success"] = False
-                result["error"] = str(e)
+                error_str = str(e)
+                # Provide user-friendly error messages
+                if "invalid_grant" in error_str or "Token has been expired" in error_str:
+                    result["error"] = f"Google authentication expired. Please re-authorize Google Contacts in Settings, or choose 'BlackBook Only' to delete locally."
+                elif "401" in error_str:
+                    result["error"] = f"Google authentication failed. Please re-authorize Google Contacts in Settings, or choose 'BlackBook Only' to delete locally."
+                elif "403" in error_str:
+                    result["error"] = f"Permission denied by Google. The contact may have been deleted already, or choose 'BlackBook Only' to delete locally."
+                elif "No active Google accounts" in error_str:
+                    result["error"] = f"No Google account connected. Please connect a Google account in Settings, or choose 'BlackBook Only' to delete locally."
+                else:
+                    result["error"] = f"Google deletion failed: {error_str}. Try choosing 'BlackBook Only' to delete locally."
                 # Don't proceed with BlackBook deletion if Google deletion failed
                 if scope == "both":
                     return result

@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from app.models.relationship_type import RelationshipType as RelationshipTypeLookup
     from app.models.ai_conversation import AIConversation
     from app.models.email_person_link import EmailPersonLink
+    from app.models.person_google_link import PersonGoogleLink
 
 
 class Person(Base):
@@ -62,6 +63,11 @@ class Person(Base):
     phone: Mapped[str | None] = mapped_column(String(100))
     email: Mapped[str | None] = mapped_column(Text)
     linkedin: Mapped[str | None] = mapped_column(Text)
+    linkedin_id: Mapped[str | None] = mapped_column(
+        String(100),
+        index=True,
+        comment="LinkedIn member ID extracted from URL (e.g., 'john-doe-123456')",
+    )
     crunchbase: Mapped[str | None] = mapped_column(Text)
     angellist: Mapped[str | None] = mapped_column(Text)
     twitter: Mapped[str | None] = mapped_column(Text)
@@ -204,6 +210,13 @@ class Person(Base):
     # Email links (emails involving this person)
     email_links: Mapped[list["EmailPersonLink"]] = orm_relationship(
         "EmailPersonLink",
+        back_populates="person",
+        cascade="all, delete-orphan",
+    )
+
+    # Google account links (person can exist in multiple Google accounts)
+    google_links: Mapped[list["PersonGoogleLink"]] = orm_relationship(
+        "PersonGoogleLink",
         back_populates="person",
         cascade="all, delete-orphan",
     )
