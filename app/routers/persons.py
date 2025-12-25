@@ -15,7 +15,7 @@ from sqlalchemy import func, or_, desc, asc
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import Person, Tag, PersonOrganization, Interaction, PersonEmail, GoogleAccount
+from app.models import Person, Tag, PersonOrganization, Interaction, PersonEmail, GoogleAccount, PersonGoogleLink
 from app.models.tag import PersonTag
 from app.models.person_email import EmailLabel
 from app.models.person_website import PersonWebsite
@@ -630,12 +630,17 @@ async def batch_merge_page(
     if len(persons) < 2:
         raise HTTPException(status_code=400, detail="At least 2 valid persons required for merge")
 
+    # Build Google Account mapping (id -> email) for showing which account synced contacts
+    google_accounts = db.query(GoogleAccount).all()
+    google_account_map = {str(acc.id): acc.email for acc in google_accounts}
+
     return templates.TemplateResponse(
         "persons/batch_merge.html",
         {
             "request": request,
             "title": "Merge People",
             "persons": persons,
+            "google_account_map": google_account_map,
         },
     )
 
@@ -992,6 +997,7 @@ async def get_person_detail(
             joinedload(Person.relationships_from).joinedload(PersonRelationship.related_person),
             joinedload(Person.relationships_from).joinedload(PersonRelationship.relationship_type),
             joinedload(Person.relationships_from).joinedload(PersonRelationship.context_organization),
+            joinedload(Person.google_links).joinedload(PersonGoogleLink.google_account),
         )
         .filter(Person.id == person_id)
         .first()
