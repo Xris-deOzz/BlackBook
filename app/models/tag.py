@@ -15,6 +15,7 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.models.person import Person
     from app.models.organization import Organization
+    from app.models.tag_google_link import TagGoogleLink
 
 
 class Tag(Base):
@@ -46,6 +47,11 @@ class Tag(Base):
         "Organization",
         secondary="organization_tags",
         back_populates="tags",
+    )
+    google_links: Mapped[list["TagGoogleLink"]] = relationship(
+        "TagGoogleLink",
+        back_populates="tag",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

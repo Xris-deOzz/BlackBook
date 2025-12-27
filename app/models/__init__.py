@@ -37,6 +37,10 @@ from app.models.pending_contact import PendingContact, PendingContactStatus
 from app.models.import_history import ImportHistory, ImportSource, ImportStatus
 from app.models.duplicate_exclusion import DuplicateExclusion
 
+# Tag-Google Label Sync models
+from app.models.tag_google_link import TagGoogleLink, SyncDirection
+from app.models.tag_sync_log import TagSyncLog
+
 # Phase 5: AI Research Assistant models
 from app.models.ai_provider import AIProvider, AIProviderType
 from app.models.ai_api_key import AIAPIKey
@@ -86,6 +90,10 @@ __all__ = [
     "PendingContact",
     "ImportHistory",
     "DuplicateExclusion",
+    # Tag-Google Label Sync
+    "TagGoogleLink",
+    "SyncDirection",
+    "TagSyncLog",
     # Junction tables
     "PersonTag",
     "OrganizationTag",

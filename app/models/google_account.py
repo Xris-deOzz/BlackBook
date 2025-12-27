@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from app.models.email_message import EmailMessage
     from app.models.email_sync_state import EmailSyncState
     from app.models.person_google_link import PersonGoogleLink
+    from app.models.tag_google_link import TagGoogleLink
 
 
 class GoogleAccount(Base):
@@ -95,6 +96,11 @@ class GoogleAccount(Base):
     )
     person_links: Mapped[list["PersonGoogleLink"]] = orm_relationship(
         "PersonGoogleLink",
+        back_populates="google_account",
+        cascade="all, delete-orphan",
+    )
+    tag_links: Mapped[list["TagGoogleLink"]] = orm_relationship(
+        "TagGoogleLink",
         back_populates="google_account",
         cascade="all, delete-orphan",
     )
